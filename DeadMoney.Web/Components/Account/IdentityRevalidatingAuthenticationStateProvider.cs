@@ -1,3 +1,4 @@
+using DeadMoney.Core.Entities;
 using DeadMoney.Web.Data;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;

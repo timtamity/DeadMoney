@@ -1,0 +1,73 @@
+﻿@page "/admin/dashboard"
+@using DeadMoney.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IPlayerSyncService SyncService
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<div class="container mt-4">
+    <h2>Admin Control Center</h2>
+    <hr />
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">NFL Player Ingestion</h5>
+                    <p class="card-text text-muted">
+                        Pulls latest player data, team associations, and injury/retired status from the Sleeper API.
+                    </p>
+
+                    @if (isSyncing)
+                    {
+                        <button class="btn btn-primary w-100" disabled>
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            Syncing Data...
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary w-100" @onclick="HandleSync">
+                            Start Player Sync
+                        </button>
+                    }
+
+                    @if (!string.IsNullOrEmpty(statusMessage))
+                    {
+                        <div class="alert alert-info mt-3 py-2">
+                            <small>@statusMessage</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isSyncing = false;
+    private string? statusMessage;
+
+    private async Task HandleSync()
+    {
+        try
+        {
+            isSyncing = true;
+            statusMessage = "Connecting to Sleeper API...";
+            StateHasChanged();
+
+            await SyncService.SyncPlayersAsync();
+
+            statusMessage = $"Sync completed successfully at {DateTime.Now:h:mm:ss tt}";
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSyncing = false;
+        }
+    }
+}

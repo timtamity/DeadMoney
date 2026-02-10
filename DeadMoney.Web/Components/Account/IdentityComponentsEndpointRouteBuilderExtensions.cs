@@ -1,3 +1,4 @@
+using DeadMoney.Core.Entities;
 using DeadMoney.Web.Components.Account.Pages;
 using DeadMoney.Web.Components.Account.Pages.Manage;
 using DeadMoney.Web.Data;
