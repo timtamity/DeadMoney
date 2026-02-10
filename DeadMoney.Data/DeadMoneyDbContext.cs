@@ -1,12 +1,11 @@
 ﻿using DeadMoney.Core.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 
 namespace DeadMoney.Data;
 
-public class DeadMoneyDbContext : IdentityDbContext
+public class DeadMoneyDbContext : IdentityDbContext<IdentityUser>
 {
     public DeadMoneyDbContext(DbContextOptions<DeadMoneyDbContext> options)
         : base(options)
@@ -21,11 +20,29 @@ public class DeadMoneyDbContext : IdentityDbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        // 1. MUST BE FIRST: This initializes the standard Identity tables
         base.OnModelCreating(builder);
 
-        // 1. Global Decimal Precision
-        // NFL contracts are massive. We use (18,2) which allows for 
-        // up to $999,999,999,999,999.99 (Quadrillions).
+        // 2. Loop through all entities to apply naming and schema rules
+        foreach (var entity in builder.Model.GetEntityTypes())
+        {
+            var tableName = entity.GetTableName();
+
+            // Check if it's an Identity table (starts with AspNet)
+            if (tableName != null && tableName.StartsWith("AspNet"))
+            {
+                entity.SetSchema("Auth");
+                // Remove the "AspNet" prefix (6 characters)
+                entity.SetTableName(tableName.Substring(6));
+            }
+            else
+            {
+                // Move your NFL/Application tables to the "League" schema
+                entity.SetSchema("League");
+            }
+        }
+
+        // 3. Global Decimal Precision (18,2) for all financial values
         foreach (var property in builder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))
@@ -34,15 +51,7 @@ public class DeadMoneyDbContext : IdentityDbContext
             property.SetScale(2);
         }
 
-        // 2. Relationship Mapping
-        builder.Entity<Player>()
-            .HasOne(p => p.Team)
-            .WithMany(t => t.Roster)
-            .HasForeignKey(p => p.TeamId)
-            .OnDelete(DeleteBehavior.SetNull); // If a team is deleted, players become Free Agents
-
-        // 3. Data Seeding
-        // We call an extension method to keep this file clean.
+        // 4. Seed initial league data
         builder.SeedLeagueData();
     }
 }

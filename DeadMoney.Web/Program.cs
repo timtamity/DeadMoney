@@ -1,66 +1,73 @@
-using DeadMoney.Web.Components;
-using DeadMoney.Web.Components.Account;
-using DeadMoney.Web.Data;
-using Microsoft.AspNetCore.Components.Authorization;
+using DeadMoney.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// 1. Database Configuration
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in secrets.json.");
+
+builder.Services.AddDbContext<DeadMoneyDbContext>(options =>
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("DeadMoney.Data")));
+
+// 2. Identity Core Setup (Optimized for OAuth - No Local Passwords)
+builder.Services.AddIdentityCore<IdentityUser>(options => {
+    // Since we use OAuth, Discord/Google verify the email for us
+    options.SignIn.RequireConfirmedAccount = false;
+})
+.AddEntityFrameworkStores<DeadMoneyDbContext>()
+.AddSignInManager<SignInManager<IdentityUser>>()
+.AddDefaultTokenProviders();
+
+// 3. Authentication & OAuth (Discord & Google)
+builder.Services.AddAuthentication(options => {
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+})
+.AddCookie(IdentityConstants.ApplicationScheme, options => {
+    options.LoginPath = "/login";
+    options.LogoutPath = "/logout";
+})
+.AddCookie(IdentityConstants.ExternalScheme)
+.AddDiscord(options => {
+    options.ClientId = builder.Configuration["Authentication:Discord:ClientId"] ?? "";
+    options.ClientSecret = builder.Configuration["Authentication:Discord:ClientSecret"] ?? "";
+    options.SaveTokens = true;
+})
+.AddGoogle(options => {
+    options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
+    options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
+});
+
+// 4. Blazor Component Services
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Support for Authorization attributes
+builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultScheme = IdentityConstants.ApplicationScheme;
-        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
-    .AddIdentityCookies();
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
-builder.Services.AddIdentityCore<ApplicationUser>(options =>
-    {
-        options.SignIn.RequireConfirmedAccount = true;
-        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
-    })
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddSignInManager()
-    .AddDefaultTokenProviders();
-
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseMigrationsEndPoint();
-}
-else
+// 5. Middleware Pipeline
+if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+
 app.UseHttpsRedirection();
-
 app.UseAntiforgery();
+app.UseStaticFiles();
 
-app.MapStaticAssets();
-app.MapRazorComponents<App>()
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Maps Blazor components and sets the Render Mode
+app.MapRazorComponents<DeadMoney.Web.Components.App>()
     .AddInteractiveServerRenderMode();
-
-// Add additional endpoints required by the Identity /Account Razor components.
-app.MapAdditionalIdentityEndpoints();
 
 app.Run();
