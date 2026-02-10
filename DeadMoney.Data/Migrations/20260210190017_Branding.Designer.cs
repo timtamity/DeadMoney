@@ -4,6 +4,7 @@ using DeadMoney.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeadMoney.Data.Migrations
 {
     [DbContext(typeof(DeadMoneyDbContext))]
-    partial class DeadMoneyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260210190017_Branding")]
+    partial class Branding
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -180,19 +183,10 @@ namespace DeadMoney.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Age")
-                        .HasColumnType("int");
-
-                    b.Property<string>("College")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Height")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsRetired")
                         .HasColumnType("bit");
@@ -201,9 +195,6 @@ namespace DeadMoney.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Number")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PositionCode")
                         .IsRequired()
@@ -215,12 +206,6 @@ namespace DeadMoney.Data.Migrations
 
                     b.Property<int?>("TeamId")
                         .HasColumnType("int");
-
-                    b.Property<int?>("Weight")
-                        .HasColumnType("int");
-
-                    b.Property<string>("YearsExp")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 

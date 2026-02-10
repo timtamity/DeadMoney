@@ -1,0 +1,108 @@
+﻿@model IEnumerable<DeadMoney.Core.Entities.Player>
+
+@{
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    string currentSearch = ViewBag.Search ?? "";
+}
+
+<style>
+    .player-card {
+        transition: transform 0.2s ease-in-out;
+    }
+
+        .player-card:hover {
+            transform: translateY(-5px);
+        }
+    /* Stylized 'Free Agent' card */
+    .card-free-agent {
+        background-color: #fcfcfc;
+        border-left: 5px solid #6c757d !important; /* Neutral Grey */
+    }
+
+    .card-teamed {
+        border-left: 5px solid var(--team-color) !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>NFL Player Index</h2>
+        <span class="text-muted">Page @currentPage of @totalPages</span>
+    </div>
+
+    <form method="get" asp-action="Index" class="mb-4">
+        <div class="input-group shadow-sm">
+            <input type="text" name="search" value="@currentSearch" class="form-control" placeholder="Search (e.g. Mahomes, Breece Hall)..." />
+            <button type="submit" class="btn btn-primary px-4">Search</button>
+            @if (!string.IsNullOrEmpty(currentSearch))
+            {
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+            }
+        </div>
+    </form>
+
+    <div class="row g-4">
+        @foreach (var player in Model)
+        {
+            var isFreeAgent = player.Team == null;
+            <div class="col-md-4 col-lg-3">
+                <div class="card h-100 shadow-sm border-0 player-card @(isFreeAgent ? "card-free-agent" : "card-teamed")"
+                     style="--team-color: @(player.Team?.PrimaryColor ?? "#6c757d")">
+
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge @(isFreeAgent ? "bg-secondary" : "bg-dark")">@player.PositionCode</span>
+                            @if (!isFreeAgent)
+                            {
+                                <img src="@player.Team!.LogoUrl" alt="@player.Team.Abbreviation" style="height: 25px;" title="@player.Team.Name" />
+                            }
+                            else
+                            {
+                                <span class="text-muted small fw-bold">FA</span>
+                            }
+                        </div>
+
+                        <h5 class="card-title mb-0">@player.FirstName @player.LastName</h5>
+                        <small class="text-muted">@(player.Team?.Name ?? "Unassigned / Free Agent")</small>
+
+                        <div class="my-3 text-center">
+                            <img src="https://sleepercdn.com/content/nfl/players/@(player.SleeperId).jpg"
+                                 class="rounded-circle border shadow-sm"
+                                 style="width: 80px; height: 80px; object-fit: cover; background-color: #f8f9fa;"
+                                 onerror="this.src='/images/default-player.png'" />
+                        </div>
+
+                        <div class="d-grid mt-2">
+                            <a asp-action="Details" asp-route-id="@player.SleeperId" class="btn btn-sm @(isFreeAgent ? "btn-outline-secondary" : "btn-outline-primary")">
+                                View Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (totalPages > 1)
+    {
+        <nav class="mt-5">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(currentPage - 1)" asp-route-search="@currentSearch">Previous</a>
+                </li>
+
+                @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+                {
+                    <li class="page-item @(i == currentPage ? "active" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-search="@currentSearch">@i</a>
+                    </li>
+                }
+
+                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(currentPage + 1)" asp-route-search="@currentSearch">Next</a>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>

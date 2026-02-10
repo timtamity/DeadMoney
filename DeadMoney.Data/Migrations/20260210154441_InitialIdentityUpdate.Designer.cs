@@ -4,6 +4,7 @@ using DeadMoney.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeadMoney.Data.Migrations
 {
     [DbContext(typeof(DeadMoneyDbContext))]
-    partial class DeadMoneyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260210154441_InitialIdentityUpdate")]
+    partial class InitialIdentityUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -180,19 +183,10 @@ namespace DeadMoney.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Age")
-                        .HasColumnType("int");
-
-                    b.Property<string>("College")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Height")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsRetired")
                         .HasColumnType("bit");
@@ -201,9 +195,6 @@ namespace DeadMoney.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Number")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PositionCode")
                         .IsRequired()
@@ -215,12 +206,6 @@ namespace DeadMoney.Data.Migrations
 
                     b.Property<int?>("TeamId")
                         .HasColumnType("int");
-
-                    b.Property<int?>("Weight")
-                        .HasColumnType("int");
-
-                    b.Property<string>("YearsExp")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -378,8 +363,7 @@ namespace DeadMoney.Data.Migrations
 
                     b.Property<string>("Abbreviation")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("CarryoverCap")
                         .HasPrecision(18, 2)
@@ -387,30 +371,11 @@ namespace DeadMoney.Data.Migrations
 
                     b.Property<string>("City")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("LogoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Nickname")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("PrimaryColor")
-                        .HasMaxLength(7)
-                        .HasColumnType("nvarchar(7)");
-
-                    b.Property<string>("SecondaryColor")
-                        .HasMaxLength(7)
-                        .HasColumnType("nvarchar(7)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -423,7 +388,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "ARI",
                             CarryoverCap = 0m,
                             City = "Arizona",
-                            Name = "",
                             Nickname = "Cardinals"
                         },
                         new
@@ -432,7 +396,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "ATL",
                             CarryoverCap = 0m,
                             City = "Atlanta",
-                            Name = "",
                             Nickname = "Falcons"
                         },
                         new
@@ -441,7 +404,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "BAL",
                             CarryoverCap = 0m,
                             City = "Baltimore",
-                            Name = "",
                             Nickname = "Ravens"
                         },
                         new
@@ -450,7 +412,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "BUF",
                             CarryoverCap = 0m,
                             City = "Buffalo",
-                            Name = "",
                             Nickname = "Bills"
                         },
                         new
@@ -459,7 +420,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CAR",
                             CarryoverCap = 0m,
                             City = "Carolina",
-                            Name = "",
                             Nickname = "Panthers"
                         },
                         new
@@ -468,7 +428,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CHI",
                             CarryoverCap = 0m,
                             City = "Chicago",
-                            Name = "",
                             Nickname = "Bears"
                         },
                         new
@@ -477,7 +436,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CIN",
                             CarryoverCap = 0m,
                             City = "Cincinnati",
-                            Name = "",
                             Nickname = "Bengals"
                         },
                         new
@@ -486,7 +444,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CLE",
                             CarryoverCap = 0m,
                             City = "Cleveland",
-                            Name = "",
                             Nickname = "Browns"
                         },
                         new
@@ -495,7 +452,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "DAL",
                             CarryoverCap = 0m,
                             City = "Dallas",
-                            Name = "",
                             Nickname = "Cowboys"
                         },
                         new
@@ -504,7 +460,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "DEN",
                             CarryoverCap = 0m,
                             City = "Denver",
-                            Name = "",
                             Nickname = "Broncos"
                         },
                         new
@@ -513,7 +468,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "DET",
                             CarryoverCap = 0m,
                             City = "Detroit",
-                            Name = "",
                             Nickname = "Lions"
                         },
                         new
@@ -522,7 +476,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "GB",
                             CarryoverCap = 0m,
                             City = "Green Bay",
-                            Name = "",
                             Nickname = "Packers"
                         },
                         new
@@ -531,7 +484,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "HOU",
                             CarryoverCap = 0m,
                             City = "Houston",
-                            Name = "",
                             Nickname = "Texans"
                         },
                         new
@@ -540,7 +492,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "IND",
                             CarryoverCap = 0m,
                             City = "Indianapolis",
-                            Name = "",
                             Nickname = "Colts"
                         },
                         new
@@ -549,7 +500,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "JAX",
                             CarryoverCap = 0m,
                             City = "Jacksonville",
-                            Name = "",
                             Nickname = "Jaguars"
                         },
                         new
@@ -558,7 +508,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "KC",
                             CarryoverCap = 0m,
                             City = "Kansas City",
-                            Name = "",
                             Nickname = "Chiefs"
                         },
                         new
@@ -567,7 +516,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "LV",
                             CarryoverCap = 0m,
                             City = "Las Vegas",
-                            Name = "",
                             Nickname = "Raiders"
                         },
                         new
@@ -576,7 +524,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "LAC",
                             CarryoverCap = 0m,
                             City = "Los Angeles",
-                            Name = "",
                             Nickname = "Chargers"
                         },
                         new
@@ -585,7 +532,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "LAR",
                             CarryoverCap = 0m,
                             City = "Los Angeles",
-                            Name = "",
                             Nickname = "Rams"
                         },
                         new
@@ -594,7 +540,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "MIA",
                             CarryoverCap = 0m,
                             City = "Miami",
-                            Name = "",
                             Nickname = "Dolphins"
                         },
                         new
@@ -603,7 +548,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "MIN",
                             CarryoverCap = 0m,
                             City = "Minnesota",
-                            Name = "",
                             Nickname = "Vikings"
                         },
                         new
@@ -612,7 +556,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NE",
                             CarryoverCap = 0m,
                             City = "New England",
-                            Name = "",
                             Nickname = "Patriots"
                         },
                         new
@@ -621,7 +564,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NO",
                             CarryoverCap = 0m,
                             City = "New Orleans",
-                            Name = "",
                             Nickname = "Saints"
                         },
                         new
@@ -630,7 +572,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NYG",
                             CarryoverCap = 0m,
                             City = "New York",
-                            Name = "",
                             Nickname = "Giants"
                         },
                         new
@@ -639,7 +580,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NYJ",
                             CarryoverCap = 0m,
                             City = "New York",
-                            Name = "",
                             Nickname = "Jets"
                         },
                         new
@@ -648,7 +588,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "PHI",
                             CarryoverCap = 0m,
                             City = "Philadelphia",
-                            Name = "",
                             Nickname = "Eagles"
                         },
                         new
@@ -657,7 +596,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "PIT",
                             CarryoverCap = 0m,
                             City = "Pittsburgh",
-                            Name = "",
                             Nickname = "Steelers"
                         },
                         new
@@ -666,7 +604,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "SF",
                             CarryoverCap = 0m,
                             City = "San Francisco",
-                            Name = "",
                             Nickname = "49ers"
                         },
                         new
@@ -675,7 +612,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "SEA",
                             CarryoverCap = 0m,
                             City = "Seattle",
-                            Name = "",
                             Nickname = "Seahawks"
                         },
                         new
@@ -684,7 +620,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "TB",
                             CarryoverCap = 0m,
                             City = "Tampa Bay",
-                            Name = "",
                             Nickname = "Buccaneers"
                         },
                         new
@@ -693,7 +628,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "TEN",
                             CarryoverCap = 0m,
                             City = "Tennessee",
-                            Name = "",
                             Nickname = "Titans"
                         },
                         new
@@ -702,7 +636,6 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "WAS",
                             CarryoverCap = 0m,
                             City = "Washington",
-                            Name = "",
                             Nickname = "Commanders"
                         });
                 });

@@ -1,0 +1,33 @@
+﻿@model IEnumerable<DeadMoney.Core.Entities.Team>
+
+<div class="container mt-4">
+    <h2 class="mb-4">NFL Teams</h2>
+    <div class="row g-3">
+        @foreach (var team in Model)
+        {
+            <div class="col-6 col-md-4 col-lg-3">
+                <a asp-action="Roster" asp-route-id="@team.Abbreviation" class="text-decoration-none">
+                    <div class="card h-100 text-center shadow-sm border-0 team-card"
+                         style="border-bottom: 4px solid @team.PrimaryColor !important;">
+                        <div class="card-body">
+                            <img src="@team.LogoUrl" alt="@team.Name" class="mb-2" style="height: 60px; object-fit: contain;" />
+                            <h6 class="text-dark mb-0">@team.Name</h6>
+                            <small class="text-muted">@team.Abbreviation</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .team-card {
+        transition: transform 0.2s;
+    }
+
+        .team-card:hover {
+            transform: translateY(-5px);
+            background-color: #f8f9fa;
+        }
+</style>

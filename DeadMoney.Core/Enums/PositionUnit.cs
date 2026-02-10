@@ -2,8 +2,9 @@
 
 public enum PositionUnit
 {
-    Unknown = 0,
-    Offense = 1,
-    Defense = 2,
-    SpecialTeams = 3
+    Offense,
+    Defense,
+    SpecialTeams,
+    Other,
+    Unknown
 }

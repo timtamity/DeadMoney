@@ -28,7 +28,6 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider>();
 
-// User provisioning service for external logins (Discord ID based)
 builder.Services.AddScoped<UserProvisioningService>();
 
 builder.Services.AddAuthentication(options =>
@@ -46,7 +45,6 @@ builder.Services.AddAuthentication(options =>
             var provisioner = context.HttpContext.RequestServices.GetRequiredService<UserProvisioningService>();
             await provisioner.ProvisionUserAsync(context.Principal!);
 
-            // Issue the Application Cookie immediately
             var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
             var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<ApplicationUser>>();
 
@@ -69,7 +67,6 @@ builder.Services.AddAuthentication(options =>
             var provisioner = context.HttpContext.RequestServices.GetRequiredService<UserProvisioningService>();
             await provisioner.ProvisionUserAsync(context.Principal!);
 
-            // Issue the Application Cookie immediately
             var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
             var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<ApplicationUser>>();
 
@@ -89,6 +86,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     options.SignIn.RequireConfirmedAccount = false;
     options.User.RequireUniqueEmail = false;
 })
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<DeadMoneyDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
@@ -99,9 +97,12 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/login";
 });
 
-// 3. CUSTOM SERVICES
+// 3. CUSTOM SERVICES & MVC SUPPORT
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IPlayerSyncService, SleeperPlayerSyncService>();
+
+// Added to support traditional MVC Controllers (like PlayersController)
+builder.Services.AddControllersWithViews();
 
 // 4. BLAZOR COMPONENTS
 builder.Services.AddRazorComponents()
@@ -129,7 +130,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
-// 6. MINIMAL AUTH ENDPOINTS
+// 6. ENDPOINTS
+
+// MVC Controller Route Mapping (This resolves /Players)
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Minimal Auth Endpoints
 app.MapPost("/Account/PerformExternalLogin", (
     [FromForm] string provider,
     [FromForm] string returnUrl) =>
@@ -144,6 +152,7 @@ app.MapPost("/Account/Logout", async (SignInManager<ApplicationUser> signInManag
     return Results.Redirect("/");
 });
 
+// Blazor Mapping
 app.MapRazorComponents<DeadMoney.Web.Components.App>()
     .AddInteractiveServerRenderMode();
 

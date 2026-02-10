@@ -18,7 +18,13 @@
                 </NotAuthorized>
             </AuthorizeView>
         </div>
-
+        <AuthorizeView Roles="Commish">
+            <Authorized>
+                <div class="alert alert-success py-1 mb-0" style="font-size: 0.8rem;">
+                    Logged in as Commissioner
+                </div>
+            </Authorized>
+        </AuthorizeView>
         <article class="content px-4">
             @Body
         </article>
