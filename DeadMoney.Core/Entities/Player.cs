@@ -17,13 +17,14 @@ public partial class Player
     public string LastName { get; set; } = string.Empty;
 
     [Required]
-    [MaxLength(10)]
-    public string Position { get; set; } = string.Empty;
+    public string PositionCode { get; set; } = string.Empty;
 
-    // Nullable TeamId = Free Agent
     public int? TeamId { get; set; }
 
     public bool IsRetired { get; set; }
+
+    [ForeignKey(nameof(PositionCode))]
+    public virtual Position Position { get; set; } = null!;
 
     [ForeignKey(nameof(TeamId))]
     public virtual Team? Team { get; set; }

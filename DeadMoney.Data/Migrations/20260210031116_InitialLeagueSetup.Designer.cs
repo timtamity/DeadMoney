@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeadMoney.Data.Migrations
 {
     [DbContext(typeof(DeadMoneyDbContext))]
-    [Migration("20260210013902_InitialLeagueSetup")]
+    [Migration("20260210031116_InitialLeagueSetup")]
     partial class InitialLeagueSetup
     {
         /// <inheritdoc />
@@ -105,14 +105,6 @@ namespace DeadMoney.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("LeagueSettings", "League");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            BaseSalaryCap = 303500000m,
-                            Year = 2026
-                        });
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Player", b =>
@@ -125,24 +117,168 @@ namespace DeadMoney.Data.Migrations
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsRetired")
+                        .HasColumnType("bit");
 
                     b.Property<string>("LastName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Position")
+                    b.Property<string>("PositionCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<int?>("TeamId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PositionCode");
+
                     b.HasIndex("TeamId");
 
                     b.ToTable("Players", "League");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.Position", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("Positions", "League");
+
+                    b.HasData(
+                        new
+                        {
+                            Code = "QB",
+                            DisplayOrder = 1,
+                            Name = "Quarterback",
+                            Unit = "Offense"
+                        },
+                        new
+                        {
+                            Code = "RB",
+                            DisplayOrder = 2,
+                            Name = "Running Back",
+                            Unit = "Offense"
+                        },
+                        new
+                        {
+                            Code = "FB",
+                            DisplayOrder = 3,
+                            Name = "Fullback",
+                            Unit = "Offense"
+                        },
+                        new
+                        {
+                            Code = "WR",
+                            DisplayOrder = 4,
+                            Name = "Wide Receiver",
+                            Unit = "Offense"
+                        },
+                        new
+                        {
+                            Code = "TE",
+                            DisplayOrder = 5,
+                            Name = "Tight End",
+                            Unit = "Offense"
+                        },
+                        new
+                        {
+                            Code = "OT",
+                            DisplayOrder = 6,
+                            Name = "Offensive Tackle",
+                            Unit = "Offense"
+                        },
+                        new
+                        {
+                            Code = "G",
+                            DisplayOrder = 7,
+                            Name = "Offensive Guard",
+                            Unit = "Offense"
+                        },
+                        new
+                        {
+                            Code = "C",
+                            DisplayOrder = 8,
+                            Name = "Center",
+                            Unit = "Offense"
+                        },
+                        new
+                        {
+                            Code = "EDGE",
+                            DisplayOrder = 10,
+                            Name = "Edge Defender",
+                            Unit = "Defense"
+                        },
+                        new
+                        {
+                            Code = "DT",
+                            DisplayOrder = 11,
+                            Name = "Interior Defensive Line",
+                            Unit = "Defense"
+                        },
+                        new
+                        {
+                            Code = "LB",
+                            DisplayOrder = 12,
+                            Name = "Linebacker",
+                            Unit = "Defense"
+                        },
+                        new
+                        {
+                            Code = "CB",
+                            DisplayOrder = 13,
+                            Name = "Cornerback",
+                            Unit = "Defense"
+                        },
+                        new
+                        {
+                            Code = "S",
+                            DisplayOrder = 14,
+                            Name = "Safety",
+                            Unit = "Defense"
+                        },
+                        new
+                        {
+                            Code = "K",
+                            DisplayOrder = 20,
+                            Name = "Kicker",
+                            Unit = "SpecialTeams"
+                        },
+                        new
+                        {
+                            Code = "P",
+                            DisplayOrder = 21,
+                            Name = "Punter",
+                            Unit = "SpecialTeams"
+                        },
+                        new
+                        {
+                            Code = "LS",
+                            DisplayOrder = 22,
+                            Name = "Long Snapper",
+                            Unit = "SpecialTeams"
+                        });
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Team", b =>
@@ -177,6 +313,126 @@ namespace DeadMoney.Data.Migrations
                         new
                         {
                             Id = 1,
+                            Abbreviation = "ARI",
+                            CarryoverCap = 0m,
+                            City = "Arizona",
+                            Nickname = "Cardinals"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Abbreviation = "ATL",
+                            CarryoverCap = 0m,
+                            City = "Atlanta",
+                            Nickname = "Falcons"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Abbreviation = "BAL",
+                            CarryoverCap = 0m,
+                            City = "Baltimore",
+                            Nickname = "Ravens"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Abbreviation = "BUF",
+                            CarryoverCap = 0m,
+                            City = "Buffalo",
+                            Nickname = "Bills"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Abbreviation = "CAR",
+                            CarryoverCap = 0m,
+                            City = "Carolina",
+                            Nickname = "Panthers"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Abbreviation = "CHI",
+                            CarryoverCap = 0m,
+                            City = "Chicago",
+                            Nickname = "Bears"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Abbreviation = "CIN",
+                            CarryoverCap = 0m,
+                            City = "Cincinnati",
+                            Nickname = "Bengals"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Abbreviation = "CLE",
+                            CarryoverCap = 0m,
+                            City = "Cleveland",
+                            Nickname = "Browns"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Abbreviation = "DAL",
+                            CarryoverCap = 0m,
+                            City = "Dallas",
+                            Nickname = "Cowboys"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Abbreviation = "DEN",
+                            CarryoverCap = 0m,
+                            City = "Denver",
+                            Nickname = "Broncos"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Abbreviation = "DET",
+                            CarryoverCap = 0m,
+                            City = "Detroit",
+                            Nickname = "Lions"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Abbreviation = "GB",
+                            CarryoverCap = 0m,
+                            City = "Green Bay",
+                            Nickname = "Packers"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Abbreviation = "HOU",
+                            CarryoverCap = 0m,
+                            City = "Houston",
+                            Nickname = "Texans"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Abbreviation = "IND",
+                            CarryoverCap = 0m,
+                            City = "Indianapolis",
+                            Nickname = "Colts"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Abbreviation = "JAX",
+                            CarryoverCap = 0m,
+                            City = "Jacksonville",
+                            Nickname = "Jaguars"
+                        },
+                        new
+                        {
+                            Id = 16,
                             Abbreviation = "KC",
                             CarryoverCap = 0m,
                             City = "Kansas City",
@@ -184,11 +440,131 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
-                            Id = 2,
+                            Id = 17,
+                            Abbreviation = "LV",
+                            CarryoverCap = 0m,
+                            City = "Las Vegas",
+                            Nickname = "Raiders"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Abbreviation = "LAC",
+                            CarryoverCap = 0m,
+                            City = "Los Angeles",
+                            Nickname = "Chargers"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Abbreviation = "LAR",
+                            CarryoverCap = 0m,
+                            City = "Los Angeles",
+                            Nickname = "Rams"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Abbreviation = "MIA",
+                            CarryoverCap = 0m,
+                            City = "Miami",
+                            Nickname = "Dolphins"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Abbreviation = "MIN",
+                            CarryoverCap = 0m,
+                            City = "Minnesota",
+                            Nickname = "Vikings"
+                        },
+                        new
+                        {
+                            Id = 22,
+                            Abbreviation = "NE",
+                            CarryoverCap = 0m,
+                            City = "New England",
+                            Nickname = "Patriots"
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Abbreviation = "NO",
+                            CarryoverCap = 0m,
+                            City = "New Orleans",
+                            Nickname = "Saints"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Abbreviation = "NYG",
+                            CarryoverCap = 0m,
+                            City = "New York",
+                            Nickname = "Giants"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Abbreviation = "NYJ",
+                            CarryoverCap = 0m,
+                            City = "New York",
+                            Nickname = "Jets"
+                        },
+                        new
+                        {
+                            Id = 26,
+                            Abbreviation = "PHI",
+                            CarryoverCap = 0m,
+                            City = "Philadelphia",
+                            Nickname = "Eagles"
+                        },
+                        new
+                        {
+                            Id = 27,
+                            Abbreviation = "PIT",
+                            CarryoverCap = 0m,
+                            City = "Pittsburgh",
+                            Nickname = "Steelers"
+                        },
+                        new
+                        {
+                            Id = 28,
                             Abbreviation = "SF",
                             CarryoverCap = 0m,
                             City = "San Francisco",
                             Nickname = "49ers"
+                        },
+                        new
+                        {
+                            Id = 29,
+                            Abbreviation = "SEA",
+                            CarryoverCap = 0m,
+                            City = "Seattle",
+                            Nickname = "Seahawks"
+                        },
+                        new
+                        {
+                            Id = 30,
+                            Abbreviation = "TB",
+                            CarryoverCap = 0m,
+                            City = "Tampa Bay",
+                            Nickname = "Buccaneers"
+                        },
+                        new
+                        {
+                            Id = 31,
+                            Abbreviation = "TEN",
+                            CarryoverCap = 0m,
+                            City = "Tennessee",
+                            Nickname = "Titans"
+                        },
+                        new
+                        {
+                            Id = 32,
+                            Abbreviation = "WAS",
+                            CarryoverCap = 0m,
+                            City = "Washington",
+                            Nickname = "Commanders"
                         });
                 });
 
@@ -410,9 +786,17 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Player", b =>
                 {
+                    b.HasOne("DeadMoney.Core.Entities.Position", "Position")
+                        .WithMany("Players")
+                        .HasForeignKey("PositionCode")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("DeadMoney.Core.Entities.Team", "Team")
                         .WithMany("Roster")
                         .HasForeignKey("TeamId");
+
+                    b.Navigation("Position");
 
                     b.Navigation("Team");
                 });
@@ -476,6 +860,11 @@ namespace DeadMoney.Data.Migrations
             modelBuilder.Entity("DeadMoney.Core.Entities.Player", b =>
                 {
                     b.Navigation("Contracts");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.Position", b =>
+                {
+                    b.Navigation("Players");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Team", b =>

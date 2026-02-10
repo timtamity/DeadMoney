@@ -35,6 +35,21 @@ namespace DeadMoney.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Positions",
+                schema: "League",
+                columns: table => new
+                {
+                    Code = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    DisplayOrder = table.Column<int>(type: "int", nullable: false),
+                    Unit = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Positions", x => x.Code);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Roles",
                 schema: "Auth",
                 columns: table => new
@@ -122,14 +137,22 @@ namespace DeadMoney.Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Position = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    TeamId = table.Column<int>(type: "int", nullable: true)
+                    FirstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    PositionCode = table.Column<string>(type: "nvarchar(10)", nullable: false),
+                    TeamId = table.Column<int>(type: "int", nullable: true),
+                    IsRetired = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Players", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Players_Positions_PositionCode",
+                        column: x => x.PositionCode,
+                        principalSchema: "League",
+                        principalTable: "Positions",
+                        principalColumn: "Code",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Players_Teams_TeamId",
                         column: x => x.TeamId,
@@ -283,9 +306,27 @@ namespace DeadMoney.Data.Migrations
 
             migrationBuilder.InsertData(
                 schema: "League",
-                table: "LeagueSettings",
-                columns: new[] { "Id", "BaseSalaryCap", "Year" },
-                values: new object[] { 1, 303500000m, 2026 });
+                table: "Positions",
+                columns: new[] { "Code", "DisplayOrder", "Name", "Unit" },
+                values: new object[,]
+                {
+                    { "C", 8, "Center", "Offense" },
+                    { "CB", 13, "Cornerback", "Defense" },
+                    { "DT", 11, "Interior Defensive Line", "Defense" },
+                    { "EDGE", 10, "Edge Defender", "Defense" },
+                    { "FB", 3, "Fullback", "Offense" },
+                    { "G", 7, "Offensive Guard", "Offense" },
+                    { "K", 20, "Kicker", "SpecialTeams" },
+                    { "LB", 12, "Linebacker", "Defense" },
+                    { "LS", 22, "Long Snapper", "SpecialTeams" },
+                    { "OT", 6, "Offensive Tackle", "Offense" },
+                    { "P", 21, "Punter", "SpecialTeams" },
+                    { "QB", 1, "Quarterback", "Offense" },
+                    { "RB", 2, "Running Back", "Offense" },
+                    { "S", 14, "Safety", "Defense" },
+                    { "TE", 5, "Tight End", "Offense" },
+                    { "WR", 4, "Wide Receiver", "Offense" }
+                });
 
             migrationBuilder.InsertData(
                 schema: "League",
@@ -293,8 +334,38 @@ namespace DeadMoney.Data.Migrations
                 columns: new[] { "Id", "Abbreviation", "CarryoverCap", "City", "Nickname" },
                 values: new object[,]
                 {
-                    { 1, "KC", 0m, "Kansas City", "Chiefs" },
-                    { 2, "SF", 0m, "San Francisco", "49ers" }
+                    { 1, "ARI", 0m, "Arizona", "Cardinals" },
+                    { 2, "ATL", 0m, "Atlanta", "Falcons" },
+                    { 3, "BAL", 0m, "Baltimore", "Ravens" },
+                    { 4, "BUF", 0m, "Buffalo", "Bills" },
+                    { 5, "CAR", 0m, "Carolina", "Panthers" },
+                    { 6, "CHI", 0m, "Chicago", "Bears" },
+                    { 7, "CIN", 0m, "Cincinnati", "Bengals" },
+                    { 8, "CLE", 0m, "Cleveland", "Browns" },
+                    { 9, "DAL", 0m, "Dallas", "Cowboys" },
+                    { 10, "DEN", 0m, "Denver", "Broncos" },
+                    { 11, "DET", 0m, "Detroit", "Lions" },
+                    { 12, "GB", 0m, "Green Bay", "Packers" },
+                    { 13, "HOU", 0m, "Houston", "Texans" },
+                    { 14, "IND", 0m, "Indianapolis", "Colts" },
+                    { 15, "JAX", 0m, "Jacksonville", "Jaguars" },
+                    { 16, "KC", 0m, "Kansas City", "Chiefs" },
+                    { 17, "LV", 0m, "Las Vegas", "Raiders" },
+                    { 18, "LAC", 0m, "Los Angeles", "Chargers" },
+                    { 19, "LAR", 0m, "Los Angeles", "Rams" },
+                    { 20, "MIA", 0m, "Miami", "Dolphins" },
+                    { 21, "MIN", 0m, "Minnesota", "Vikings" },
+                    { 22, "NE", 0m, "New England", "Patriots" },
+                    { 23, "NO", 0m, "New Orleans", "Saints" },
+                    { 24, "NYG", 0m, "New York", "Giants" },
+                    { 25, "NYJ", 0m, "New York", "Jets" },
+                    { 26, "PHI", 0m, "Philadelphia", "Eagles" },
+                    { 27, "PIT", 0m, "Pittsburgh", "Steelers" },
+                    { 28, "SF", 0m, "San Francisco", "49ers" },
+                    { 29, "SEA", 0m, "Seattle", "Seahawks" },
+                    { 30, "TB", 0m, "Tampa Bay", "Buccaneers" },
+                    { 31, "TEN", 0m, "Tennessee", "Titans" },
+                    { 32, "WAS", 0m, "Washington", "Commanders" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -308,6 +379,12 @@ namespace DeadMoney.Data.Migrations
                 schema: "League",
                 table: "ContractYears",
                 column: "ContractId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Players_PositionCode",
+                schema: "League",
+                table: "Players",
+                column: "PositionCode");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Players_TeamId",
@@ -407,6 +484,10 @@ namespace DeadMoney.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Players",
+                schema: "League");
+
+            migrationBuilder.DropTable(
+                name: "Positions",
                 schema: "League");
 
             migrationBuilder.DropTable(
