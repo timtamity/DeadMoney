@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DeadMoney.Core\DeadMoney.Core.csproj" />
+  </ItemGroup>
+
 </Project>

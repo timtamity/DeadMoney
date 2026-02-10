@@ -15,4 +15,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DeadMoney.Core\DeadMoney.Core.csproj" />
+    <ProjectReference Include="..\DeadMoney.Services\DeadMoney.Services.csproj" />
+  </ItemGroup>
+
 </Project>
