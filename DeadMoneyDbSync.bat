@@ -18,8 +18,9 @@ echo SUCCESS: Project builds.
 echo.
 
 :: PHASE 2: Generate Migration
-echo [PHASE 2] Generating EF Migration (InitialLeagueSetup)...
-dotnet ef migrations add InitialLeagueSetup ^
+echo [PHASE 2] Generating EF Migration (InitialIdentityUpdate)...
+:: Note: I'm using a name that reflects our new Identity structure
+dotnet ef migrations add InitialIdentityUpdate ^
     --project DeadMoney.Data ^
     --startup-project DeadMoney.Web ^
     --context DeadMoneyDbContext ^

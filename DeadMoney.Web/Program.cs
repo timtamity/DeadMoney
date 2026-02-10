@@ -1,12 +1,14 @@
-using DeadMoney.Core.Entities; // Global priority for ApplicationUser
+using System.Security.Claims;
+using DeadMoney.Core.Entities;
 using DeadMoney.Data;
 using DeadMoney.Services.Interfaces;
 using DeadMoney.Services.Sleeper;
 using DeadMoney.Web.Components;
-using DeadMoney.Web.Components.Account;
+using DeadMoney.Web.Identity;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,11 +22,14 @@ builder.Services.AddDbContext<DeadMoneyDbContext>(options =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// 2. IDENTITY
+// 2. IDENTITY & AUTHENTICATION
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider>();
+
+// User provisioning service for external logins (Discord ID based)
+builder.Services.AddScoped<UserProvisioningService>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -35,25 +40,64 @@ builder.Services.AddAuthentication(options =>
     {
         options.ClientId = builder.Configuration["Authentication:Discord:ClientId"]!;
         options.ClientSecret = builder.Configuration["Authentication:Discord:ClientSecret"]!;
-        options.Scope.Add("identify");
-        options.Scope.Add("email");
+
+        options.Events.OnTicketReceived = async context =>
+        {
+            var provisioner = context.HttpContext.RequestServices.GetRequiredService<UserProvisioningService>();
+            await provisioner.ProvisionUserAsync(context.Principal!);
+
+            // Issue the Application Cookie immediately
+            var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+            var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<ApplicationUser>>();
+
+            var discordId = context.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await userManager.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
+
+            if (user != null)
+            {
+                await signInManager.SignInAsync(user, isPersistent: true);
+            }
+        };
     })
     .AddGoogle(options =>
     {
         options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
+
+        options.Events.OnTicketReceived = async context =>
+        {
+            var provisioner = context.HttpContext.RequestServices.GetRequiredService<UserProvisioningService>();
+            await provisioner.ProvisionUserAsync(context.Principal!);
+
+            // Issue the Application Cookie immediately
+            var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+            var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<ApplicationUser>>();
+
+            var googleId = context.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await userManager.Users.FirstOrDefaultAsync(u => u.DiscordId == googleId);
+
+            if (user != null)
+            {
+                await signInManager.SignInAsync(user, isPersistent: true);
+            }
+        };
     })
     .AddIdentityCookies();
 
-// This line MUST use the ApplicationUser from DeadMoney.Core.Entities
-builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
+    options.User.RequireUniqueEmail = false;
+})
     .AddEntityFrameworkStores<DeadMoneyDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
-// This now works because both the interface and the implementation 
-// are using the exact same ApplicationUser type from Core.Entities.
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.LoginPath = "/login";
+});
 
 // 3. CUSTOM SERVICES
 builder.Services.AddHttpClient();
@@ -61,7 +105,8 @@ builder.Services.AddScoped<IPlayerSyncService, SleeperPlayerSyncService>();
 
 // 4. BLAZOR COMPONENTS
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents()
+    .AddHubOptions(options => options.MaximumReceiveMessageSize = 1024 * 1024);
 
 var app = builder.Build();
 
@@ -78,11 +123,28 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
 
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+// 6. MINIMAL AUTH ENDPOINTS
+app.MapPost("/Account/PerformExternalLogin", (
+    [FromForm] string provider,
+    [FromForm] string returnUrl) =>
+{
+    var properties = new AuthenticationProperties { RedirectUri = returnUrl };
+    return Results.Challenge(properties, [provider]);
+});
 
-app.MapAdditionalIdentityEndpoints();
+app.MapPost("/Account/Logout", async (SignInManager<ApplicationUser> signInManager) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.Redirect("/");
+});
+
+app.MapRazorComponents<DeadMoney.Web.Components.App>()
+    .AddInteractiveServerRenderMode();
 
 app.Run();

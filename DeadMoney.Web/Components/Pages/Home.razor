@@ -1,7 +1,15 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home - Dead Money</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Welcome to Dead Money</h1>
+<p>The site is up and running!</p>
 
-Welcome to your new app.
+<AuthorizeView>
+    <Authorized>
+        <p>You are logged in as @context.User.Identity?.Name</p>
+    </Authorized>
+    <NotAuthorized>
+        <p>Please <a href="login">login</a> to continue.</p>
+    </NotAuthorized>
+</AuthorizeView>

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeadMoney.Data;
 
-public class DeadMoneyDbContext : IdentityDbContext<IdentityUser>
+public class DeadMoneyDbContext : IdentityDbContext<ApplicationUser>
 {
     public DeadMoneyDbContext(DbContextOptions<DeadMoneyDbContext> options)
         : base(options) { }
@@ -25,10 +25,17 @@ public class DeadMoneyDbContext : IdentityDbContext<IdentityUser>
         foreach (var entity in builder.Model.GetEntityTypes())
         {
             var tableName = entity.GetTableName();
-            if (tableName != null && tableName.StartsWith("AspNet"))
+            var entityNamespace = entity.ClrType.Namespace ?? string.Empty;
+
+            // Handle Identity tables (User, Role, etc.)
+            // We check for the AspNet prefix OR if the class lives in an Identity namespace
+            if (tableName != null && (tableName.StartsWith("AspNet") || entityNamespace.Contains("Identity")))
             {
                 entity.SetSchema("Auth");
-                entity.SetTableName(tableName.Substring(6));
+                if (tableName.StartsWith("AspNet"))
+                {
+                    entity.SetTableName(tableName.Substring(6));
+                }
             }
             else
             {
@@ -36,7 +43,7 @@ public class DeadMoneyDbContext : IdentityDbContext<IdentityUser>
             }
         }
 
-        // Precision
+        // Precision for Financials
         foreach (var property in builder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))

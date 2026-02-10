@@ -1,19 +1,12 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+﻿@namespace DeadMoney.Web.Components
+@using Microsoft.AspNetCore.Components.Web
 
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
                 <NotAuthorized>
-                    @if (context.User.Identity?.IsAuthenticated != true)
-                    {
-                        @* Redirect to your custom login page or trigger OAuth *@
-                        <p>You are not authorized. Please <a href="MicrosoftIdentity/Account/SignIn">Sign In with Discord</a>.</p>
-                    }
-                    else
-                    {
-                        <p role="alert">You do not have permission to access this resource.</p>
-                    }
+                    <RedirectToLogin />
                 </NotAuthorized>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />

@@ -1,0 +1,70 @@
+﻿@page "/profile"
+@using Microsoft.AspNetCore.Authorization
+@using DeadMoney.Web.Identity
+@attribute [Authorize]
+@inject IdentityUserAccessor UserAccessor
+@inject HttpContext HttpContext
+
+<PageTitle>My Profile - Dead Money</PageTitle>
+
+<div class="container mt-4">
+    <h1>User Profile</h1>
+    <hr />
+
+    @if (_user == null)
+    {
+        <p><em>Loading profile...</em></p>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        Account Details
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Internal ID:</strong> <span class="text-muted small">@_user.Id</span>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Email:</strong> @_user.Email
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Username:</strong> @_user.UserName
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        Discord / External Claims
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">These values are retrieved from your current login session:</p>
+                        <ul class="list-group list-group-flush">
+                            @foreach (var claim in HttpContext.User.Claims)
+                            {
+                                <li class="list-group-item" style="font-size: 0.8rem;">
+                                    <strong>@claim.Type.Split('/').Last():</strong> @claim.Value
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private ApplicationUser? _user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // This validates that our Accessor can find the user in the DB
+        _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    }
+}
