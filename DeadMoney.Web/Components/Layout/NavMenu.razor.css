@@ -1,0 +1,52 @@
+﻿.nav-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.nav-section-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--dm-text-muted);
+    padding: 1.5rem 1rem 0.5rem 1.25rem;
+    letter-spacing: 1.5px;
+}
+
+.admin-label {
+    color: var(--dm-secondary); /* Gold Label */
+}
+
+.nav-link {
+    color: var(--dm-text-main);
+    border-radius: var(--dm-radius);
+    margin: 0.2rem 0;
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+    .nav-link i {
+        font-size: 1.1rem;
+        width: 20px;
+        text-align: center;
+    }
+
+    .nav-link:hover {
+        background-color: rgba(201, 163, 65, 0.1);
+        color: var(--dm-secondary);
+    }
+
+/* The Active State - When the user is on the current page */
+::deep .nav-link.active {
+    background-color: var(--dm-secondary);
+    color: var(--dm-primary) !important;
+    font-weight: 600;
+}
+
+    ::deep .nav-link.active i {
+        color: var(--dm-primary);
+    }

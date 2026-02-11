@@ -1,5 +1,65 @@
-﻿<h3>NavMenu</h3>
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+
+<div class="nav-container">
+    <div class="nav-scrollable">
+        <nav class="flex-column">
+
+            <div class="nav-section-label">General</div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <i class="bi bi-house-door-fill"></i> <span>Home</span>
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="standings">
+                    <i class="bi bi-list-ol"></i> <span>Standings</span>
+                </NavLink>
+            </div>
+
+            <AuthorizeView Roles="GM, Assistant GM, Commissioner">
+                <div class="nav-section-label">Front Office</div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="roster">
+                        <i class="bi bi-people-fill"></i> <span>My Roster</span>
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="salary-cap">
+                        <i class="bi bi-bank2"></i> <span>Salary Cap</span>
+                    </NavLink>
+                </div>
+            </AuthorizeView>
+
+            <AuthorizeView Roles="Agent, Commissioner">
+                <div class="nav-section-label">Agency</div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="my-clients">
+                        <i class="bi bi-briefcase-fill"></i> <span>My Clients</span>
+                    </NavLink>
+                </div>
+            </AuthorizeView>
+
+            <AuthorizeView Roles="Commissioner">
+                <div class="nav-section-label admin-label">League Office</div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link admin-link" href="admin/users">
+                        <i class="bi bi-person-gear"></i> <span>User Management</span>
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link admin-link" href="admin/import">
+                        <i class="bi bi-cloud-download-fill"></i> <span>Import Data</span>
+                    </NavLink>
+                </div>
+            </AuthorizeView>
+
+        </nav>
+    </div>
+</div>
 
 @code {
-
+    // Logic can be added here for toggling mobile menus in the future
 }

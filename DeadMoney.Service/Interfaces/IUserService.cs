@@ -1,19 +1,28 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 
-namespace DeadMoney.Service.Interfaces
+namespace DeadMoney.Service.Interfaces;
+
+public interface IUserService
 {
-    public interface IUserService
-    {
-        /// <summary>
-        /// Intercepts the Discord login, matches it to a local user, 
-        /// and injects custom roles into the auth cookie.
-        /// </summary>
-        Task ProcessDiscordLoginAsync(TicketReceivedContext context);
+    /// <summary>
+    /// Processes the Discord login, provisions/updates the user in the database,
+    /// and enriches the ClaimsPrincipal with app-specific roles and data.
+    /// </summary>
+    Task ProcessDiscordLoginAsync(TicketReceivedContext context);
 
-        /// <summary>
-        /// Helper to quickly retrieve custom claims (like TeamId) from the current user.
-        /// </summary>
-        int? GetAssignedTeamId(ClaimsPrincipal user);
-    }
+    /// <summary>
+    /// Extracts the TeamId from the user's claims if they are a GM or Assistant GM.
+    /// </summary>
+    int? GetAssignedTeamId(ClaimsPrincipal user);
+
+    /// <summary>
+    /// Retrieves the user's preferred TimeZoneId from claims, defaulting to UTC.
+    /// </summary>
+    string GetUserTimeZone(ClaimsPrincipal user);
+
+    /// <summary>
+    /// Retrieves the list of Position codes (e.g., "QB", "WR") assigned to an Agent.
+    /// </summary>
+    IEnumerable<string> GetAgentPositions(ClaimsPrincipal user);
 }

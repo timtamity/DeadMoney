@@ -1,10 +1,12 @@
 using DeadMoney.Data;
+using DeadMoney.Service.Interfaces;
+using DeadMoney.Service.Services;
+using DeadMoney.Web.Authorization;
 using DeadMoney.Web.Components;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using DeadMoney.Service.Interfaces;
-using DeadMoney.Service.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,7 +54,15 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+// Inside the Authorization section
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+        policy.Requirements.Add(new CommissionerRequirement()));
+});
+
+// Register the handler as a service
+builder.Services.AddSingleton<IAuthorizationHandler, CommissionerHandler>();
 
 // --- 3. CUSTOM SERVICES ---
 builder.Services.AddHttpClient();

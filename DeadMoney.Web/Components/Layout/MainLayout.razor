@@ -1,30 +1,42 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
     <main>
-        <div class="top-row px-4">
-            <AuthorizeView>
-                <Authorized>
-                    <span class="me-3">Hello, @context.User.Identity?.Name!</span>
-                    <form action="Account/Logout" method="post" style="display:inline">
-                        <AntiforgeryToken />
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                            Logout
-                        </button>
-                    </form>
-                </Authorized>
-                <NotAuthorized>
-                    <a href="login" class="btn btn-sm btn-primary">Log in</a>
-                </NotAuthorized>
-            </AuthorizeView>
-        </div>
-        <AuthorizeView Roles="Commish">
+        <header class="top-bar px-4">
+            <div class="brand">DEAD MONEY</div>
+
+            <div class="user-auth">
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="me-3 welcome-text">
+                            Hello, @(context.User.FindFirst("DisplayName")?.Value ?? context.User.Identity?.Name)!
+                        </span>
+                        <form action="logout" method="post" style="display:inline">
+                            <AntiforgeryToken />
+                            <button type="submit" class="dm-button-outline">
+                                Logout
+                            </button>
+                        </form>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="login" class="dm-button-primary">Log in with Discord</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </header>
+
+        <AuthorizeView Roles="Commissioner">
             <Authorized>
-                <div class="alert alert-success py-1 mb-0" style="font-size: 0.8rem;">
-                    Logged in as Commissioner
+                <div class="commish-banner">
+                    <i class="bi bi-shield-check me-2"></i> COMMISSIONER ACCESS ENABLED
                 </div>
             </Authorized>
         </AuthorizeView>
+
         <article class="content px-4">
             @Body
         </article>

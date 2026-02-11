@@ -36,10 +36,12 @@ namespace DeadMoney.Service.Services
 
             using var db = await _dbFactory.CreateDbContextAsync();
 
-            // 2. Find or Create User
+            // 2. Find or Create User - Including Positions for Agent logic
             var user = await db.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Positions)
                 .FirstOrDefaultAsync(u => u.DiscordId == discordId);
 
             if (user == null)
@@ -75,7 +77,7 @@ namespace DeadMoney.Service.Services
                 new Claim("TimeZoneId", user.TimeZoneId)
             };
 
-            // 4. Map Roles
+            // 4. Map Roles and Positions
             if (user.UserRoles != null)
             {
                 foreach (var userRole in user.UserRoles)
@@ -84,9 +86,19 @@ namespace DeadMoney.Service.Services
                     {
                         appClaims.Add(new Claim(ClaimTypes.Role, userRole.Role.Name));
                     }
+
                     if (userRole.TeamId.HasValue)
                     {
                         appClaims.Add(new Claim("TeamId", userRole.TeamId.Value.ToString()));
+                    }
+
+                    // Add Agent Position Claims (e.g., "QB", "WR")
+                    if (userRole.Positions != null)
+                    {
+                        foreach (var pos in userRole.Positions)
+                        {
+                            appClaims.Add(new Claim("AgentPosition", pos.Code));
+                        }
                     }
                 }
             }
@@ -104,6 +116,11 @@ namespace DeadMoney.Service.Services
         public string GetUserTimeZone(ClaimsPrincipal user)
         {
             return user.FindFirst("TimeZoneId")?.Value ?? "UTC";
+        }
+
+        public IEnumerable<string> GetAgentPositions(ClaimsPrincipal user)
+        {
+            return user.FindAll("AgentPosition").Select(c => c.Value);
         }
     }
 }

@@ -1,0 +1,43 @@
+﻿.top-bar {
+    background-color: var(--dm-bg-nav);
+    height: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--dm-border);
+}
+
+.brand {
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: var(--dm-text-gold);
+    font-size: 1.25rem;
+}
+
+.welcome-text {
+    color: var(--dm-text-muted);
+    font-size: 0.9rem;
+}
+
+.commish-banner {
+    background-color: rgba(63, 185, 80, 0.1);
+    color: var(--dm-success);
+    border-bottom: 1px solid var(--dm-border);
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+/* Sidebar structure within the isolated layout */
+.sidebar {
+    background-color: var(--dm-bg-nav);
+    width: 250px;
+}
+
+@media (max-width: 640px) {
+    .sidebar {
+        display: none; /* Hide sidebar on mobile or use a toggle later */
+    }
+}
