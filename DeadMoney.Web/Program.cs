@@ -1,122 +1,65 @@
 using System.Security.Claims;
-using DeadMoney.Core.Entities;
 using DeadMoney.Data;
+using DeadMoney.Core.Entities;
 using DeadMoney.Services.Interfaces;
-using DeadMoney.Services.Sleeper;
 using DeadMoney.Web.Components;
-using DeadMoney.Web.Identity;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using DeadMoney.Web.Services.Interfaces;
+using DeadMoney.Services.Services;
+using DeadMoney.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. DATABASE
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+builder.Services.AddDbContextFactory<DeadMoneyDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddDbContext<DeadMoneyDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
-// 2. IDENTITY & AUTHENTICATION
+// 2. AUTHENTICATION (Manual Cookies + Discord)
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<IdentityUserAccessor>();
-builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider>();
-
-builder.Services.AddScoped<UserProvisioningService>();
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = "Discord";
 })
-    .AddDiscord(options =>
-    {
-        options.ClientId = builder.Configuration["Authentication:Discord:ClientId"]!;
-        options.ClientSecret = builder.Configuration["Authentication:Discord:ClientSecret"]!;
-
-        options.Events.OnTicketReceived = async context =>
-        {
-            var provisioner = context.HttpContext.RequestServices.GetRequiredService<UserProvisioningService>();
-            await provisioner.ProvisionUserAsync(context.Principal!);
-
-            var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
-            var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<ApplicationUser>>();
-
-            var discordId = context.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await userManager.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
-
-            if (user != null)
-            {
-                await signInManager.SignInAsync(user, isPersistent: true);
-            }
-        };
-    })
-    .AddGoogle(options =>
-    {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
-
-        options.Events.OnTicketReceived = async context =>
-        {
-            var provisioner = context.HttpContext.RequestServices.GetRequiredService<UserProvisioningService>();
-            await provisioner.ProvisionUserAsync(context.Principal!);
-
-            var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
-            var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<ApplicationUser>>();
-
-            var googleId = context.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await userManager.Users.FirstOrDefaultAsync(u => u.DiscordId == googleId);
-
-            if (user != null)
-            {
-                await signInManager.SignInAsync(user, isPersistent: true);
-            }
-        };
-    })
-    .AddIdentityCookies();
-
-builder.Services.AddIdentityCore<ApplicationUser>(options =>
+.AddCookie(options =>
 {
-    options.SignIn.RequireConfirmedAccount = false;
-    options.User.RequireUniqueEmail = false;
-})
-    .AddRoles<IdentityRole>()
-    .AddEntityFrameworkStores<DeadMoneyDbContext>()
-    .AddSignInManager()
-    .AddDefaultTokenProviders();
-
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.Cookie.SameSite = SameSiteMode.Lax;
     options.LoginPath = "/login";
+    options.LogoutPath = "/logout";
+    options.AccessDeniedPath = "/access-denied";
+    options.Cookie.Name = "DeadMoney.Auth";
+})
+.AddDiscord("Discord", options =>
+{
+    options.ClientId = builder.Configuration["Discord:ClientId"]!;
+    options.ClientSecret = builder.Configuration["Discord:ClientSecret"]!;
+    options.SaveTokens = true;
+
+    options.Events.OnTicketReceived = async context =>
+    {
+        // Use our custom service to find/create the user and attach roles
+        var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
+        await userService.ProcessDiscordLoginAsync(context);
+    };
 });
 
-// 3. CUSTOM SERVICES & MVC SUPPORT
-builder.Services.AddHttpClient();
-builder.Services.AddScoped<IPlayerSyncService, SleeperPlayerSyncService>();
+builder.Services.AddAuthorization();
 
-// Added to support traditional MVC Controllers (like PlayersController)
-builder.Services.AddControllersWithViews();
+// 3. CUSTOM SERVICES
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IUserService, UserService>(); // Your new bridge service
+builder.Services.AddScoped<INflVerseImportService, NflVerseImportService>();
 
 // 4. BLAZOR COMPONENTS
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-    .AddHubOptions(options => options.MaximumReceiveMessageSize = 1024 * 1024);
+    .AddInteractiveServerComponents();
 
 var app = builder.Build();
 
 // 5. PIPELINE
-if (app.Environment.IsDevelopment())
-{
-    app.UseMigrationsEndPoint();
-}
-else
+if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
@@ -124,36 +67,19 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-app.UseRouting();
-
-app.UseAuthentication();
-app.UseAuthorization();
 app.UseAntiforgery();
 
-// 6. ENDPOINTS
+// 6. MINIMAL ENDPOINTS (Replaces MVC Controllers)
+app.MapGet("/login", (string returnUrl = "/") =>
+    Results.Challenge(new AuthenticationProperties { RedirectUri = returnUrl }, ["Discord"]));
 
-// MVC Controller Route Mapping (This resolves /Players)
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-
-// Minimal Auth Endpoints
-app.MapPost("/Account/PerformExternalLogin", (
-    [FromForm] string provider,
-    [FromForm] string returnUrl) =>
+app.MapPost("/logout", async (HttpContext context) =>
 {
-    var properties = new AuthenticationProperties { RedirectUri = returnUrl };
-    return Results.Challenge(properties, [provider]);
-});
-
-app.MapPost("/Account/Logout", async (SignInManager<ApplicationUser> signInManager) =>
-{
-    await signInManager.SignOutAsync();
+    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.Redirect("/");
 });
 
-// Blazor Mapping
-app.MapRazorComponents<DeadMoney.Web.Components.App>()
+app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();

@@ -17,12 +17,12 @@ namespace DeadMoney.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("DeadMoney.Core.Entities.ApplicationUser", b =>
+            modelBuilder.Entity("DeadMoney.Core.Entities.User", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -101,6 +101,9 @@ namespace DeadMoney.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsModifiedBySim")
+                        .HasColumnType("bit");
+
                     b.Property<int>("PlayerId")
                         .HasColumnType("int");
 
@@ -127,10 +130,6 @@ namespace DeadMoney.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("Bonuses")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<int>("ContractId")
                         .HasColumnType("int");
 
@@ -138,7 +137,23 @@ namespace DeadMoney.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("ProratedSigningBonus")
+                    b.Property<decimal>("MiscBonuses")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OptionBonusProration")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("RosterBonus")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SigningBonusProration")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("WorkoutBonus")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -183,13 +198,32 @@ namespace DeadMoney.Data.Migrations
                     b.Property<int?>("Age")
                         .HasColumnType("int");
 
+                    b.Property<string>("BirthDate")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("College")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DraftPick")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DraftRound")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DraftYear")
+                        .HasColumnType("int");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GsisId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("HeadshotUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Height")
                         .HasColumnType("nvarchar(max)");
@@ -205,13 +239,20 @@ namespace DeadMoney.Data.Migrations
                     b.Property<string>("Number")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("OtcId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PfrId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("PositionCode")
                         .IsRequired()
                         .HasColumnType("nvarchar(10)");
 
-                    b.Property<string>("SleeperId")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<string>("Suffix")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("TeamId")
                         .HasColumnType("int");
@@ -842,20 +883,24 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Contract", b =>
                 {
-                    b.HasOne("DeadMoney.Core.Entities.Player", null)
+                    b.HasOne("DeadMoney.Core.Entities.Player", "Player")
                         .WithMany("Contracts")
                         .HasForeignKey("PlayerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Player");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.ContractYear", b =>
                 {
-                    b.HasOne("DeadMoney.Core.Entities.Contract", null)
-                        .WithMany("Years")
+                    b.HasOne("DeadMoney.Core.Entities.Contract", "Contract")
+                        .WithMany("ContractYears")
                         .HasForeignKey("ContractId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Contract");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Player", b =>
@@ -886,7 +931,7 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("DeadMoney.Core.Entities.ApplicationUser", null)
+                    b.HasOne("DeadMoney.Core.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -895,7 +940,7 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("DeadMoney.Core.Entities.ApplicationUser", null)
+                    b.HasOne("DeadMoney.Core.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -910,7 +955,7 @@ namespace DeadMoney.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("DeadMoney.Core.Entities.ApplicationUser", null)
+                    b.HasOne("DeadMoney.Core.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -919,7 +964,7 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("DeadMoney.Core.Entities.ApplicationUser", null)
+                    b.HasOne("DeadMoney.Core.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -928,7 +973,7 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Contract", b =>
                 {
-                    b.Navigation("Years");
+                    b.Navigation("ContractYears");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Player", b =>

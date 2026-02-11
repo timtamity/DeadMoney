@@ -1,15 +1,20 @@
 ﻿using DeadMoney.Core.Entities;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace DeadMoney.Data;
 
-public class DeadMoneyDbContext : IdentityDbContext<ApplicationUser>
+// CHANGE: Inherit from standard DbContext since Identity packages were removed
+public class DeadMoneyDbContext : DbContext
 {
     public DeadMoneyDbContext(DbContextOptions<DeadMoneyDbContext> options)
         : base(options) { }
 
+    // Auth Tables (Custom Ground-Up Implementation)
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
+
+    // League Tables
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<Player> Players => Set<Player>();
     public DbSet<Position> Positions => Set<Position>();
@@ -19,23 +24,21 @@ public class DeadMoneyDbContext : IdentityDbContext<ApplicationUser>
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        // base.OnModelCreating(builder) is still good practice even without Identity
         base.OnModelCreating(builder);
 
-        // Schema & Naming
+        // Schema & Naming Strategy
         foreach (var entity in builder.Model.GetEntityTypes())
         {
-            var tableName = entity.GetTableName();
             var entityNamespace = entity.ClrType.Namespace ?? string.Empty;
 
-            // Handle Identity tables (User, Role, etc.)
-            // We check for the AspNet prefix OR if the class lives in an Identity namespace
-            if (tableName != null && (tableName.StartsWith("AspNet") || entityNamespace.Contains("Identity")))
+            // Organize by Namespace: Core.Entities vs Core.Entities.Auth (if you move them)
+            // For now, we'll explicitly check the type names for the Auth schema
+            var authTypes = new[] { nameof(User), nameof(Role), nameof(UserRole) };
+
+            if (authTypes.Contains(entity.ClrType.Name))
             {
                 entity.SetSchema("Auth");
-                if (tableName.StartsWith("AspNet"))
-                {
-                    entity.SetTableName(tableName.Substring(6));
-                }
             }
             else
             {
@@ -43,7 +46,7 @@ public class DeadMoneyDbContext : IdentityDbContext<ApplicationUser>
             }
         }
 
-        // Precision for Financials
+        // Precision for Financials (Crucial for Salary Cap)
         foreach (var property in builder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))
@@ -52,11 +55,17 @@ public class DeadMoneyDbContext : IdentityDbContext<ApplicationUser>
             property.SetScale(2);
         }
 
+        // Custom Constraints
+        builder.Entity<User>()
+            .HasIndex(u => u.DiscordId)
+            .IsUnique();
+
         // Store Enum as String
         builder.Entity<Position>()
             .Property(p => p.Unit)
             .HasConversion<string>();
 
+        // Seeding
         builder.SeedLeagueData();
     }
 }

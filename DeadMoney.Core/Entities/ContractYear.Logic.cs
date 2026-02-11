@@ -1,10 +1,29 @@
-﻿namespace DeadMoney.Core.Entities;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace DeadMoney.Core.Entities;
 
 public partial class ContractYear
 {
+    // Fixes the "missing Bonuses" error by summing the specific bonus buckets
+    [NotMapped]
+    public decimal TotalBonuses =>
+        RosterBonus +
+        OptionBonusProration +
+        WorkoutBonus +
+        MiscBonuses;
+
     // The number that actually counts against the team's cap
-    public decimal CapHit => BaseSalary + Bonuses + ProratedSigningBonus;
+    [NotMapped]
+    public decimal CapHit =>
+        BaseSalary +
+        TotalBonuses +
+        SigningBonusProration;
 
     // Logic for the UI to highlight if a salary is fully guaranteed
-    public bool IsFullyGuaranteed => GuaranteedAmount >= BaseSalary;
+    [NotMapped]
+    public bool IsFullyGuaranteed => GuaranteedAmount >= (BaseSalary + RosterBonus);
+
+    // Total cash the player actually pockets this year
+    [NotMapped]
+    public decimal TotalCash => BaseSalary + RosterBonus + WorkoutBonus + MiscBonuses;
 }

@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace DeadMoney.Web.Views.Teams
+namespace DeadMoney.Web.Components.Admin
 {
-    public class RosterModel : PageModel
+    public class IndexModel : PageModel
     {
         public void OnGet()
         {

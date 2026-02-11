@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DeadMoney.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialIdentityUpdate : Migration
+    public partial class Initial_NflVerse_Schema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -71,9 +71,13 @@ namespace DeadMoney.Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    City = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Nickname = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Abbreviation = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Abbreviation = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Nickname = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    PrimaryColor = table.Column<string>(type: "nvarchar(7)", maxLength: 7, nullable: true),
+                    SecondaryColor = table.Column<string>(type: "nvarchar(7)", maxLength: 7, nullable: true),
+                    LogoUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     CarryoverCap = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
                 },
                 constraints: table =>
@@ -138,12 +142,26 @@ namespace DeadMoney.Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    SleeperId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    GsisId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    OtcId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PfrId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     FirstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Suffix = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PositionCode = table.Column<string>(type: "nvarchar(10)", nullable: false),
                     TeamId = table.Column<int>(type: "int", nullable: true),
-                    IsRetired = table.Column<bool>(type: "bit", nullable: false)
+                    IsRetired = table.Column<bool>(type: "bit", nullable: false),
+                    College = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    BirthDate = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Age = table.Column<int>(type: "int", nullable: true),
+                    Height = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Weight = table.Column<int>(type: "int", nullable: true),
+                    DraftYear = table.Column<int>(type: "int", nullable: true),
+                    DraftRound = table.Column<int>(type: "int", nullable: true),
+                    DraftPick = table.Column<int>(type: "int", nullable: true),
+                    YearsExp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Number = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HeadshotUrl = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -266,7 +284,8 @@ namespace DeadMoney.Data.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     PlayerId = table.Column<int>(type: "int", nullable: false),
                     SigningBonus = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsModifiedBySim = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -290,8 +309,11 @@ namespace DeadMoney.Data.Migrations
                     ContractId = table.Column<int>(type: "int", nullable: false),
                     Year = table.Column<int>(type: "int", nullable: false),
                     BaseSalary = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Bonuses = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    ProratedSigningBonus = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    SigningBonusProration = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    RosterBonus = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    OptionBonusProration = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    WorkoutBonus = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    MiscBonuses = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     GuaranteedAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
                 },
                 constraints: table =>
@@ -333,41 +355,41 @@ namespace DeadMoney.Data.Migrations
             migrationBuilder.InsertData(
                 schema: "League",
                 table: "Teams",
-                columns: new[] { "Id", "Abbreviation", "CarryoverCap", "City", "Nickname" },
+                columns: new[] { "Id", "Abbreviation", "CarryoverCap", "City", "LogoUrl", "Name", "Nickname", "PrimaryColor", "SecondaryColor" },
                 values: new object[,]
                 {
-                    { 1, "ARI", 0m, "Arizona", "Cardinals" },
-                    { 2, "ATL", 0m, "Atlanta", "Falcons" },
-                    { 3, "BAL", 0m, "Baltimore", "Ravens" },
-                    { 4, "BUF", 0m, "Buffalo", "Bills" },
-                    { 5, "CAR", 0m, "Carolina", "Panthers" },
-                    { 6, "CHI", 0m, "Chicago", "Bears" },
-                    { 7, "CIN", 0m, "Cincinnati", "Bengals" },
-                    { 8, "CLE", 0m, "Cleveland", "Browns" },
-                    { 9, "DAL", 0m, "Dallas", "Cowboys" },
-                    { 10, "DEN", 0m, "Denver", "Broncos" },
-                    { 11, "DET", 0m, "Detroit", "Lions" },
-                    { 12, "GB", 0m, "Green Bay", "Packers" },
-                    { 13, "HOU", 0m, "Houston", "Texans" },
-                    { 14, "IND", 0m, "Indianapolis", "Colts" },
-                    { 15, "JAX", 0m, "Jacksonville", "Jaguars" },
-                    { 16, "KC", 0m, "Kansas City", "Chiefs" },
-                    { 17, "LV", 0m, "Las Vegas", "Raiders" },
-                    { 18, "LAC", 0m, "Los Angeles", "Chargers" },
-                    { 19, "LAR", 0m, "Los Angeles", "Rams" },
-                    { 20, "MIA", 0m, "Miami", "Dolphins" },
-                    { 21, "MIN", 0m, "Minnesota", "Vikings" },
-                    { 22, "NE", 0m, "New England", "Patriots" },
-                    { 23, "NO", 0m, "New Orleans", "Saints" },
-                    { 24, "NYG", 0m, "New York", "Giants" },
-                    { 25, "NYJ", 0m, "New York", "Jets" },
-                    { 26, "PHI", 0m, "Philadelphia", "Eagles" },
-                    { 27, "PIT", 0m, "Pittsburgh", "Steelers" },
-                    { 28, "SF", 0m, "San Francisco", "49ers" },
-                    { 29, "SEA", 0m, "Seattle", "Seahawks" },
-                    { 30, "TB", 0m, "Tampa Bay", "Buccaneers" },
-                    { 31, "TEN", 0m, "Tennessee", "Titans" },
-                    { 32, "WAS", 0m, "Washington", "Commanders" }
+                    { 1, "ARI", 0m, "Arizona", null, "", "Cardinals", null, null },
+                    { 2, "ATL", 0m, "Atlanta", null, "", "Falcons", null, null },
+                    { 3, "BAL", 0m, "Baltimore", null, "", "Ravens", null, null },
+                    { 4, "BUF", 0m, "Buffalo", null, "", "Bills", null, null },
+                    { 5, "CAR", 0m, "Carolina", null, "", "Panthers", null, null },
+                    { 6, "CHI", 0m, "Chicago", null, "", "Bears", null, null },
+                    { 7, "CIN", 0m, "Cincinnati", null, "", "Bengals", null, null },
+                    { 8, "CLE", 0m, "Cleveland", null, "", "Browns", null, null },
+                    { 9, "DAL", 0m, "Dallas", null, "", "Cowboys", null, null },
+                    { 10, "DEN", 0m, "Denver", null, "", "Broncos", null, null },
+                    { 11, "DET", 0m, "Detroit", null, "", "Lions", null, null },
+                    { 12, "GB", 0m, "Green Bay", null, "", "Packers", null, null },
+                    { 13, "HOU", 0m, "Houston", null, "", "Texans", null, null },
+                    { 14, "IND", 0m, "Indianapolis", null, "", "Colts", null, null },
+                    { 15, "JAX", 0m, "Jacksonville", null, "", "Jaguars", null, null },
+                    { 16, "KC", 0m, "Kansas City", null, "", "Chiefs", null, null },
+                    { 17, "LV", 0m, "Las Vegas", null, "", "Raiders", null, null },
+                    { 18, "LAC", 0m, "Los Angeles", null, "", "Chargers", null, null },
+                    { 19, "LAR", 0m, "Los Angeles", null, "", "Rams", null, null },
+                    { 20, "MIA", 0m, "Miami", null, "", "Dolphins", null, null },
+                    { 21, "MIN", 0m, "Minnesota", null, "", "Vikings", null, null },
+                    { 22, "NE", 0m, "New England", null, "", "Patriots", null, null },
+                    { 23, "NO", 0m, "New Orleans", null, "", "Saints", null, null },
+                    { 24, "NYG", 0m, "New York", null, "", "Giants", null, null },
+                    { 25, "NYJ", 0m, "New York", null, "", "Jets", null, null },
+                    { 26, "PHI", 0m, "Philadelphia", null, "", "Eagles", null, null },
+                    { 27, "PIT", 0m, "Pittsburgh", null, "", "Steelers", null, null },
+                    { 28, "SF", 0m, "San Francisco", null, "", "49ers", null, null },
+                    { 29, "SEA", 0m, "Seattle", null, "", "Seahawks", null, null },
+                    { 30, "TB", 0m, "Tampa Bay", null, "", "Buccaneers", null, null },
+                    { 31, "TEN", 0m, "Tennessee", null, "", "Titans", null, null },
+                    { 32, "WAS", 0m, "Washington", null, "", "Commanders", null, null }
                 });
 
             migrationBuilder.CreateIndex(

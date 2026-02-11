@@ -1,54 +1,84 @@
 ﻿@page "/profile"
 @using Microsoft.AspNetCore.Authorization
-@using DeadMoney.Web.Identity
+@using System.Security.Claims
+@using DeadMoney.Core.Entities
+@using DeadMoney.Data
+@using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
-@inject IdentityUserAccessor UserAccessor
-@inject HttpContext HttpContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 
 <PageTitle>My Profile - Dead Money</PageTitle>
 
 <div class="container mt-4">
-    <h1>User Profile</h1>
+    <div class="d-flex align-items-center mb-4">
+        @if (!string.IsNullOrEmpty(_user?.AvatarUrl))
+        {
+            <img src="@_user.AvatarUrl" alt="Avatar" class="rounded-circle me-3" style="width: 80px; height: 80px; border: 2px solid #444;" />
+        }
+        <div>
+            <h1 class="mb-0">@(_user?.DisplayName ?? "User Profile")</h1>
+            <p class="text-muted">@_user?.Username</p>
+        </div>
+    </div>
+
     <hr />
 
     @if (_user == null)
     {
-        <p><em>Loading profile...</em></p>
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Fetching your stats from the grid...</p>
+        </div>
     }
     else
     {
         <div class="row">
             <div class="col-md-6">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm mb-4">
                     <div class="card-header bg-dark text-white">
                         Account Details
                     </div>
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item">
-                            <strong>Internal ID:</strong> <span class="text-muted small">@_user.Id</span>
+                            <strong>Discord ID:</strong> <span class="text-muted small">@_user.DiscordId</span>
                         </li>
                         <li class="list-group-item">
-                            <strong>Email:</strong> @_user.Email
+                            <strong>Preferred Timezone:</strong> @_user.TimeZoneId
                         </li>
                         <li class="list-group-item">
-                            <strong>Username:</strong> @_user.UserName
+                            <strong>Theme:</strong> @_user.ThemePreference
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Member Since:</strong> @_user.CreatedAt.ToShortDateString()
                         </li>
                     </ul>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        Bio
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">@(string.IsNullOrWhiteSpace(_user.Bio) ? "No bio provided." : _user.Bio)</p>
+                    </div>
                 </div>
             </div>
 
             <div class="col-md-6">
                 <div class="card shadow-sm">
                     <div class="card-header bg-info text-white">
-                        Discord / External Claims
+                        Active Session Claims
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small">These values are retrieved from your current login session:</p>
+                        <p class="text-muted small">These values are stored in your encrypted session cookie:</p>
                         <ul class="list-group list-group-flush">
-                            @foreach (var claim in HttpContext.User.Claims)
+                            @foreach (var claim in _claims)
                             {
                                 <li class="list-group-item" style="font-size: 0.8rem;">
-                                    <strong>@claim.Type.Split('/').Last():</strong> @claim.Value
+                                    <strong>@claim.Type:</strong> @claim.Value
                                 </li>
                             }
                         </ul>
@@ -60,11 +90,26 @@
 </div>
 
 @code {
-    private ApplicationUser? _user;
+    private User? _user;
+    private IEnumerable<Claim> _claims = Enumerable.Empty<Claim>();
 
     protected override async Task OnInitializedAsync()
     {
-        // This validates that our Accessor can find the user in the DB
-        _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var principal = authState.User;
+        _claims = principal.Claims;
+
+        // Get the internal UserId we stashed in the claims during login
+        var userIdClaim = principal.FindFirst("UserId")?.Value;
+
+        if (int.TryParse(userIdClaim, out var userId))
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _user = await db.Users
+                .AsNoTracking()
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+        }
     }
 }

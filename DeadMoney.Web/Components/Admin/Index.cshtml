@@ -1,0 +1,138 @@
+﻿@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<style>
+    .sync-loader {
+        display: none;
+    }
+
+    .btn-loading .sync-text {
+        display: none;
+    }
+
+    .btn-loading .sync-loader {
+        display: inline-block;
+    }
+    /* Visual feedback that the button is locked */
+    button:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+</style>
+
+<div class="mb-5">
+    <h1 class="fw-800">Admin <span style="color: var(--accent)">Control Panel</span></h1>
+    <p class="text-muted">Orchestrate the nflverse data pipeline. Run these steps in order.</p>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success border-0 bg-success bg-opacity-10 text-success mb-4 d-flex align-items-center">
+        <i class="bi bi-check-circle-fill me-3 fs-4"></i>
+        <div>@TempData["Success"]</div>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger mb-4 d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+        <div>@TempData["Error"]</div>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="bento-card h-100 d-flex flex-column">
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge bg-primary px-3">Step 1</span>
+                    <i class="bi bi-people text-muted fs-4"></i>
+                </div>
+                <h5 class="fw-bold text-white">Master Player List</h5>
+                <p class="small text-muted">Links NFL GSIS IDs with OTC Financial IDs. Baseline for the entire app.</p>
+            </div>
+            <form asp-action="SyncMasterList" method="post" class="mt-auto sync-form">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary w-100 fw-bold py-2 sync-btn">
+                    <span class="sync-text">Sync Identities</span>
+                    <span class="sync-loader spinner-border spinner-border-sm" role="status"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="bento-card h-100 d-flex flex-column">
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge bg-accent px-3">Step 2</span>
+                    <i class="bi bi-shield-check text-muted fs-4"></i>
+                </div>
+                <h5 class="fw-bold text-white">Team Rosters</h5>
+                <p class="small text-muted">Updates team assignments and fetches the latest headshot URLs.</p>
+            </div>
+            <form asp-action="SyncRosters" method="post" class="mt-auto sync-form">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-accent w-100 fw-bold py-2 sync-btn">
+                    <span class="sync-text">Sync Rosters</span>
+                    <span class="sync-loader spinner-border spinner-border-sm" role="status"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="bento-card h-100 d-flex flex-column">
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge bg-success px-3">Step 3</span>
+                    <i class="bi bi-cash-stack text-muted fs-4"></i>
+                </div>
+                <h5 class="fw-bold text-white">Financial Baseline</h5>
+                <p class="small text-muted">Imports active contract data and year-by-year salary buckets.</p>
+            </div>
+            <form asp-action="SyncContracts" method="post" class="mt-auto sync-form">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-success w-100 fw-bold py-2 sync-btn">
+                    <span class="sync-text">Sync Contracts</span>
+                    <span class="sync-loader spinner-border spinner-border-sm" role="status"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <div class="bento-card bg-dark bg-opacity-25 border-secondary py-3">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle text-muted me-3"></i>
+            <span class="small text-muted">
+                <strong>Syncing Guidance:</strong> Once a sync starts, all buttons will lock to prevent data collisions. Please wait for the page to refresh with a success message.
+            </span>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.sync-form').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                const activeBtn = this.querySelector('.sync-btn');
+                const allBtns = document.querySelectorAll('.sync-btn');
+
+                // 1. Show spinner on the clicked button
+                activeBtn.classList.add('btn-loading');
+
+                // 2. Disable ALL buttons to prevent overlapping syncs
+                allBtns.forEach(btn => {
+                    btn.disabled = true;
+                });
+
+                // The form will now submit naturally and the page will refresh
+                // when the Controller action finishes.
+            });
+        });
+    </script>
+}
