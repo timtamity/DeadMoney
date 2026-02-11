@@ -2,6 +2,7 @@
 
 namespace DeadMoney.Core.Entities
 {
+    [Table("UserRoles", Schema = "Auth")]
     public class UserRole
     {
         public int Id { get; set; }
@@ -20,6 +21,12 @@ namespace DeadMoney.Core.Entities
 
         [ForeignKey("TeamId")]
         public virtual Team? Team { get; set; }
+
+        /// <summary>
+        /// For Agents: Specific positions they manage.
+        /// For other roles, this collection will simply be empty.
+        /// </summary>
+        public virtual ICollection<Position> Positions { get; set; } = new List<Position>();
 
         public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
     }

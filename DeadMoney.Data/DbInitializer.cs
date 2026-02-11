@@ -4,13 +4,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeadMoney.Data;
 
-public static class ModelBuilderExtensions
+public static class DbInitializer
 {
+    /// <summary>
+    /// STATIC SEEDING: Called in OnModelCreating. 
+    /// Handles Roles, Positions, and Teams via Migrations.
+    /// </summary>
     public static void SeedLeagueData(this ModelBuilder builder)
     {
-        // 1. All Standard NFL Positions categorized by PositionUnit
+        // 1. Roles (Auth Schema)
+        builder.Entity<Role>().HasData(
+            new Role { Id = 1, Name = "Commissioner" },
+            new Role { Id = 2, Name = "Agent" },
+            new Role { Id = 3, Name = "GM" },
+            new Role { Id = 4, Name = "Assistant GM" }
+        );
+
+        // 2. Positions (League Schema - Codes are the Primary Key)
         builder.Entity<Position>().HasData(
-            // Offense
             new Position { Code = "QB", Name = "Quarterback", DisplayOrder = 1, Unit = PositionUnit.Offense },
             new Position { Code = "RB", Name = "Running Back", DisplayOrder = 2, Unit = PositionUnit.Offense },
             new Position { Code = "FB", Name = "Fullback", DisplayOrder = 3, Unit = PositionUnit.Offense },
@@ -19,21 +30,17 @@ public static class ModelBuilderExtensions
             new Position { Code = "OT", Name = "Offensive Tackle", DisplayOrder = 6, Unit = PositionUnit.Offense },
             new Position { Code = "G", Name = "Offensive Guard", DisplayOrder = 7, Unit = PositionUnit.Offense },
             new Position { Code = "C", Name = "Center", DisplayOrder = 8, Unit = PositionUnit.Offense },
-
-            // Defense
             new Position { Code = "EDGE", Name = "Edge Defender", DisplayOrder = 10, Unit = PositionUnit.Defense },
             new Position { Code = "DT", Name = "Interior Defensive Line", DisplayOrder = 11, Unit = PositionUnit.Defense },
             new Position { Code = "LB", Name = "Linebacker", DisplayOrder = 12, Unit = PositionUnit.Defense },
             new Position { Code = "CB", Name = "Cornerback", DisplayOrder = 13, Unit = PositionUnit.Defense },
             new Position { Code = "S", Name = "Safety", DisplayOrder = 14, Unit = PositionUnit.Defense },
-
-            // Special Teams
             new Position { Code = "K", Name = "Kicker", DisplayOrder = 20, Unit = PositionUnit.SpecialTeams },
             new Position { Code = "P", Name = "Punter", DisplayOrder = 21, Unit = PositionUnit.SpecialTeams },
             new Position { Code = "LS", Name = "Long Snapper", DisplayOrder = 22, Unit = PositionUnit.SpecialTeams }
         );
 
-        // 2. All 32 NFL Teams
+        // 3. Teams (League Schema - Ids are the Primary Key)
         builder.Entity<Team>().HasData(
             new Team { Id = 1, City = "Arizona", Nickname = "Cardinals", Abbreviation = "ARI" },
             new Team { Id = 2, City = "Atlanta", Nickname = "Falcons", Abbreviation = "ATL" },
@@ -68,5 +75,28 @@ public static class ModelBuilderExtensions
             new Team { Id = 31, City = "Tennessee", Nickname = "Titans", Abbreviation = "TEN" },
             new Team { Id = 32, City = "Washington", Nickname = "Commanders", Abbreviation = "WAS" }
         );
+    }
+
+    /// <summary>
+    /// RUNTIME SEEDING: Called in Program.cs at startup.
+    /// Safely assigns your Discord user to the Commissioner role.
+    /// </summary>
+    public static async Task InitializeUserRoles(DeadMoneyDbContext db, string discordId)
+    {
+        if (string.IsNullOrEmpty(discordId)) return;
+
+        var user = await db.Users
+            .Include(u => u.UserRoles)
+            .FirstOrDefaultAsync(u => u.DiscordId == discordId);
+
+        if (user != null)
+        {
+            // RoleId 1 is the "Commissioner" seeded in the static method above.
+            if (!user.UserRoles.Any(ur => ur.RoleId == 1))
+            {
+                user.UserRoles.Add(new UserRole { RoleId = 1 });
+                await db.SaveChangesAsync();
+            }
+        }
     }
 }

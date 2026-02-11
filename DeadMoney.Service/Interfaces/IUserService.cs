@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 
-namespace DeadMoney.Web.Service.Interfaces
+namespace DeadMoney.Service.Interfaces
 {
     public interface IUserService
     {

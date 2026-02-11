@@ -1,6 +1,6 @@
 ﻿using DeadMoney.Core.Entities;
 using DeadMoney.Data;
-using DeadMoney.Web.Service.Interfaces;
+using DeadMoney.Service.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

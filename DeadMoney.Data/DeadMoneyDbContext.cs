@@ -3,13 +3,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeadMoney.Data;
 
-// CHANGE: Inherit from standard DbContext since Identity packages were removed
 public class DeadMoneyDbContext : DbContext
 {
     public DeadMoneyDbContext(DbContextOptions<DeadMoneyDbContext> options)
         : base(options) { }
 
-    // Auth Tables (Custom Ground-Up Implementation)
+    // Auth Tables
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
@@ -24,29 +23,16 @@ public class DeadMoneyDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        // base.OnModelCreating(builder) is still good practice even without Identity
         base.OnModelCreating(builder);
 
-        // Schema & Naming Strategy
+        // 1. Schema Strategy
         foreach (var entity in builder.Model.GetEntityTypes())
         {
-            var entityNamespace = entity.ClrType.Namespace ?? string.Empty;
-
-            // Organize by Namespace: Core.Entities vs Core.Entities.Auth (if you move them)
-            // For now, we'll explicitly check the type names for the Auth schema
             var authTypes = new[] { nameof(User), nameof(Role), nameof(UserRole) };
-
-            if (authTypes.Contains(entity.ClrType.Name))
-            {
-                entity.SetSchema("Auth");
-            }
-            else
-            {
-                entity.SetSchema("League");
-            }
+            entity.SetSchema(authTypes.Contains(entity.ClrType.Name) ? "Auth" : "League");
         }
 
-        // Precision for Financials (Crucial for Salary Cap)
+        // 2. Financial Precision
         foreach (var property in builder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))
@@ -55,17 +41,18 @@ public class DeadMoneyDbContext : DbContext
             property.SetScale(2);
         }
 
-        // Custom Constraints
-        builder.Entity<User>()
-            .HasIndex(u => u.DiscordId)
-            .IsUnique();
+        // 3. Custom Constraints & Conversions
+        builder.Entity<User>().HasIndex(u => u.DiscordId).IsUnique();
+        builder.Entity<Position>().Property(p => p.Unit).HasConversion<string>();
 
-        // Store Enum as String
-        builder.Entity<Position>()
-            .Property(p => p.Unit)
-            .HasConversion<string>();
+        // 4. Many-to-Many: UserRole <-> Position
+        // This explicitly defines the join table name and schema
+        builder.Entity<UserRole>()
+            .HasMany(ur => ur.Positions)
+            .WithMany(p => p.UserRoles)
+            .UsingEntity(j => j.ToTable("UserRolePositions", "Auth"));
 
-        // Seeding
+        // 5. Seeding
         builder.SeedLeagueData();
     }
 }
