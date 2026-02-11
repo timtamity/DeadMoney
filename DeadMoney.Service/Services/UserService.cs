@@ -1,12 +1,12 @@
 ﻿using DeadMoney.Core.Entities;
 using DeadMoney.Data;
-using DeadMoney.Web.Services.Interfaces;
+using DeadMoney.Web.Service.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
-namespace DeadMoney.Web.Services
+namespace DeadMoney.Service.Services
 {
     public class UserService : IUserService
     {

@@ -1,14 +1,11 @@
-using System.Security.Claims;
 using DeadMoney.Data;
-using DeadMoney.Core.Entities;
-using DeadMoney.Services.Interfaces;
+using DeadMoney.Service.Interfaces;
 using DeadMoney.Web.Components;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using DeadMoney.Web.Services.Interfaces;
-using DeadMoney.Services.Services;
-using DeadMoney.Web.Services;
+using DeadMoney.Web.Service.Interfaces;
+using DeadMoney.Service.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

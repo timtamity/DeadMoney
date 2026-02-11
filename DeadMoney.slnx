@@ -4,6 +4,6 @@
   </Folder>
   <Project Path="DeadMoney.Core/DeadMoney.Core.csproj" />
   <Project Path="DeadMoney.Data/DeadMoney.Data.csproj" />
-  <Project Path="DeadMoney.Services/DeadMoney.Services.csproj" />
+  <Project Path="DeadMoney.Service/DeadMoney.Service.csproj" />
   <Project Path="DeadMoney.Web/DeadMoney.Web.csproj" />
 </Solution>

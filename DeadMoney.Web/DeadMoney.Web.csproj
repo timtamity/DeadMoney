@@ -26,7 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DeadMoney.Core\DeadMoney.Core.csproj" />
     <ProjectReference Include="..\DeadMoney.Data\DeadMoney.Data.csproj" />
-    <ProjectReference Include="..\DeadMoney.Services\DeadMoney.Services.csproj" />
+    <ProjectReference Include="..\DeadMoney.Service\DeadMoney.Service.csproj" />
   </ItemGroup>
 
   <ItemGroup>

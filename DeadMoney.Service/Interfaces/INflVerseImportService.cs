@@ -1,4 +1,4 @@
-﻿namespace DeadMoney.Services.Interfaces;
+﻿namespace DeadMoney.Service.Interfaces;
 
 public interface INflVerseImportService
 {

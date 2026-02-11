@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DeadMoney.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial_NflVerse_Schema : Migration
+    public partial class InitialSetup : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -54,10 +54,10 @@ namespace DeadMoney.Data.Migrations
                 schema: "Auth",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -75,6 +75,8 @@ namespace DeadMoney.Data.Migrations
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Nickname = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Conference = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    Division = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
                     PrimaryColor = table.Column<string>(type: "nvarchar(7)", maxLength: 7, nullable: true),
                     SecondaryColor = table.Column<string>(type: "nvarchar(7)", maxLength: 7, nullable: true),
                     LogoUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
@@ -90,49 +92,22 @@ namespace DeadMoney.Data.Migrations
                 schema: "Auth",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    DiscordId = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DiscordId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Username = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    DisplayName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    AvatarUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Bio = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ThemePreference = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    UseTeamColorsAsAccent = table.Column<bool>(type: "bit", nullable: false),
+                    TimeZoneId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastLogin = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RoleClaims",
-                schema: "Auth",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ClaimType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClaimValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RoleClaims", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_RoleClaims_Roles_RoleId",
-                        column: x => x.RoleId,
-                        principalSchema: "Auth",
-                        principalTable: "Roles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -182,61 +157,20 @@ namespace DeadMoney.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "UserClaims",
+                name: "UserRoles",
                 schema: "Auth",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ClaimType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClaimValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    RoleId = table.Column<int>(type: "int", nullable: false),
+                    TeamId = table.Column<int>(type: "int", nullable: true),
+                    AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserClaims", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_UserClaims_Users_UserId",
-                        column: x => x.UserId,
-                        principalSchema: "Auth",
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "UserLogins",
-                schema: "Auth",
-                columns: table => new
-                {
-                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ProviderKey = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ProviderDisplayName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserLogins", x => new { x.LoginProvider, x.ProviderKey });
-                    table.ForeignKey(
-                        name: "FK_UserLogins_Users_UserId",
-                        column: x => x.UserId,
-                        principalSchema: "Auth",
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "UserRoles",
-                schema: "Auth",
-                columns: table => new
-                {
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserRoles", x => new { x.UserId, x.RoleId });
+                    table.PrimaryKey("PK_UserRoles", x => x.Id);
                     table.ForeignKey(
                         name: "FK_UserRoles_Roles_RoleId",
                         column: x => x.RoleId,
@@ -245,29 +179,13 @@ namespace DeadMoney.Data.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_UserRoles_Users_UserId",
-                        column: x => x.UserId,
-                        principalSchema: "Auth",
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "UserTokens",
-                schema: "Auth",
-                columns: table => new
-                {
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
+                        name: "FK_UserRoles_Teams_TeamId",
+                        column: x => x.TeamId,
+                        principalSchema: "League",
+                        principalTable: "Teams",
+                        principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_UserTokens_Users_UserId",
+                        name: "FK_UserRoles_Users_UserId",
                         column: x => x.UserId,
                         principalSchema: "Auth",
                         principalTable: "Users",
@@ -355,41 +273,41 @@ namespace DeadMoney.Data.Migrations
             migrationBuilder.InsertData(
                 schema: "League",
                 table: "Teams",
-                columns: new[] { "Id", "Abbreviation", "CarryoverCap", "City", "LogoUrl", "Name", "Nickname", "PrimaryColor", "SecondaryColor" },
+                columns: new[] { "Id", "Abbreviation", "CarryoverCap", "City", "Conference", "Division", "LogoUrl", "Name", "Nickname", "PrimaryColor", "SecondaryColor" },
                 values: new object[,]
                 {
-                    { 1, "ARI", 0m, "Arizona", null, "", "Cardinals", null, null },
-                    { 2, "ATL", 0m, "Atlanta", null, "", "Falcons", null, null },
-                    { 3, "BAL", 0m, "Baltimore", null, "", "Ravens", null, null },
-                    { 4, "BUF", 0m, "Buffalo", null, "", "Bills", null, null },
-                    { 5, "CAR", 0m, "Carolina", null, "", "Panthers", null, null },
-                    { 6, "CHI", 0m, "Chicago", null, "", "Bears", null, null },
-                    { 7, "CIN", 0m, "Cincinnati", null, "", "Bengals", null, null },
-                    { 8, "CLE", 0m, "Cleveland", null, "", "Browns", null, null },
-                    { 9, "DAL", 0m, "Dallas", null, "", "Cowboys", null, null },
-                    { 10, "DEN", 0m, "Denver", null, "", "Broncos", null, null },
-                    { 11, "DET", 0m, "Detroit", null, "", "Lions", null, null },
-                    { 12, "GB", 0m, "Green Bay", null, "", "Packers", null, null },
-                    { 13, "HOU", 0m, "Houston", null, "", "Texans", null, null },
-                    { 14, "IND", 0m, "Indianapolis", null, "", "Colts", null, null },
-                    { 15, "JAX", 0m, "Jacksonville", null, "", "Jaguars", null, null },
-                    { 16, "KC", 0m, "Kansas City", null, "", "Chiefs", null, null },
-                    { 17, "LV", 0m, "Las Vegas", null, "", "Raiders", null, null },
-                    { 18, "LAC", 0m, "Los Angeles", null, "", "Chargers", null, null },
-                    { 19, "LAR", 0m, "Los Angeles", null, "", "Rams", null, null },
-                    { 20, "MIA", 0m, "Miami", null, "", "Dolphins", null, null },
-                    { 21, "MIN", 0m, "Minnesota", null, "", "Vikings", null, null },
-                    { 22, "NE", 0m, "New England", null, "", "Patriots", null, null },
-                    { 23, "NO", 0m, "New Orleans", null, "", "Saints", null, null },
-                    { 24, "NYG", 0m, "New York", null, "", "Giants", null, null },
-                    { 25, "NYJ", 0m, "New York", null, "", "Jets", null, null },
-                    { 26, "PHI", 0m, "Philadelphia", null, "", "Eagles", null, null },
-                    { 27, "PIT", 0m, "Pittsburgh", null, "", "Steelers", null, null },
-                    { 28, "SF", 0m, "San Francisco", null, "", "49ers", null, null },
-                    { 29, "SEA", 0m, "Seattle", null, "", "Seahawks", null, null },
-                    { 30, "TB", 0m, "Tampa Bay", null, "", "Buccaneers", null, null },
-                    { 31, "TEN", 0m, "Tennessee", null, "", "Titans", null, null },
-                    { 32, "WAS", 0m, "Washington", null, "", "Commanders", null, null }
+                    { 1, "ARI", 0m, "Arizona", "", "", null, "", "Cardinals", null, null },
+                    { 2, "ATL", 0m, "Atlanta", "", "", null, "", "Falcons", null, null },
+                    { 3, "BAL", 0m, "Baltimore", "", "", null, "", "Ravens", null, null },
+                    { 4, "BUF", 0m, "Buffalo", "", "", null, "", "Bills", null, null },
+                    { 5, "CAR", 0m, "Carolina", "", "", null, "", "Panthers", null, null },
+                    { 6, "CHI", 0m, "Chicago", "", "", null, "", "Bears", null, null },
+                    { 7, "CIN", 0m, "Cincinnati", "", "", null, "", "Bengals", null, null },
+                    { 8, "CLE", 0m, "Cleveland", "", "", null, "", "Browns", null, null },
+                    { 9, "DAL", 0m, "Dallas", "", "", null, "", "Cowboys", null, null },
+                    { 10, "DEN", 0m, "Denver", "", "", null, "", "Broncos", null, null },
+                    { 11, "DET", 0m, "Detroit", "", "", null, "", "Lions", null, null },
+                    { 12, "GB", 0m, "Green Bay", "", "", null, "", "Packers", null, null },
+                    { 13, "HOU", 0m, "Houston", "", "", null, "", "Texans", null, null },
+                    { 14, "IND", 0m, "Indianapolis", "", "", null, "", "Colts", null, null },
+                    { 15, "JAX", 0m, "Jacksonville", "", "", null, "", "Jaguars", null, null },
+                    { 16, "KC", 0m, "Kansas City", "", "", null, "", "Chiefs", null, null },
+                    { 17, "LV", 0m, "Las Vegas", "", "", null, "", "Raiders", null, null },
+                    { 18, "LAC", 0m, "Los Angeles", "", "", null, "", "Chargers", null, null },
+                    { 19, "LAR", 0m, "Los Angeles", "", "", null, "", "Rams", null, null },
+                    { 20, "MIA", 0m, "Miami", "", "", null, "", "Dolphins", null, null },
+                    { 21, "MIN", 0m, "Minnesota", "", "", null, "", "Vikings", null, null },
+                    { 22, "NE", 0m, "New England", "", "", null, "", "Patriots", null, null },
+                    { 23, "NO", 0m, "New Orleans", "", "", null, "", "Saints", null, null },
+                    { 24, "NYG", 0m, "New York", "", "", null, "", "Giants", null, null },
+                    { 25, "NYJ", 0m, "New York", "", "", null, "", "Jets", null, null },
+                    { 26, "PHI", 0m, "Philadelphia", "", "", null, "", "Eagles", null, null },
+                    { 27, "PIT", 0m, "Pittsburgh", "", "", null, "", "Steelers", null, null },
+                    { 28, "SF", 0m, "San Francisco", "", "", null, "", "49ers", null, null },
+                    { 29, "SEA", 0m, "Seattle", "", "", null, "", "Seahawks", null, null },
+                    { 30, "TB", 0m, "Tampa Bay", "", "", null, "", "Buccaneers", null, null },
+                    { 31, "TEN", 0m, "Tennessee", "", "", null, "", "Titans", null, null },
+                    { 32, "WAS", 0m, "Washington", "", "", null, "", "Commanders", null, null }
                 });
 
             migrationBuilder.CreateIndex(
@@ -417,50 +335,29 @@ namespace DeadMoney.Data.Migrations
                 column: "TeamId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RoleClaims_RoleId",
-                schema: "Auth",
-                table: "RoleClaims",
-                column: "RoleId");
-
-            migrationBuilder.CreateIndex(
-                name: "RoleNameIndex",
-                schema: "Auth",
-                table: "Roles",
-                column: "NormalizedName",
-                unique: true,
-                filter: "[NormalizedName] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UserClaims_UserId",
-                schema: "Auth",
-                table: "UserClaims",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UserLogins_UserId",
-                schema: "Auth",
-                table: "UserLogins",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_UserRoles_RoleId",
                 schema: "Auth",
                 table: "UserRoles",
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
-                name: "EmailIndex",
+                name: "IX_UserRoles_TeamId",
                 schema: "Auth",
-                table: "Users",
-                column: "NormalizedEmail");
+                table: "UserRoles",
+                column: "TeamId");
 
             migrationBuilder.CreateIndex(
-                name: "UserNameIndex",
+                name: "IX_UserRoles_UserId",
+                schema: "Auth",
+                table: "UserRoles",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_DiscordId",
                 schema: "Auth",
                 table: "Users",
-                column: "NormalizedUserName",
-                unique: true,
-                filter: "[NormalizedUserName] IS NOT NULL");
+                column: "DiscordId",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -475,23 +372,7 @@ namespace DeadMoney.Data.Migrations
                 schema: "League");
 
             migrationBuilder.DropTable(
-                name: "RoleClaims",
-                schema: "Auth");
-
-            migrationBuilder.DropTable(
-                name: "UserClaims",
-                schema: "Auth");
-
-            migrationBuilder.DropTable(
-                name: "UserLogins",
-                schema: "Auth");
-
-            migrationBuilder.DropTable(
                 name: "UserRoles",
-                schema: "Auth");
-
-            migrationBuilder.DropTable(
-                name: "UserTokens",
                 schema: "Auth");
 
             migrationBuilder.DropTable(

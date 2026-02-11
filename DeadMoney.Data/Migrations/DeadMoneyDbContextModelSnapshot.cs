@@ -17,78 +17,10 @@ namespace DeadMoney.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("DeadMoney.Core.Entities.User", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DiscordId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("NormalizedEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedUserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("SecurityStamp")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("UserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
-
-                    b.HasIndex("NormalizedUserName")
-                        .IsUnique()
-                        .HasDatabaseName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
-
-                    b.ToTable("Users", "Auth");
-                });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Contract", b =>
                 {
@@ -409,6 +341,29 @@ namespace DeadMoney.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DeadMoney.Core.Entities.Role", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Roles", "Auth");
+                });
+
             modelBuilder.Entity("DeadMoney.Core.Entities.Team", b =>
                 {
                     b.Property<int>("Id")
@@ -424,12 +379,22 @@ namespace DeadMoney.Data.Migrations
 
                     b.Property<decimal>("CarryoverCap")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(18, 2)");
 
                     b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Conference")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Division")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("LogoUrl")
                         .HasMaxLength(500)
@@ -464,6 +429,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "ARI",
                             CarryoverCap = 0m,
                             City = "Arizona",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Cardinals"
                         },
@@ -473,6 +440,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "ATL",
                             CarryoverCap = 0m,
                             City = "Atlanta",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Falcons"
                         },
@@ -482,6 +451,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "BAL",
                             CarryoverCap = 0m,
                             City = "Baltimore",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Ravens"
                         },
@@ -491,6 +462,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "BUF",
                             CarryoverCap = 0m,
                             City = "Buffalo",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Bills"
                         },
@@ -500,6 +473,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CAR",
                             CarryoverCap = 0m,
                             City = "Carolina",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Panthers"
                         },
@@ -509,6 +484,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CHI",
                             CarryoverCap = 0m,
                             City = "Chicago",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Bears"
                         },
@@ -518,6 +495,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CIN",
                             CarryoverCap = 0m,
                             City = "Cincinnati",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Bengals"
                         },
@@ -527,6 +506,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CLE",
                             CarryoverCap = 0m,
                             City = "Cleveland",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Browns"
                         },
@@ -536,6 +517,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "DAL",
                             CarryoverCap = 0m,
                             City = "Dallas",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Cowboys"
                         },
@@ -545,6 +528,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "DEN",
                             CarryoverCap = 0m,
                             City = "Denver",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Broncos"
                         },
@@ -554,6 +539,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "DET",
                             CarryoverCap = 0m,
                             City = "Detroit",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Lions"
                         },
@@ -563,6 +550,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "GB",
                             CarryoverCap = 0m,
                             City = "Green Bay",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Packers"
                         },
@@ -572,6 +561,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "HOU",
                             CarryoverCap = 0m,
                             City = "Houston",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Texans"
                         },
@@ -581,6 +572,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "IND",
                             CarryoverCap = 0m,
                             City = "Indianapolis",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Colts"
                         },
@@ -590,6 +583,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "JAX",
                             CarryoverCap = 0m,
                             City = "Jacksonville",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Jaguars"
                         },
@@ -599,6 +594,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "KC",
                             CarryoverCap = 0m,
                             City = "Kansas City",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Chiefs"
                         },
@@ -608,6 +605,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "LV",
                             CarryoverCap = 0m,
                             City = "Las Vegas",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Raiders"
                         },
@@ -617,6 +616,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "LAC",
                             CarryoverCap = 0m,
                             City = "Los Angeles",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Chargers"
                         },
@@ -626,6 +627,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "LAR",
                             CarryoverCap = 0m,
                             City = "Los Angeles",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Rams"
                         },
@@ -635,6 +638,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "MIA",
                             CarryoverCap = 0m,
                             City = "Miami",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Dolphins"
                         },
@@ -644,6 +649,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "MIN",
                             CarryoverCap = 0m,
                             City = "Minnesota",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Vikings"
                         },
@@ -653,6 +660,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NE",
                             CarryoverCap = 0m,
                             City = "New England",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Patriots"
                         },
@@ -662,6 +671,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NO",
                             CarryoverCap = 0m,
                             City = "New Orleans",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Saints"
                         },
@@ -671,6 +682,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NYG",
                             CarryoverCap = 0m,
                             City = "New York",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Giants"
                         },
@@ -680,6 +693,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NYJ",
                             CarryoverCap = 0m,
                             City = "New York",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Jets"
                         },
@@ -689,6 +704,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "PHI",
                             CarryoverCap = 0m,
                             City = "Philadelphia",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Eagles"
                         },
@@ -698,6 +715,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "PIT",
                             CarryoverCap = 0m,
                             City = "Pittsburgh",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Steelers"
                         },
@@ -707,6 +726,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "SF",
                             CarryoverCap = 0m,
                             City = "San Francisco",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "49ers"
                         },
@@ -716,6 +737,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "SEA",
                             CarryoverCap = 0m,
                             City = "Seattle",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Seahawks"
                         },
@@ -725,6 +748,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "TB",
                             CarryoverCap = 0m,
                             City = "Tampa Bay",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Buccaneers"
                         },
@@ -734,6 +759,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "TEN",
                             CarryoverCap = 0m,
                             City = "Tennessee",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Titans"
                         },
@@ -743,39 +770,14 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "WAS",
                             CarryoverCap = 0m,
                             City = "Washington",
+                            Conference = "",
+                            Division = "",
                             Name = "",
                             Nickname = "Commanders"
                         });
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
-
-                    b.ToTable("Roles", "Auth");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+            modelBuilder.Entity("DeadMoney.Core.Entities.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -783,24 +785,56 @@ namespace DeadMoney.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("Bio")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("RoleId")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DiscordId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("LastLogin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ThemePreference")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("UseTeamColorsAsAccent")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RoleId");
+                    b.HasIndex("DiscordId")
+                        .IsUnique();
 
-                    b.ToTable("RoleClaims", "Auth");
+                    b.ToTable("Users", "Auth");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
+            modelBuilder.Entity("DeadMoney.Core.Entities.UserRole", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -808,77 +842,27 @@ namespace DeadMoney.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int?>("TeamId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserClaims", "Auth");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
-                {
-                    b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ProviderKey")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("LoginProvider", "ProviderKey");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserLogins", "Auth");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
-                {
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("RoleId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("UserId", "RoleId");
-
                     b.HasIndex("RoleId");
+
+                    b.HasIndex("TeamId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserRoles", "Auth");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
-                {
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("UserId", "LoginProvider", "Name");
-
-                    b.ToTable("UserTokens", "Auth");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Contract", b =>
@@ -920,55 +904,29 @@ namespace DeadMoney.Data.Migrations
                     b.Navigation("Team");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+            modelBuilder.Entity("DeadMoney.Core.Entities.UserRole", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
-                {
-                    b.HasOne("DeadMoney.Core.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
-                {
-                    b.HasOne("DeadMoney.Core.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
-                        .WithMany()
+                    b.HasOne("DeadMoney.Core.Entities.Role", "Role")
+                        .WithMany("UserRoles")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("DeadMoney.Core.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
+                    b.HasOne("DeadMoney.Core.Entities.Team", "Team")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("TeamId");
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
-                {
-                    b.HasOne("DeadMoney.Core.Entities.User", null)
-                        .WithMany()
+                    b.HasOne("DeadMoney.Core.Entities.User", "User")
+                        .WithMany("UserRoles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Role");
+
+                    b.Navigation("Team");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Contract", b =>
@@ -986,9 +944,21 @@ namespace DeadMoney.Data.Migrations
                     b.Navigation("Players");
                 });
 
+            modelBuilder.Entity("DeadMoney.Core.Entities.Role", b =>
+                {
+                    b.Navigation("UserRoles");
+                });
+
             modelBuilder.Entity("DeadMoney.Core.Entities.Team", b =>
                 {
                     b.Navigation("Roster");
+
+                    b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.User", b =>
+                {
+                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }

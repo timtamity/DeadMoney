@@ -2,11 +2,11 @@
 using CsvHelper.Configuration;
 using DeadMoney.Core.Entities;
 using DeadMoney.Data;
-using DeadMoney.Services.Interfaces;
+using DeadMoney.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 
-namespace DeadMoney.Services.Services;
+namespace DeadMoney.Service.Services;
 
 public class NflVerseImportService(DeadMoneyDbContext context, HttpClient http) : INflVerseImportService
 {
