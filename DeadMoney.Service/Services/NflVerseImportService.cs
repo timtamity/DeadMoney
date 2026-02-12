@@ -112,8 +112,6 @@ public class NflVerseImportService(
                 using (var setupCmd = new DuckDBCommand("INSTALL httpfs; LOAD httpfs;", conn))
                     await setupCmd.ExecuteNonQueryAsync();
 
-                // ADDED FILTER: year_struct.year >= year_signed
-                // This prevents "ghost years" from previous contracts appearing in the new one.
                 var exportQuery = $@"
                     COPY (
                         WITH flattened AS (
@@ -140,7 +138,7 @@ public class NflVerseImportService(
                             (COALESCE(year_struct.cap_number, 0) * 1000000) as cap_number
                         FROM flattened
                         WHERE year_struct.year != 'Total' 
-                          AND CAST(year_struct.year AS INTEGER) >= year_signed
+                          AND TRY_CAST(year_struct.year AS INTEGER) >= year_signed
                     ) TO '{tempCsvPath}' (HEADER TRUE, DELIMITER ',');";
 
                 using var cmd = new DuckDBCommand(exportQuery, conn);
@@ -204,10 +202,7 @@ public class NflVerseImportService(
             }
 
             int currentYear = csv.GetField<int>("year_val");
-            decimal rawBaseSalary = csv.GetField<decimal>("base_salary");
-
-            // LOGIC: A year is a void year if it is beyond the signed year + the duration of the contract.
-            bool isVoidYear = currentYear > (yearSigned + contractDuration);
+            bool isVoidYear = currentYear >= (yearSigned + contractDuration);
 
             string teamRawNickname = (csv.GetField<string>("team_nickname") ?? "").ToUpper();
             teamNicknameLookup.TryGetValue(teamRawNickname, out var teamId);
@@ -217,7 +212,7 @@ public class NflVerseImportService(
                 ContractId = contractId,
                 Year = currentYear,
                 TeamId = teamId > 0 ? teamId : null,
-                BaseSalary = isVoidYear ? 0 : Math.Round(rawBaseSalary, 2),
+                BaseSalary = isVoidYear ? 0 : Math.Round(csv.GetField<decimal>("base_salary"), 2),
                 SigningBonusProration = Math.Round(csv.GetField<decimal>("prorated_bonus"), 2),
                 OptionBonusProration = Math.Round(csv.GetField<decimal>("option_bonus"), 2),
                 RosterBonus = Math.Round(csv.GetField<decimal>("roster_bonus"), 2),
