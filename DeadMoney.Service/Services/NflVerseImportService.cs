@@ -3,7 +3,6 @@ using CsvHelper.Configuration;
 using DeadMoney.Core.Entities;
 using DeadMoney.Data;
 using DeadMoney.Service.Interfaces;
-using DeadMoney.Service.Parsers;
 using DuckDB.NET.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
@@ -14,8 +13,7 @@ namespace DeadMoney.Service.Services;
 
 public class NflVerseImportService(
     DeadMoneyDbContext context,
-    HttpClient http,
-    NflVerseCsvParser parser) : INflVerseImportService
+    HttpClient http) : INflVerseImportService
 {
     private const string PlayersUrl = "https://github.com/nflverse/nflverse-data/releases/download/players/players.csv";
     private const string RostersUrl = "https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2025.csv";
@@ -27,7 +25,6 @@ public class NflVerseImportService(
         {
             using var connection = new DuckDBConnection("DataSource=:memory:");
             await connection.OpenAsync();
-
             using (var setupCmd = new DuckDBCommand("INSTALL httpfs; LOAD httpfs;", connection))
                 await setupCmd.ExecuteNonQueryAsync();
 
@@ -38,9 +35,8 @@ public class NflVerseImportService(
             var sb = new StringBuilder();
             sb.AppendLine("--- DUCKDB PARQUET SCHEMA DUMP ---");
             while (reader.Read())
-            {
                 sb.AppendLine($"Column: {reader[0],-20} | Type: {reader[1],-12}");
-            }
+
             return sb.ToString();
         }
         catch (Exception ex) { return $"Schema Dump Failed: {ex.Message}"; }
@@ -49,21 +45,18 @@ public class NflVerseImportService(
     public async Task SyncPlayerMasterListAsync()
     {
         var records = await GetCsvRecordsAsync(PlayersUrl);
-
-        // Safe lookup: Group by GsisId to handle duplicates in source CSV
         var existingPlayers = (await context.Players.Where(p => p.GsisId != null).ToListAsync())
-            .GroupBy(p => p.GsisId!)
-            .ToDictionary(g => g.Key, g => g.First());
-
+            .GroupBy(p => p.GsisId!).ToDictionary(g => g.Key, g => g.First());
         var existingPositions = (await context.Positions.ToListAsync())
-            .GroupBy(p => p.Code)
-            .ToDictionary(g => g.Key, g => g.First());
+            .GroupBy(p => p.Code).ToDictionary(g => g.Key, g => g.First());
 
         foreach (var row in records)
         {
             IDictionary<string, object> dict = row;
             string gsisId = dict["gsis_id"]?.ToString() ?? "";
-            if (string.IsNullOrEmpty(gsisId)) continue;
+            string status = dict["status"]?.ToString()?.ToUpper() ?? "";
+
+            if (string.IsNullOrEmpty(gsisId) || status == "RET") continue;
 
             string posCode = MapPosition(dict["position"]?.ToString() ?? "UNK");
             if (!existingPositions.ContainsKey(posCode))
@@ -92,14 +85,8 @@ public class NflVerseImportService(
     public async Task SyncCurrentRostersAsync()
     {
         var records = await GetCsvRecordsAsync(RostersUrl);
-
-        var teams = (await context.Teams.ToListAsync())
-            .GroupBy(t => t.Abbreviation.ToUpper())
-            .ToDictionary(g => g.Key, g => g.First());
-
-        var players = (await context.Players.Where(p => p.GsisId != null).ToListAsync())
-            .GroupBy(p => p.GsisId!)
-            .ToDictionary(g => g.Key, g => g.First());
+        var teams = (await context.Teams.ToListAsync()).GroupBy(t => t.Abbreviation.ToUpper()).ToDictionary(g => g.Key, g => g.First());
+        var players = (await context.Players.Where(p => p.GsisId != null).ToListAsync()).GroupBy(p => p.GsisId!).ToDictionary(g => g.Key, g => g.First());
 
         foreach (var row in records)
         {
@@ -117,7 +104,6 @@ public class NflVerseImportService(
     public async Task SyncContractsAsync()
     {
         var tempCsvPath = Path.Combine(Path.GetTempPath(), "contracts_flattened.csv");
-
         try
         {
             using (var conn = new DuckDBConnection("DataSource=:memory:"))
@@ -126,24 +112,40 @@ public class NflVerseImportService(
                 using (var setupCmd = new DuckDBCommand("INSTALL httpfs; LOAD httpfs;", conn))
                     await setupCmd.ExecuteNonQueryAsync();
 
-                // Modified query to unnest while keeping the anchor year and length
+                // ADDED FILTER: year_struct.year >= year_signed
+                // This prevents "ghost years" from previous contracts appearing in the new one.
                 var exportQuery = $@"
                     COPY (
+                        WITH flattened AS (
+                            SELECT 
+                                otc_id, 
+                                (COALESCE(value, 0) * 1000000) as value, 
+                                (COALESCE(guaranteed, 0) * 1000000) as guaranteed, 
+                                year_signed, 
+                                years, 
+                                unnest(cols) as year_struct
+                            FROM read_parquet('{ContractsUrl}')
+                            WHERE is_active = true AND otc_id IS NOT NULL
+                        )
                         SELECT 
-                            otc_id,
-                            is_active,
-                            value,
-                            guaranteed,
-                            year_signed,
-                            years,
-                            unnest(cols) as year_data
-                        FROM read_parquet('{ContractsUrl}')
+                            otc_id, value, guaranteed, year_signed, years, 
+                            year_struct.year as year_val, 
+                            year_struct.team as team_nickname, 
+                            (COALESCE(year_struct.base_salary, 0) * 1000000) as base_salary, 
+                            (COALESCE(year_struct.prorated_bonus, 0) * 1000000) as prorated_bonus, 
+                            (COALESCE(year_struct.option_bonus, 0) * 1000000) as option_bonus,
+                            (COALESCE(year_struct.roster_bonus, 0) * 1000000) as roster_bonus,
+                            (COALESCE(year_struct.workout_bonus, 0) * 1000000) as workout_bonus,
+                            (COALESCE(year_struct.per_game_roster_bonus, 0) * 1000000) as per_game_bonus,
+                            (COALESCE(year_struct.cap_number, 0) * 1000000) as cap_number
+                        FROM flattened
+                        WHERE year_struct.year != 'Total' 
+                          AND CAST(year_struct.year AS INTEGER) >= year_signed
                     ) TO '{tempCsvPath}' (HEADER TRUE, DELIMITER ',');";
 
                 using var cmd = new DuckDBCommand(exportQuery, conn);
                 await cmd.ExecuteNonQueryAsync();
             }
-
             await ProcessFlattenedCsv(tempCsvPath);
         }
         finally
@@ -158,20 +160,23 @@ public class NflVerseImportService(
         await context.Database.ExecuteSqlRawAsync("DELETE FROM League.Contracts");
 
         using var reader = new StreamReader(csvPath);
-        using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+        using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HeaderValidated = null,
+            MissingFieldFound = null
+        });
+
+        csv.Context.TypeConverterOptionsCache.GetOptions<decimal>().NullValues.Add("");
+        csv.Context.TypeConverterOptionsCache.GetOptions<int>().NullValues.Add("");
 
         await csv.ReadAsync();
         csv.ReadHeader();
 
-        // Safe player lookup (handling duplicates in OtcId)
         var playerLookup = (await context.Players.Where(p => p.OtcId != null).ToListAsync())
-            .GroupBy(p => p.OtcId!)
-            .ToDictionary(g => g.Key, g => g.First().Id);
+            .GroupBy(p => p.OtcId!).ToDictionary(g => g.Key, g => g.First().Id);
 
-        // Safe team lookup (using Name from the year_data tuples)
-        var teamLookup = (await context.Teams.ToListAsync())
-            .GroupBy(t => t.Name.ToUpper())
-            .ToDictionary(g => g.Key, g => g.First().Id);
+        var teamNicknameLookup = (await context.Teams.ToListAsync())
+            .ToDictionary(t => t.Nickname.ToUpper(), t => t.Id);
 
         var createdContracts = new Dictionary<string, int>();
 
@@ -180,7 +185,6 @@ public class NflVerseImportService(
             var otcId = csv.GetField<string>("otc_id") ?? string.Empty;
             if (string.IsNullOrEmpty(otcId) || !playerLookup.TryGetValue(otcId, out int pId)) continue;
 
-            // Anchor points for contract logic
             int yearSigned = csv.GetField<int>("year_signed");
             int contractDuration = csv.GetField<int>("years");
 
@@ -189,9 +193,9 @@ public class NflVerseImportService(
                 var contract = new Contract
                 {
                     PlayerId = pId,
-                    TotalValue = csv.GetField<decimal>("value"),
-                    TotalGuaranteed = csv.GetField<decimal>("guaranteed"),
-                    IsActive = csv.GetField<bool>("is_active")
+                    TotalValue = Math.Round(csv.GetField<decimal>("value"), 2),
+                    TotalGuaranteed = Math.Round(csv.GetField<decimal>("guaranteed"), 2),
+                    IsActive = true
                 };
                 context.Contracts.Add(contract);
                 await context.SaveChangesAsync();
@@ -199,38 +203,29 @@ public class NflVerseImportService(
                 createdContracts.Add(otcId, contractId);
             }
 
-            if (csv.TryGetField<string>("year_data", out var yearDataRaw))
+            int currentYear = csv.GetField<int>("year_val");
+            decimal rawBaseSalary = csv.GetField<decimal>("base_salary");
+
+            // LOGIC: A year is a void year if it is beyond the signed year + the duration of the contract.
+            bool isVoidYear = currentYear > (yearSigned + contractDuration);
+
+            string teamRawNickname = (csv.GetField<string>("team_nickname") ?? "").ToUpper();
+            teamNicknameLookup.TryGetValue(teamRawNickname, out var teamId);
+
+            context.ContractYears.Add(new ContractYear
             {
-                // Parser needs to populate NflVerseYearDto.TeamName
-                var contractYears = parser.ParseNestedYears(yearDataRaw)
-                    .Where(y => y.Year >= yearSigned)
-                    .OrderBy(y => y.Year)
-                    .ToList();
-
-                for (int i = 0; i < contractYears.Count; i++)
-                {
-                    var yr = contractYears[i];
-                    bool isVoidYear = (i >= contractDuration);
-
-                    // Resolve team from the tuple data
-                    int? teamId = null;
-                    if (!string.IsNullOrEmpty(yr.TeamName) && teamLookup.TryGetValue(yr.TeamName.ToUpper(), out var tId))
-                    {
-                        teamId = tId;
-                    }
-
-                    context.ContractYears.Add(new ContractYear
-                    {
-                        ContractId = contractId,
-                        Year = yr.Year,
-                        TeamId = teamId,
-                        BaseSalary = isVoidYear ? 0 : yr.BaseSalary,
-                        SigningBonusProration = yr.SigningBonusProration,
-                        CapNumber = yr.CapHit,
-                        IsVoidYear = isVoidYear
-                    });
-                }
-            }
+                ContractId = contractId,
+                Year = currentYear,
+                TeamId = teamId > 0 ? teamId : null,
+                BaseSalary = isVoidYear ? 0 : Math.Round(rawBaseSalary, 2),
+                SigningBonusProration = Math.Round(csv.GetField<decimal>("prorated_bonus"), 2),
+                OptionBonusProration = Math.Round(csv.GetField<decimal>("option_bonus"), 2),
+                RosterBonus = Math.Round(csv.GetField<decimal>("roster_bonus"), 2),
+                WorkoutBonus = Math.Round(csv.GetField<decimal>("workout_bonus"), 2),
+                PerGameRosterBonus = Math.Round(csv.GetField<decimal>("per_game_bonus"), 2),
+                CapNumber = Math.Round(csv.GetField<decimal>("cap_number"), 2),
+                IsVoidYear = isVoidYear
+            });
         }
         await context.SaveChangesAsync();
     }

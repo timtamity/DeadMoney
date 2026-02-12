@@ -1,6 +1,5 @@
 using DeadMoney.Data;
 using DeadMoney.Service.Interfaces;
-using DeadMoney.Service.Parsers;
 using DeadMoney.Service.Services;
 using DeadMoney.Web.Authorization;
 using DeadMoney.Web.Components;
@@ -65,9 +64,6 @@ builder.Services.AddSingleton<IAuthorizationHandler, CommissionerHandler>();
 
 // --- 3. CUSTOM SERVICES ---
 builder.Services.AddScoped<IUserService, UserService>();
-
-// NEW: Register the Parser as a Singleton (stateless logic)
-builder.Services.AddSingleton<NflVerseCsvParser>();
 
 // NEW: Typed HttpClient for the Import Service. 
 // This automatically handles the HttpClient injection into NflVerseImportService.
