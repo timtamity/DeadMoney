@@ -1,0 +1,177 @@
+﻿@page "/admin/import"
+@using DeadMoney.Service.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = "AdminOnly")]
+@inject INflVerseImportService ImportService
+
+<PageTitle>NFLVerse Sync | DeadMoney</PageTitle>
+
+<div class="container-fluid">
+    <div class="mb-4">
+        <h1 class="h3 text-bright">NFLVerse Data Synchronization</h1>
+        <p class="text-muted">Pull the latest player, roster, and contract data directly from the NFLVerse data repository.</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-5">
+            <div class="bento-card mb-4">
+                <h5 class="text-gold mb-4"><i class="bi bi-cloud-download me-2"></i>Sync Operations</h5>
+
+                <div class="d-grid gap-3">
+                    <button class="btn btn-outline-light text-start p-3 hover-gold"
+                            @onclick="SyncPlayers" disabled="@_isProcessing">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold">1. Sync Master Players</div>
+                                <div class="extra-small text-muted">Updates names, colleges, and IDs</div>
+                            </div>
+                            <i class="bi bi-people fs-4"></i>
+                        </div>
+                    </button>
+
+                    <button class="btn btn-outline-light text-start p-3 hover-gold"
+                            @onclick="SyncRosters" disabled="@_isProcessing">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold">2. Sync Active Rosters</div>
+                                <div class="extra-small text-muted">Links players to NFL teams</div>
+                            </div>
+                            <i class="bi bi-shield-check fs-4"></i>
+                        </div>
+                    </button>
+
+                    <button class="btn btn-outline-light text-start p-3 hover-gold"
+                            @onclick="SyncContracts" disabled="@_isProcessing">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold">3. Sync Contracts</div>
+                                <div class="extra-small text-muted">Generates multi-year salary data</div>
+                            </div>
+                            <i class="bi bi-currency-dollar fs-4"></i>
+                        </div>
+                    </button>
+
+                    <hr class="border-secondary" />
+
+                    <button class="btn btn-outline-warning text-start p-3"
+                            @onclick="DumpSchema" disabled="@_isProcessing">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold">Debug: Dump Schema</div>
+                                <div class="extra-small text-muted">Inspect Parquet file columns</div>
+                            </div>
+                            <i class="bi bi-terminal fs-4"></i>
+                        </div>
+                    </button>
+                </div>
+
+                @if (_isProcessing)
+                {
+                    <div class="mt-4 text-center">
+                        <div class="spinner-border text-gold mb-2" role="status"></div>
+                        <div class="small text-muted">@_statusMessage</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="bento-card h-100">
+                <h5 class="text-bright mb-3">System Log</h5>
+                <div class="log-container" style="max-height: 600px; overflow-y: auto; background: #0f111a; padding: 1rem; border-radius: 8px;">
+                    @if (!_logs.Any())
+                    {
+                        <div class="text-muted small italic">No sync operations performed yet...</div>
+                    }
+                    @foreach (var log in _logs)
+                    {
+                        <div class="log-entry @(log.IsError ? "text-danger" : (log.IsDebug ? "text-warning" : "text-success")) mb-1" style="font-family: 'Courier New', Courier, monospace; font-size: 0.85rem;">
+                            <span class="text-muted">[@log.Timestamp.ToString("HH:mm:ss")]</span> @log.Message
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isProcessing;
+    private string _statusMessage = "";
+    private List<SyncLog> _logs = new();
+
+    private async Task SyncPlayers() =>
+        await ExecuteStep("Syncing Master Player List...", () => ImportService.SyncPlayerMasterListAsync());
+
+    private async Task SyncRosters() =>
+        await ExecuteStep("Syncing NFL Rosters...", () => ImportService.SyncCurrentRostersAsync());
+
+    private async Task SyncContracts() =>
+        await ExecuteStep("Syncing Contract Data...", () => ImportService.SyncContractsAsync());
+
+    private async Task DumpSchema()
+    {
+        _isProcessing = true;
+        _statusMessage = "Analyzing Parquet File Schema...";
+
+        try
+        {
+            // Now returns a single formatted string
+            var schemaDump = await ImportService.GetContractFileSchemaAsync();
+
+            // Add as one large log entry or split by newlines if you prefer
+            AddLog("Schema Analysis Results:", false, true);
+            AddLog(schemaDump, false, true);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Schema Error: {ex.Message}", true);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _statusMessage = "";
+        }
+    }
+
+    private async Task ExecuteStep(string message, Func<Task> action)
+    {
+        _isProcessing = true;
+        _statusMessage = message;
+        AddLog(message);
+
+        try
+        {
+            await action();
+            AddLog("Step completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Error: {ex.Message}", true);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _statusMessage = "";
+        }
+    }
+
+    private void AddLog(string msg, bool isError = false, bool isDebug = false)
+    {
+        _logs.Insert(0, new SyncLog
+        {
+            Message = msg,
+            IsError = isError,
+            IsDebug = isDebug,
+            Timestamp = DateTime.Now
+        });
+    }
+
+    private class SyncLog
+    {
+        public string Message { get; set; } = "";
+        public bool IsError { get; set; }
+        public bool IsDebug { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+}

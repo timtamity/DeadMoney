@@ -1,0 +1,129 @@
+﻿@using DeadMoney.Core.Entities
+@using DeadMoney.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+
+<div class="side-panel @(_isOpen ? "is-open" : "")">
+    <div class="panel-header">
+        <h5 class="mb-0">Edit User: @User?.DisplayName</h5>
+        <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+    </div>
+
+    @if (User != null)
+    {
+        <div class="panel-body">
+            <div class="info-group mb-4">
+                <label>Discord Identity</label>
+                <div class="d-flex align-items-center mt-2">
+                    <img src="@User.AvatarUrl" class="rounded-circle me-2" width="40" />
+                    <div>
+                        <div class="text-bright">@User.Username</div>
+                        <div class="extra-small text-muted">ID: @User.DiscordId</div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-secondary" />
+
+            <div class="mb-4">
+                <label class="form-label text-gold">League Role</label>
+                <select class="form-select bg-dark text-white border-secondary" @bind="_selectedRoleId">
+                    <option value="">Select a Role...</option>
+                    @foreach (var role in _availableRoles)
+                    {
+                        <option value="@role.Id">@role.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label text-gold">Team Assignment</label>
+                <select class="form-select bg-dark text-white border-secondary" @bind="_selectedTeamId">
+                    <option value="">No Team / Free Agent</option>
+                    @foreach (var team in _availableTeams)
+                    {
+                        <option value="@team.Id">@team.Abbreviation - @team.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="alert alert-info py-2 small">
+                <i class="bi bi-info-circle me-2"></i> Changes will take effect the next time the user logs in.
+            </div>
+        </div>
+
+        <div class="panel-footer">
+            <button class="btn btn-secondary w-100 mb-2" @onclick="Close">Cancel</button>
+            <button class="btn btn-gold w-100" @onclick="SaveChanges">Save Changes</button>
+        </div>
+    }
+</div>
+
+<div class="panel-backdrop @(_isOpen ? "show" : "")" @onclick="Close"></div>
+
+@code {
+    [Parameter] public User? User { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    private bool _isOpen;
+    private List<Role> _availableRoles = new();
+    private List<Team> _availableTeams = new();
+
+    private int? _selectedRoleId;
+    private int? _selectedTeamId;
+
+    public async Task Open(User user)
+    {
+        User = user;
+        _isOpen = true;
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        _availableRoles = await db.Roles.ToListAsync();
+        _availableTeams = await db.Teams.OrderBy(t => t.Abbreviation).ToListAsync();
+
+        // Pre-load existing assignments
+        var mainRole = User.UserRoles.FirstOrDefault();
+        _selectedRoleId = mainRole?.RoleId;
+        _selectedTeamId = mainRole?.TeamId;
+
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        _isOpen = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveChanges()
+    {
+        if (User == null) return;
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        var dbUser = await db.Users
+            .Include(u => u.UserRoles)
+            .FirstOrDefaultAsync(u => u.Id == User.Id);
+
+        if (dbUser != null)
+        {
+            // Simple logic: Update the first role or add a new one
+            // We can expand this later for multiple roles
+            var currentRole = dbUser.UserRoles.FirstOrDefault();
+
+            if (currentRole != null)
+            {
+                currentRole.RoleId = _selectedRoleId ?? currentRole.RoleId;
+                currentRole.TeamId = _selectedTeamId;
+            }
+            else if (_selectedRoleId.HasValue)
+            {
+                dbUser.UserRoles.Add(new UserRole { RoleId = _selectedRoleId.Value, TeamId = _selectedTeamId });
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        await OnSave.InvokeAsync();
+        Close();
+    }
+}

@@ -13,6 +13,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="CsvHelper" Version="33.1.0" />
+		<PackageReference Include="DuckDB.NET.Data.Full" Version="1.4.4" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Components\Contracts\" />
+    <Folder Include="Components\Pages\Contracts\" />
   </ItemGroup>
 
 </Project>

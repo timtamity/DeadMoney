@@ -5,24 +5,26 @@ namespace DeadMoney.Core.Entities;
 
 public partial class Contract
 {
+    // Updated to use the correct fields from ContractYear
     [NotMapped]
-    public decimal TotalValue => ContractYears.Sum(y =>
+    public decimal CalculatedTotalValue => ContractYears.Sum(y =>
         y.BaseSalary +
         y.RosterBonus +
         y.WorkoutBonus +
-        y.MiscBonuses
+        y.OtherBonus +
+        y.PerGameRosterBonus
     ) + SigningBonus;
 
-    [NotMapped]
-    public decimal TotalGuaranteed => ContractYears.Sum(y => y.GuaranteedAmount) + SigningBonus;
+    // Note: I renamed the property below to "CalculatedTotalValue" because your 
+    // Contract.cs already contains a physical Column for "TotalValue". 
+    // You cannot have a [NotMapped] property with the same name as a [Column].
 
     [NotMapped]
-    public decimal APY => ContractYears.Count > 0 ? TotalValue / ContractYears.Count : 0;
+    public decimal CalculatedTotalGuaranteed => ContractYears.Sum(y => y.GuaranteedAmount) + SigningBonus;
 
-    /// <summary>
-    /// NFL Rule: Signing bonuses are prorated over the life of the contract, 
-    /// but for a maximum of 5 years.
-    /// </summary>
+    [NotMapped]
+    public decimal APY => ContractYears.Count > 0 ? CalculatedTotalValue / ContractYears.Count : 0;
+
     [NotMapped]
     public decimal AnnualProration
     {
@@ -37,26 +39,40 @@ public partial class Contract
     public decimal GetCapHitForYear(int year)
     {
         var yearData = ContractYears.FirstOrDefault(y => y.Year == year);
-        return yearData?.CapHit ?? 0;
+        if (yearData == null) return 0;
+
+        var contractYearsOrdered = ContractYears.OrderBy(y => y.Year).ToList();
+        int yearIndex = contractYearsOrdered.FindIndex(y => y.Year == year);
+
+        decimal prorationSlice = (yearIndex >= 0 && yearIndex < 5) ? AnnualProration : 0;
+
+        // Uses the logic properties from ContractYear
+        return yearData.BaseSalary +
+               yearData.RosterBonus +
+               yearData.WorkoutBonus +
+               yearData.OtherBonus +
+               yearData.PerGameRosterBonus +
+               prorationSlice;
     }
 
     public decimal GetDeadMoneyForYear(int year)
     {
         if (ContractYears.Count == 0) return 0;
 
-        // 1. Calculate remaining proration
-        // We only count years where proration actually applies (first 5 years of contract)
         var contractYearsOrdered = ContractYears.OrderBy(y => y.Year).ToList();
         int yearIndex = contractYearsOrdered.FindIndex(y => y.Year == year);
 
+        if (yearIndex == -1) return 0;
+
+        int totalProrationYears = Math.Min(contractYearsOrdered.Count, 5);
         decimal remainingProration = 0;
-        if (yearIndex != -1 && yearIndex < 5)
+
+        if (yearIndex < totalProrationYears)
         {
-            int yearsOfProrationLeft = Math.Min(contractYearsOrdered.Count, 5) - yearIndex;
-            remainingProration = AnnualProration * yearsOfProrationLeft;
+            int yearsRemainingInProratedWindow = totalProrationYears - yearIndex;
+            remainingProration = AnnualProration * yearsRemainingInProratedWindow;
         }
 
-        // 2. Add future guaranteed salary/bonuses
         decimal futureGuarantees = ContractYears
             .Where(y => y.Year >= year)
             .Sum(y => y.GuaranteedAmount);
@@ -64,8 +80,5 @@ public partial class Contract
         return remainingProration + futureGuarantees;
     }
 
-    public decimal GetSavingsForYear(int year)
-    {
-        return GetCapHitForYear(year) - GetDeadMoneyForYear(year);
-    }
+    public decimal GetSavingsForYear(int year) => GetCapHitForYear(year) - GetDeadMoneyForYear(year);
 }

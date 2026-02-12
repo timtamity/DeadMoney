@@ -1,0 +1,132 @@
+﻿@page "/admin/users"
+@using DeadMoney.Core.Entities
+@using DeadMoney.Data
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize(Policy = "AdminOnly")]
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+
+<PageTitle>User Management | DeadMoney</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">User Management</h1>
+        <span class="badge bg-dark border border-secondary p-2">
+            Commissioner Access
+        </span>
+    </div>
+
+    @if (_users == null)
+    {
+        <div class="text-center mt-5">
+            <div class="spinner-border text-gold" role="status"></div>
+            <p class="mt-2 text-muted">Loading League Directory...</p>
+        </div>
+    }
+    else
+    {
+        <div class="bento-card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Discord ID</th>
+                        <th>Roles</th>
+                        <th>Assignments</th>
+                        <th>Last Login</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in _users)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="@(user.AvatarUrl ?? "img/default-avatar.png")"
+                                         class="rounded-circle me-3 shadow-sm" width="32" height="32" />
+                                    <div>
+                                        <div class="fw-bold text-bright">@user.DisplayName</div>
+                                        <div class="small text-muted">@@@user.Username</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="small font-monospace">@user.DiscordId</td>
+                            <td>
+                                @foreach (var ur in user.UserRoles)
+                                {
+                                    <span class="badge rounded-pill bg-primary me-1">
+                                        @ur.Role.Name
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                @foreach (var ur in user.UserRoles)
+                                {
+                                    if (ur.Team != null)
+                                    {
+                                        <div class="small text-gold fw-bold">
+                                            <i class="bi bi-shield-shaded me-1"></i>@ur.Team.Abbreviation
+                                        </div>
+                                    }
+                                    @foreach (var pos in ur.Positions)
+                                    {
+                                        <span class="badge bg-secondary extra-small me-1">@pos.Code</span>
+                                    }
+                                }
+                            </td>
+                            <td class="small">@user.LastLogin.ToLocalTime().ToString("g")</td>
+                            <td class="text-end">
+                                @* Use 'async' in the lambda to allow awaiting the Task *@
+                                <button class="btn btn-sm btn-outline-light hover-gold" @onclick="async () => await OpenEdit(user)">
+                                    <i class="bi bi-pencil me-1"></i> Edit
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@* The Slide-out Edit Panel *@
+<EditUserPanel @ref="_editPanel" OnSave="RefreshUsers" />
+
+@code {
+    private List<User>? _users;
+    private EditUserPanel _editPanel = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        _users = await db.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Team)
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Positions)
+            .OrderByDescending(u => u.LastLogin)
+            .ToListAsync();
+    }
+
+    private async Task RefreshUsers()
+    {
+        await LoadUsers();
+        // StateHasChanged is usually not needed here if called from a Task-based event,
+        // but kept if the UI doesn't refresh immediately.
+    }
+
+    // Changed return type to Task and added 'await' support
+    private async Task OpenEdit(User user)
+    {
+        await _editPanel.Open(user);
+    }
+}

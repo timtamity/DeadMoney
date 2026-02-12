@@ -4,6 +4,7 @@ using DeadMoney.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeadMoney.Data.Migrations
 {
     [DbContext(typeof(DeadMoneyDbContext))]
-    partial class DeadMoneyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260211225303_SchemaFixes")]
+    partial class SchemaFixes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -85,9 +88,6 @@ namespace DeadMoney.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<bool>("IsVoidYear")
-                        .HasColumnType("bit");
-
                     b.Property<decimal>("OptionBonusProration")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -108,9 +108,6 @@ namespace DeadMoney.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("TeamId")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("WorkoutBonus")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -121,8 +118,6 @@ namespace DeadMoney.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ContractId");
-
-                    b.HasIndex("TeamId");
 
                     b.ToTable("ContractYears", "League");
                 });
@@ -953,13 +948,7 @@ namespace DeadMoney.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("DeadMoney.Core.Entities.Team", "Team")
-                        .WithMany()
-                        .HasForeignKey("TeamId");
-
                     b.Navigation("Contract");
-
-                    b.Navigation("Team");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Player", b =>

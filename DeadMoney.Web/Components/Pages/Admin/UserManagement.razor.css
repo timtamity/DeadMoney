@@ -1,0 +1,32 @@
+﻿.text-gold {
+    color: var(--dm-secondary) !important;
+}
+
+.text-bright {
+    color: var(--dm-text-bright);
+}
+
+.extra-small {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.spinner-border.text-gold {
+    color: var(--dm-secondary);
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.hover-gold:hover {
+    border-color: var(--dm-secondary);
+    color: var(--dm-secondary);
+    background-color: rgba(201, 163, 65, 0.1);
+}
+
+/* Ensure avatars don't look flat */
+.shadow-sm {
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.5) !important;
+}

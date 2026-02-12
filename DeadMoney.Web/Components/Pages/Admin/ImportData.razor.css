@@ -1,0 +1,28 @@
+﻿.log-container {
+    height: 400px;
+    overflow-y: auto;
+    background-color: #090a0c;
+    padding: 1rem;
+    border-radius: var(--dm-radius);
+    border: 1px solid var(--dm-border);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+}
+
+.log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.hover-gold:hover {
+    border-color: var(--dm-secondary) !important;
+    background-color: rgba(201, 163, 65, 0.05) !important;
+}
+
+    .hover-gold:hover .fw-bold {
+        color: var(--dm-secondary);
+    }
+
+.extra-small {
+    font-size: 0.7rem;
+}

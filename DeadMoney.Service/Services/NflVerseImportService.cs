@@ -3,22 +3,61 @@ using CsvHelper.Configuration;
 using DeadMoney.Core.Entities;
 using DeadMoney.Data;
 using DeadMoney.Service.Interfaces;
+using DeadMoney.Service.Parsers;
+using DuckDB.NET.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using System.IO.Compression;
+using System.Text;
 
 namespace DeadMoney.Service.Services;
 
-public class NflVerseImportService(DeadMoneyDbContext context, HttpClient http) : INflVerseImportService
+public class NflVerseImportService(
+    DeadMoneyDbContext context,
+    HttpClient http,
+    NflVerseCsvParser parser) : INflVerseImportService
 {
     private const string PlayersUrl = "https://github.com/nflverse/nflverse-data/releases/download/players/players.csv";
-    private const string RostersUrl = "https://github.com/nflverse/nflverse-data/releases/download/rosters/roster.csv";
-    private const string ContractsUrl = "https://github.com/nflverse/nflverse-data/releases/download/contracts/contracts.csv";
+    private const string RostersUrl = "https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2025.csv";
+    private const string ContractsUrl = "https://github.com/nflverse/nflverse-data/releases/download/contracts/historical_contracts.parquet";
+
+    public async Task<string> GetContractFileSchemaAsync()
+    {
+        try
+        {
+            using var connection = new DuckDBConnection("DataSource=:memory:");
+            await connection.OpenAsync();
+
+            using (var setupCmd = new DuckDBCommand("INSTALL httpfs; LOAD httpfs;", connection))
+                await setupCmd.ExecuteNonQueryAsync();
+
+            var query = $"DESCRIBE SELECT * FROM read_parquet('{ContractsUrl}');";
+            using var command = new DuckDBCommand(query, connection);
+            using var reader = await command.ExecuteReaderAsync();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("--- DUCKDB PARQUET SCHEMA DUMP ---");
+            while (reader.Read())
+            {
+                sb.AppendLine($"Column: {reader[0],-20} | Type: {reader[1],-12}");
+            }
+            return sb.ToString();
+        }
+        catch (Exception ex) { return $"Schema Dump Failed: {ex.Message}"; }
+    }
 
     public async Task SyncPlayerMasterListAsync()
     {
         var records = await GetCsvRecordsAsync(PlayersUrl);
-        var existingPlayers = await context.Players.Where(p => p.GsisId != null).ToDictionaryAsync(p => p.GsisId!);
-        var existingPositions = await context.Positions.ToDictionaryAsync(p => p.Code);
+
+        // Safe lookup: Group by GsisId to handle duplicates in source CSV
+        var existingPlayers = (await context.Players.Where(p => p.GsisId != null).ToListAsync())
+            .GroupBy(p => p.GsisId!)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var existingPositions = (await context.Positions.ToListAsync())
+            .GroupBy(p => p.Code)
+            .ToDictionary(g => g.Key, g => g.First());
 
         foreach (var row in records)
         {
@@ -44,16 +83,8 @@ public class NflVerseImportService(DeadMoneyDbContext context, HttpClient http) 
 
             player.FirstName = dict["first_name"]?.ToString() ?? "";
             player.LastName = dict["last_name"]?.ToString() ?? "";
-            player.Suffix = dict["suffix"]?.ToString();
             player.OtcId = dict["otc_id"]?.ToString();
-            player.PfrId = dict["pfr_id"]?.ToString();
-            player.BirthDate = dict["birth_date"]?.ToString();
-            player.College = dict["college_name"]?.ToString();
             player.PositionCode = posCode;
-            player.Height = dict["height"]?.ToString();
-
-            if (int.TryParse(dict["weight"]?.ToString(), out int w))
-                player.Weight = w;
         }
         await context.SaveChangesAsync();
     }
@@ -61,32 +92,23 @@ public class NflVerseImportService(DeadMoneyDbContext context, HttpClient http) 
     public async Task SyncCurrentRostersAsync()
     {
         var records = await GetCsvRecordsAsync(RostersUrl);
-        var teams = await context.Teams.ToDictionaryAsync(t => t.Abbreviation);
-        var players = await context.Players.Where(p => p.GsisId != null).ToDictionaryAsync(p => p.GsisId!);
+
+        var teams = (await context.Teams.ToListAsync())
+            .GroupBy(t => t.Abbreviation.ToUpper())
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var players = (await context.Players.Where(p => p.GsisId != null).ToListAsync())
+            .GroupBy(p => p.GsisId!)
+            .ToDictionary(g => g.Key, g => g.First());
 
         foreach (var row in records)
         {
             IDictionary<string, object> dict = row;
-            string gsisId = dict["gsis_id"]?.ToString() ?? "";
-
-            if (players.TryGetValue(gsisId, out Player? player))
+            if (players.TryGetValue(dict["gsis_id"]?.ToString() ?? "", out Player? player))
             {
                 player.Number = dict["jersey_number"]?.ToString();
-                player.YearsExp = dict["years_exp"]?.ToString();
-                player.HeadshotUrl = dict["headshot_url"]?.ToString();
-
-                string teamAbbr = dict["team"]?.ToString() ?? "";
-                if (!string.IsNullOrEmpty(teamAbbr))
-                {
-                    if (!teams.TryGetValue(teamAbbr, out Team? team))
-                    {
-                        team = new Team { Abbreviation = teamAbbr, City = "Unknown", Nickname = teamAbbr };
-                        context.Teams.Add(team);
-                        teams.Add(teamAbbr, team);
-                        await context.SaveChangesAsync();
-                    }
+                if (teams.TryGetValue(dict["team"]?.ToString()?.ToUpper() ?? "", out Team? team))
                     player.TeamId = team.Id;
-                }
             }
         }
         await context.SaveChangesAsync();
@@ -94,58 +116,120 @@ public class NflVerseImportService(DeadMoneyDbContext context, HttpClient http) 
 
     public async Task SyncContractsAsync()
     {
-        var records = await GetCsvRecordsAsync(ContractsUrl);
+        var tempCsvPath = Path.Combine(Path.GetTempPath(), "contracts_flattened.csv");
 
-        // Use OTC ID for mapping as GSIS ID is sometimes missing in contract files
-        var playersByOtc = await context.Players
-            .Where(p => p.OtcId != null)
-            .ToDictionaryAsync(p => p.OtcId!);
-
-        foreach (var row in records)
+        try
         {
-            IDictionary<string, object> dict = row;
-            string otcId = dict["otc_id"]?.ToString() ?? "";
-
-            if (string.IsNullOrEmpty(otcId) || !playersByOtc.TryGetValue(otcId, out Player? player))
-                continue;
-
-            // Check if this player already has a "Base" contract (not sim-modified)
-            bool hasContract = await context.Contracts.AnyAsync(c => c.PlayerId == player.Id && !c.IsModifiedBySim);
-            if (hasContract) continue;
-
-            // Map standard OTC columns
-            if (!decimal.TryParse(dict["value"]?.ToString(), out decimal totalValue)) continue;
-            int.TryParse(dict["years"]?.ToString(), out int duration);
-            decimal.TryParse(dict["guaranteed"]?.ToString(), out decimal guaranteed);
-
-            var contract = new Contract
+            using (var conn = new DuckDBConnection("DataSource=:memory:"))
             {
-                PlayerId = player.Id,
-                IsActive = dict["is_active"]?.ToString()?.ToLower() == "true",
-                IsModifiedBySim = false,
-                SigningBonus = guaranteed // Simplified for baseline
-            };
+                await conn.OpenAsync();
+                using (var setupCmd = new DuckDBCommand("INSTALL httpfs; LOAD httpfs;", conn))
+                    await setupCmd.ExecuteNonQueryAsync();
 
-            context.Contracts.Add(contract);
-            await context.SaveChangesAsync();
+                // Modified query to unnest while keeping the anchor year and length
+                var exportQuery = $@"
+                    COPY (
+                        SELECT 
+                            otc_id,
+                            is_active,
+                            value,
+                            guaranteed,
+                            year_signed,
+                            years,
+                            unnest(cols) as year_data
+                        FROM read_parquet('{ContractsUrl}')
+                    ) TO '{tempCsvPath}' (HEADER TRUE, DELIMITER ',');";
 
-            // Create placeholder years based on contract length
-            // NFLVerse's contracts.csv doesn't always provide the year-by-year split in one row.
-            // We'll generate the years starting from the 'year_signed' column or current year.
-            if (!int.TryParse(dict["year_signed"]?.ToString(), out int startYear))
-                startYear = DateTime.UtcNow.Year;
+                using var cmd = new DuckDBCommand(exportQuery, conn);
+                await cmd.ExecuteNonQueryAsync();
+            }
 
-            decimal avgSalary = duration > 0 ? totalValue / duration : totalValue;
+            await ProcessFlattenedCsv(tempCsvPath);
+        }
+        finally
+        {
+            if (File.Exists(tempCsvPath)) File.Delete(tempCsvPath);
+        }
+    }
 
-            for (int i = 0; i < (duration > 0 ? duration : 1); i++)
+    private async Task ProcessFlattenedCsv(string csvPath)
+    {
+        await context.Database.ExecuteSqlRawAsync("DELETE FROM League.ContractYears");
+        await context.Database.ExecuteSqlRawAsync("DELETE FROM League.Contracts");
+
+        using var reader = new StreamReader(csvPath);
+        using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+
+        await csv.ReadAsync();
+        csv.ReadHeader();
+
+        // Safe player lookup (handling duplicates in OtcId)
+        var playerLookup = (await context.Players.Where(p => p.OtcId != null).ToListAsync())
+            .GroupBy(p => p.OtcId!)
+            .ToDictionary(g => g.Key, g => g.First().Id);
+
+        // Safe team lookup (using Name from the year_data tuples)
+        var teamLookup = (await context.Teams.ToListAsync())
+            .GroupBy(t => t.Name.ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().Id);
+
+        var createdContracts = new Dictionary<string, int>();
+
+        while (await csv.ReadAsync())
+        {
+            var otcId = csv.GetField<string>("otc_id") ?? string.Empty;
+            if (string.IsNullOrEmpty(otcId) || !playerLookup.TryGetValue(otcId, out int pId)) continue;
+
+            // Anchor points for contract logic
+            int yearSigned = csv.GetField<int>("year_signed");
+            int contractDuration = csv.GetField<int>("years");
+
+            if (!createdContracts.TryGetValue(otcId, out int contractId))
             {
-                context.ContractYears.Add(new ContractYear
+                var contract = new Contract
                 {
-                    ContractId = contract.Id,
-                    Year = startYear + i,
-                    BaseSalary = avgSalary,
-                    SigningBonusProration = guaranteed / (duration > 0 ? duration : 1)
-                });
+                    PlayerId = pId,
+                    TotalValue = csv.GetField<decimal>("value"),
+                    TotalGuaranteed = csv.GetField<decimal>("guaranteed"),
+                    IsActive = csv.GetField<bool>("is_active")
+                };
+                context.Contracts.Add(contract);
+                await context.SaveChangesAsync();
+                contractId = contract.Id;
+                createdContracts.Add(otcId, contractId);
+            }
+
+            if (csv.TryGetField<string>("year_data", out var yearDataRaw))
+            {
+                // Parser needs to populate NflVerseYearDto.TeamName
+                var contractYears = parser.ParseNestedYears(yearDataRaw)
+                    .Where(y => y.Year >= yearSigned)
+                    .OrderBy(y => y.Year)
+                    .ToList();
+
+                for (int i = 0; i < contractYears.Count; i++)
+                {
+                    var yr = contractYears[i];
+                    bool isVoidYear = (i >= contractDuration);
+
+                    // Resolve team from the tuple data
+                    int? teamId = null;
+                    if (!string.IsNullOrEmpty(yr.TeamName) && teamLookup.TryGetValue(yr.TeamName.ToUpper(), out var tId))
+                    {
+                        teamId = tId;
+                    }
+
+                    context.ContractYears.Add(new ContractYear
+                    {
+                        ContractId = contractId,
+                        Year = yr.Year,
+                        TeamId = teamId,
+                        BaseSalary = isVoidYear ? 0 : yr.BaseSalary,
+                        SigningBonusProration = yr.SigningBonusProration,
+                        CapNumber = yr.CapHit,
+                        IsVoidYear = isVoidYear
+                    });
+                }
             }
         }
         await context.SaveChangesAsync();
@@ -153,29 +237,25 @@ public class NflVerseImportService(DeadMoneyDbContext context, HttpClient http) 
 
     private async Task<IEnumerable<dynamic>> GetCsvRecordsAsync(string url)
     {
-        var response = await http.GetStreamAsync(url);
-        using var reader = new StreamReader(response);
+        var response = await http.GetAsync(url);
+        var stream = await response.Content.ReadAsStreamAsync();
+        if (url.EndsWith(".gz")) stream = new GZipStream(stream, CompressionMode.Decompress);
+        using var reader = new StreamReader(stream);
         using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HasHeaderRecord = true,
-            PrepareHeaderForMatch = args => args.Header.ToLower()
+            PrepareHeaderForMatch = args => args.Header.ToLower(),
+            MissingFieldFound = null,
+            HeaderValidated = null
         });
         return csv.GetRecords<dynamic>().ToList();
     }
 
-    private string MapPosition(string rawPos)
+    private string MapPosition(string raw) => raw.ToUpper() switch
     {
-        if (string.IsNullOrWhiteSpace(rawPos)) return "UNK";
-        string p = rawPos.ToUpper().Trim();
-        return p switch
-        {
-            "SAF" or "FS" or "SS" => "S",
-            "OG" or "LG" or "RG" => "G",
-            "OT" or "LT" or "RT" => "T",
-            "ILB" or "OLB" or "MLB" => "LB",
-            "ED" or "EDGE" => "DE",
-            "NT" => "DT",
-            _ => p
-        };
-    }
+        "SAF" or "FS" or "SS" => "S",
+        "OG" or "LG" or "RG" => "G",
+        "OT" or "LT" or "RT" => "T",
+        _ => raw.ToUpper()
+    };
 }

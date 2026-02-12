@@ -1,6 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using DeadMoney.Core.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DeadMoney.Core.Entities;
 
@@ -14,17 +16,17 @@ public partial class Contract
     public int PlayerId { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
+    public decimal TotalValue { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal TotalGuaranteed { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
     public decimal SigningBonus { get; set; }
 
     public bool IsActive { get; set; }
-
-    /// <summary>
-    /// If true, the NflVerse import will skip this record to avoid 
-    /// overwriting a user's custom SIM scenario.
-    /// </summary>
     public bool IsModifiedBySim { get; set; }
 
-    // Navigation properties
     [ForeignKey(nameof(PlayerId))]
     public virtual Player Player { get; set; } = null!;
 

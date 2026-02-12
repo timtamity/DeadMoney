@@ -17,4 +17,9 @@ public interface INflVerseImportService
     /// Phase 3: Injects the OverTheCap financial baseline for all known players.
     /// </summary>
     Task SyncContractsAsync();
+
+    /// <summary>
+    /// Phase 0: Fetches the contract file schema from OverTheCap.    
+    /// </summary>
+    Task<string> GetContractFileSchemaAsync();
 }

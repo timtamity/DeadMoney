@@ -1,5 +1,6 @@
 using DeadMoney.Data;
 using DeadMoney.Service.Interfaces;
+using DeadMoney.Service.Parsers;
 using DeadMoney.Service.Services;
 using DeadMoney.Web.Authorization;
 using DeadMoney.Web.Components;
@@ -54,20 +55,23 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Inside the Authorization section
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy =>
         policy.Requirements.Add(new CommissionerRequirement()));
 });
 
-// Register the handler as a service
 builder.Services.AddSingleton<IAuthorizationHandler, CommissionerHandler>();
 
 // --- 3. CUSTOM SERVICES ---
-builder.Services.AddHttpClient();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<INflVerseImportService, NflVerseImportService>();
+
+// NEW: Register the Parser as a Singleton (stateless logic)
+builder.Services.AddSingleton<NflVerseCsvParser>();
+
+// NEW: Typed HttpClient for the Import Service. 
+// This automatically handles the HttpClient injection into NflVerseImportService.
+builder.Services.AddHttpClient<INflVerseImportService, NflVerseImportService>();
 
 // --- 4. BLAZOR COMPONENTS ---
 builder.Services.AddRazorComponents()
@@ -91,15 +95,13 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<DeadMoneyDbContext>();
 
-    // 1. Ensure migrations are applied (This creates the Roles/Teams/Positions)
-    // If you prefer manual migrations, ensure you've run 'Update-Database' in CLI
+    // Ensure migrations are applied
     await dbContext.Database.MigrateAsync();
 
     var adminDiscordId = builder.Configuration["AdminSettings:MyDiscordId"];
 
     if (!string.IsNullOrEmpty(adminDiscordId))
     {
-        // 2. Now it's safe to assign the role because MigrateAsync() just created RoleId 1
         await DbInitializer.InitializeUserRoles(dbContext, adminDiscordId);
     }
 }
