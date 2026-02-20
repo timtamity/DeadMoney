@@ -299,10 +299,10 @@ namespace DeadMoney.Data.Migrations
                 columns: new[] { "Id", "Description", "Name" },
                 values: new object[,]
                 {
-                    { 1, "", "Commissioner" },
-                    { 2, "", "Agent" },
-                    { 3, "", "GM" },
-                    { 4, "", "Assistant GM" }
+                    { 1, "Full administrative access to league settings and users.", "Commissioner" },
+                    { 2, "Manages specific player positions across the league.", "Agent" },
+                    { 3, "Manages a specific team's roster and salary cap.", "GM" },
+                    { 4, "Assists in managing team operations.", "Assistant GM" }
                 });
 
             migrationBuilder.InsertData(

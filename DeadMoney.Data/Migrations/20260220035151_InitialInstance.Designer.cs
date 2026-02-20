@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeadMoney.Data.Migrations
 {
     [DbContext(typeof(DeadMoneyDbContext))]
-    [Migration("20260220033920_InitialInstance")]
+    [Migration("20260220035151_InitialInstance")]
     partial class InitialInstance
     {
         /// <inheritdoc />
@@ -420,25 +420,25 @@ namespace DeadMoney.Data.Migrations
                         new
                         {
                             Id = 1,
-                            Description = "",
+                            Description = "Full administrative access to league settings and users.",
                             Name = "Commissioner"
                         },
                         new
                         {
                             Id = 2,
-                            Description = "",
+                            Description = "Manages specific player positions across the league.",
                             Name = "Agent"
                         },
                         new
                         {
                             Id = 3,
-                            Description = "",
+                            Description = "Manages a specific team's roster and salary cap.",
                             Name = "GM"
                         },
                         new
                         {
                             Id = 4,
-                            Description = "",
+                            Description = "Assists in managing team operations.",
                             Name = "Assistant GM"
                         });
                 });

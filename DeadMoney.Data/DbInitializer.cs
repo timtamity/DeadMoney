@@ -14,13 +14,13 @@ public static class DbInitializer
     {
         // 1. Roles (Auth Schema)
         builder.Entity<Role>().HasData(
-            new Role { Id = 1, Name = "Commissioner" },
-            new Role { Id = 2, Name = "Agent" },
-            new Role { Id = 3, Name = "GM" },
-            new Role { Id = 4, Name = "Assistant GM" }
+            new Role { Id = 1, Name = "Commissioner", Description = "Full administrative access to league settings and users." },
+            new Role { Id = 2, Name = "Agent", Description = "Manages specific player positions across the league." },
+            new Role { Id = 3, Name = "GM", Description = "Manages a specific team's roster and salary cap." },
+            new Role { Id = 4, Name = "Assistant GM", Description = "Assists in managing team operations." }
         );
 
-        // 2. Positions (League Schema - Now using Integer IDs as Primary Key)
+        // 2. Positions (League Schema)
         builder.Entity<Position>().HasData(
             new Position { Id = 1, Code = "QB", Name = "Quarterback", DisplayOrder = 1, Unit = PositionUnit.Offense },
             new Position { Id = 2, Code = "RB", Name = "Running Back", DisplayOrder = 2, Unit = PositionUnit.Offense },
@@ -40,7 +40,7 @@ public static class DbInitializer
             new Position { Id = 16, Code = "LS", Name = "Long Snapper", DisplayOrder = 22, Unit = PositionUnit.SpecialTeams }
         );
 
-        // 3. Teams (League Schema - Ids are the Primary Key)
+        // 3. Teams (League Schema)
         builder.Entity<Team>().HasData(
             new Team { Id = 1, City = "Arizona", Nickname = "Cardinals", Abbreviation = "ARI" },
             new Team { Id = 2, City = "Atlanta", Nickname = "Falcons", Abbreviation = "ATL" },
@@ -79,24 +79,53 @@ public static class DbInitializer
 
     /// <summary>
     /// RUNTIME SEEDING: Called in Program.cs at startup.
-    /// Safely assigns your Discord user to the Commissioner role.
+    /// Safely ensures your Discord user exists and is assigned to the Commissioner role.
     /// </summary>
     public static async Task InitializeUserRoles(DeadMoneyDbContext db, string discordId)
     {
         if (string.IsNullOrEmpty(discordId)) return;
 
+        // 1. Find or create the User record based on your custom User entity
         var user = await db.Users
             .Include(u => u.UserRoles)
             .FirstOrDefaultAsync(u => u.DiscordId == discordId);
 
-        if (user != null)
+        if (user == null)
         {
-            // RoleId 1 is the "Commissioner" seeded in the static method above.
-            if (!user.UserRoles.Any(ur => ur.RoleId == 1))
+            user = new User
             {
-                user.UserRoles.Add(new UserRole { RoleId = 1 });
-                await db.SaveChangesAsync();
-            }
+                DiscordId = discordId,
+                Username = "tim_of_thee",
+                DisplayName = "tim_of_thee",
+                ThemePreference = "Dark",
+                UseTeamColorsAsAccent = true,
+                TimeZoneId = "UTC",
+                CreatedAt = DateTime.UtcNow,
+                LastLogin = DateTime.UtcNow
+            };
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+        }
+
+        // 2. Assign the Commissioner Role (RoleId 1)
+        // Check using the composite key properties
+        var hasCommRole = await db.UserRoles.AnyAsync(ur =>
+            ur.UserId == user.Id &&
+            ur.RoleId == 1 &&
+            ur.PositionId == null &&
+            ur.TeamId == null);
+
+        if (!hasCommRole)
+        {
+            db.UserRoles.Add(new UserRole
+            {
+                UserId = user.Id,
+                RoleId = 1,
+                PositionId = null,
+                TeamId = null
+            });
+
+            await db.SaveChangesAsync();
         }
     }
 }
