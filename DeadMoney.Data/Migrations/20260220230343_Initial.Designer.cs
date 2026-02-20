@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeadMoney.Data.Migrations
 {
     [DbContext(typeof(DeadMoneyDbContext))]
-    [Migration("20260220035151_InitialInstance")]
-    partial class InitialInstance
+    [Migration("20260220230343_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -43,15 +43,12 @@ namespace DeadMoney.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("SigningBonus")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TotalGuaranteed")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TotalValue")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -70,52 +67,42 @@ namespace DeadMoney.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("BaseSalary")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("CapNumber")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("CashPaid")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ContractId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("GuaranteedAmount")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsVoidYear")
                         .HasColumnType("bit");
 
                     b.Property<decimal>("OptionBonusProration")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("OtherBonus")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PerGameRosterBonus")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("RosterBonus")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("SigningBonusProration")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("TeamId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("WorkoutBonus")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Year")
@@ -128,26 +115,6 @@ namespace DeadMoney.Data.Migrations
                     b.HasIndex("TeamId");
 
                     b.ToTable("ContractYears", "League");
-                });
-
-            modelBuilder.Entity("DeadMoney.Core.Entities.LeagueSetting", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("BaseSalaryCap")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LeagueSettings", "League");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Player", b =>
@@ -255,9 +222,8 @@ namespace DeadMoney.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Unit")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -270,7 +236,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "QB",
                             DisplayOrder = 1,
                             Name = "Quarterback",
-                            Unit = "Offense"
+                            Unit = 0
                         },
                         new
                         {
@@ -278,7 +244,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "RB",
                             DisplayOrder = 2,
                             Name = "Running Back",
-                            Unit = "Offense"
+                            Unit = 0
                         },
                         new
                         {
@@ -286,7 +252,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "FB",
                             DisplayOrder = 3,
                             Name = "Fullback",
-                            Unit = "Offense"
+                            Unit = 0
                         },
                         new
                         {
@@ -294,7 +260,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "WR",
                             DisplayOrder = 4,
                             Name = "Wide Receiver",
-                            Unit = "Offense"
+                            Unit = 0
                         },
                         new
                         {
@@ -302,7 +268,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "TE",
                             DisplayOrder = 5,
                             Name = "Tight End",
-                            Unit = "Offense"
+                            Unit = 0
                         },
                         new
                         {
@@ -310,7 +276,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "OT",
                             DisplayOrder = 6,
                             Name = "Offensive Tackle",
-                            Unit = "Offense"
+                            Unit = 0
                         },
                         new
                         {
@@ -318,7 +284,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "G",
                             DisplayOrder = 7,
                             Name = "Offensive Guard",
-                            Unit = "Offense"
+                            Unit = 0
                         },
                         new
                         {
@@ -326,7 +292,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "C",
                             DisplayOrder = 8,
                             Name = "Center",
-                            Unit = "Offense"
+                            Unit = 0
                         },
                         new
                         {
@@ -334,7 +300,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "EDGE",
                             DisplayOrder = 10,
                             Name = "Edge Defender",
-                            Unit = "Defense"
+                            Unit = 1
                         },
                         new
                         {
@@ -342,7 +308,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "DT",
                             DisplayOrder = 11,
                             Name = "Interior Defensive Line",
-                            Unit = "Defense"
+                            Unit = 1
                         },
                         new
                         {
@@ -350,7 +316,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "LB",
                             DisplayOrder = 12,
                             Name = "Linebacker",
-                            Unit = "Defense"
+                            Unit = 1
                         },
                         new
                         {
@@ -358,7 +324,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "CB",
                             DisplayOrder = 13,
                             Name = "Cornerback",
-                            Unit = "Defense"
+                            Unit = 1
                         },
                         new
                         {
@@ -366,7 +332,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "S",
                             DisplayOrder = 14,
                             Name = "Safety",
-                            Unit = "Defense"
+                            Unit = 1
                         },
                         new
                         {
@@ -374,7 +340,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "K",
                             DisplayOrder = 20,
                             Name = "Kicker",
-                            Unit = "SpecialTeams"
+                            Unit = 2
                         },
                         new
                         {
@@ -382,7 +348,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "P",
                             DisplayOrder = 21,
                             Name = "Punter",
-                            Unit = "SpecialTeams"
+                            Unit = 2
                         },
                         new
                         {
@@ -390,7 +356,7 @@ namespace DeadMoney.Data.Migrations
                             Code = "LS",
                             DisplayOrder = 22,
                             Name = "Long Snapper",
-                            Unit = "SpecialTeams"
+                            Unit = 2
                         });
                 });
 
@@ -414,7 +380,7 @@ namespace DeadMoney.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Roles", "Auth");
+                    b.ToTable("Roles");
 
                     b.HasData(
                         new
@@ -457,7 +423,6 @@ namespace DeadMoney.Data.Migrations
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<decimal>("CarryoverCap")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18, 2)");
 
                     b.Property<string>("City")
@@ -508,8 +473,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "ARI",
                             CarryoverCap = 0m,
                             City = "Arizona",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "West",
                             Name = "",
                             Nickname = "Cardinals"
                         },
@@ -519,8 +484,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "ATL",
                             CarryoverCap = 0m,
                             City = "Atlanta",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "South",
                             Name = "",
                             Nickname = "Falcons"
                         },
@@ -530,8 +495,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "BAL",
                             CarryoverCap = 0m,
                             City = "Baltimore",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "North",
                             Name = "",
                             Nickname = "Ravens"
                         },
@@ -541,8 +506,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "BUF",
                             CarryoverCap = 0m,
                             City = "Buffalo",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "East",
                             Name = "",
                             Nickname = "Bills"
                         },
@@ -552,8 +517,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CAR",
                             CarryoverCap = 0m,
                             City = "Carolina",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "South",
                             Name = "",
                             Nickname = "Panthers"
                         },
@@ -563,8 +528,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CHI",
                             CarryoverCap = 0m,
                             City = "Chicago",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "North",
                             Name = "",
                             Nickname = "Bears"
                         },
@@ -574,8 +539,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CIN",
                             CarryoverCap = 0m,
                             City = "Cincinnati",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "North",
                             Name = "",
                             Nickname = "Bengals"
                         },
@@ -585,8 +550,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "CLE",
                             CarryoverCap = 0m,
                             City = "Cleveland",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "North",
                             Name = "",
                             Nickname = "Browns"
                         },
@@ -596,8 +561,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "DAL",
                             CarryoverCap = 0m,
                             City = "Dallas",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "East",
                             Name = "",
                             Nickname = "Cowboys"
                         },
@@ -607,8 +572,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "DEN",
                             CarryoverCap = 0m,
                             City = "Denver",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "West",
                             Name = "",
                             Nickname = "Broncos"
                         },
@@ -618,8 +583,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "DET",
                             CarryoverCap = 0m,
                             City = "Detroit",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "North",
                             Name = "",
                             Nickname = "Lions"
                         },
@@ -629,8 +594,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "GB",
                             CarryoverCap = 0m,
                             City = "Green Bay",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "North",
                             Name = "",
                             Nickname = "Packers"
                         },
@@ -640,8 +605,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "HOU",
                             CarryoverCap = 0m,
                             City = "Houston",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "South",
                             Name = "",
                             Nickname = "Texans"
                         },
@@ -651,8 +616,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "IND",
                             CarryoverCap = 0m,
                             City = "Indianapolis",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "South",
                             Name = "",
                             Nickname = "Colts"
                         },
@@ -662,8 +627,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "JAX",
                             CarryoverCap = 0m,
                             City = "Jacksonville",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "South",
                             Name = "",
                             Nickname = "Jaguars"
                         },
@@ -673,8 +638,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "KC",
                             CarryoverCap = 0m,
                             City = "Kansas City",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "West",
                             Name = "",
                             Nickname = "Chiefs"
                         },
@@ -684,8 +649,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "LV",
                             CarryoverCap = 0m,
                             City = "Las Vegas",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "West",
                             Name = "",
                             Nickname = "Raiders"
                         },
@@ -695,8 +660,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "LAC",
                             CarryoverCap = 0m,
                             City = "Los Angeles",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "West",
                             Name = "",
                             Nickname = "Chargers"
                         },
@@ -706,8 +671,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "LAR",
                             CarryoverCap = 0m,
                             City = "Los Angeles",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "West",
                             Name = "",
                             Nickname = "Rams"
                         },
@@ -717,8 +682,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "MIA",
                             CarryoverCap = 0m,
                             City = "Miami",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "East",
                             Name = "",
                             Nickname = "Dolphins"
                         },
@@ -728,8 +693,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "MIN",
                             CarryoverCap = 0m,
                             City = "Minnesota",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "North",
                             Name = "",
                             Nickname = "Vikings"
                         },
@@ -739,8 +704,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NE",
                             CarryoverCap = 0m,
                             City = "New England",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "East",
                             Name = "",
                             Nickname = "Patriots"
                         },
@@ -750,8 +715,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NO",
                             CarryoverCap = 0m,
                             City = "New Orleans",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "South",
                             Name = "",
                             Nickname = "Saints"
                         },
@@ -761,8 +726,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NYG",
                             CarryoverCap = 0m,
                             City = "New York",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "East",
                             Name = "",
                             Nickname = "Giants"
                         },
@@ -772,8 +737,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "NYJ",
                             CarryoverCap = 0m,
                             City = "New York",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "East",
                             Name = "",
                             Nickname = "Jets"
                         },
@@ -783,8 +748,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "PHI",
                             CarryoverCap = 0m,
                             City = "Philadelphia",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "East",
                             Name = "",
                             Nickname = "Eagles"
                         },
@@ -794,8 +759,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "PIT",
                             CarryoverCap = 0m,
                             City = "Pittsburgh",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "North",
                             Name = "",
                             Nickname = "Steelers"
                         },
@@ -805,8 +770,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "SF",
                             CarryoverCap = 0m,
                             City = "San Francisco",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "West",
                             Name = "",
                             Nickname = "49ers"
                         },
@@ -816,8 +781,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "SEA",
                             CarryoverCap = 0m,
                             City = "Seattle",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "West",
                             Name = "",
                             Nickname = "Seahawks"
                         },
@@ -827,8 +792,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "TB",
                             CarryoverCap = 0m,
                             City = "Tampa Bay",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "South",
                             Name = "",
                             Nickname = "Buccaneers"
                         },
@@ -838,8 +803,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "TEN",
                             CarryoverCap = 0m,
                             City = "Tennessee",
-                            Conference = "",
-                            Division = "",
+                            Conference = "AFC",
+                            Division = "South",
                             Name = "",
                             Nickname = "Titans"
                         },
@@ -849,8 +814,8 @@ namespace DeadMoney.Data.Migrations
                             Abbreviation = "WAS",
                             CarryoverCap = 0m,
                             City = "Washington",
-                            Conference = "",
-                            Division = "",
+                            Conference = "NFC",
+                            Division = "East",
                             Name = "",
                             Nickname = "Commanders"
                         });
@@ -907,39 +872,41 @@ namespace DeadMoney.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DiscordId")
-                        .IsUnique();
-
-                    b.ToTable("Users", "Auth");
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.UserRole", b =>
                 {
-                    b.Property<int>("UserId")
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("PositionId")
                         .HasColumnType("int");
 
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
 
-                    b.Property<int>("PositionId")
+                    b.Property<int?>("TeamId")
                         .HasColumnType("int");
 
-                    b.Property<int>("TeamId")
+                    b.Property<int>("UserId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
-
-                    b.HasKey("UserId", "RoleId", "PositionId", "TeamId");
+                    b.HasKey("Id");
 
                     b.HasIndex("PositionId");
 
                     b.HasIndex("RoleId");
 
                     b.HasIndex("TeamId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserRoles", "Auth");
                 });
@@ -949,7 +916,7 @@ namespace DeadMoney.Data.Migrations
                     b.HasOne("DeadMoney.Core.Entities.Player", "Player")
                         .WithMany("Contracts")
                         .HasForeignKey("PlayerId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Player");
@@ -977,12 +944,13 @@ namespace DeadMoney.Data.Migrations
                     b.HasOne("DeadMoney.Core.Entities.Position", "Position")
                         .WithMany("Players")
                         .HasForeignKey("PositionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("DeadMoney.Core.Entities.Team", "Team")
                         .WithMany("Roster")
-                        .HasForeignKey("TeamId");
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Position");
 
@@ -994,8 +962,7 @@ namespace DeadMoney.Data.Migrations
                     b.HasOne("DeadMoney.Core.Entities.Position", "Position")
                         .WithMany("UserRoles")
                         .HasForeignKey("PositionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("DeadMoney.Core.Entities.Role", "Role")
                         .WithMany("UserRoles")
@@ -1006,8 +973,7 @@ namespace DeadMoney.Data.Migrations
                     b.HasOne("DeadMoney.Core.Entities.Team", "Team")
                         .WithMany("UserRoles")
                         .HasForeignKey("TeamId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("DeadMoney.Core.Entities.User", "User")
                         .WithMany("UserRoles")

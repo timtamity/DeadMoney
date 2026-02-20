@@ -25,17 +25,13 @@ public partial class Team
     [MaxLength(50)]
     public string Nickname { get; set; } = string.Empty;
 
-    // --- New Structural Columns ---
-
     [Required]
     [MaxLength(10)]
     public string Conference { get; set; } = string.Empty; // e.g., "AFC", "NFC"
 
     [Required]
     [MaxLength(10)]
-    public string Division { get; set; } = string.Empty; // e.g., "North", "South", "East", "West"
-
-    // --- Aesthetic Columns ---
+    public string Division { get; set; } = string.Empty; // e.g., "North", "South"
 
     [MaxLength(7)]
     public string? PrimaryColor { get; set; }
@@ -46,15 +42,11 @@ public partial class Team
     [MaxLength(500)]
     public string? LogoUrl { get; set; }
 
-    // --- Financial Columns ---
-
     [Column(TypeName = "decimal(18, 2)")]
     public decimal CarryoverCap { get; set; }
 
-    // --- Navigation properties ---
-
+    // Navigation properties
     public virtual ICollection<Player> Roster { get; set; } = new List<Player>();
 
-    // Links to the new UserRole table we created
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }

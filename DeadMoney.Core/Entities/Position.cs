@@ -8,7 +8,7 @@ namespace DeadMoney.Core.Entities;
 public class Position
 {
     [Key]
-    public int Id { get; set; } // The Right Way: Integer PK
+    public int Id { get; set; }
 
     [Required]
     [MaxLength(10)]

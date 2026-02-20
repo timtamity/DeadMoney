@@ -42,38 +42,38 @@ public static class DbInitializer
 
         // 3. Teams (League Schema)
         builder.Entity<Team>().HasData(
-            new Team { Id = 1, City = "Arizona", Nickname = "Cardinals", Abbreviation = "ARI" },
-            new Team { Id = 2, City = "Atlanta", Nickname = "Falcons", Abbreviation = "ATL" },
-            new Team { Id = 3, City = "Baltimore", Nickname = "Ravens", Abbreviation = "BAL" },
-            new Team { Id = 4, City = "Buffalo", Nickname = "Bills", Abbreviation = "BUF" },
-            new Team { Id = 5, City = "Carolina", Nickname = "Panthers", Abbreviation = "CAR" },
-            new Team { Id = 6, City = "Chicago", Nickname = "Bears", Abbreviation = "CHI" },
-            new Team { Id = 7, City = "Cincinnati", Nickname = "Bengals", Abbreviation = "CIN" },
-            new Team { Id = 8, City = "Cleveland", Nickname = "Browns", Abbreviation = "CLE" },
-            new Team { Id = 9, City = "Dallas", Nickname = "Cowboys", Abbreviation = "DAL" },
-            new Team { Id = 10, City = "Denver", Nickname = "Broncos", Abbreviation = "DEN" },
-            new Team { Id = 11, City = "Detroit", Nickname = "Lions", Abbreviation = "DET" },
-            new Team { Id = 12, City = "Green Bay", Nickname = "Packers", Abbreviation = "GB" },
-            new Team { Id = 13, City = "Houston", Nickname = "Texans", Abbreviation = "HOU" },
-            new Team { Id = 14, City = "Indianapolis", Nickname = "Colts", Abbreviation = "IND" },
-            new Team { Id = 15, City = "Jacksonville", Nickname = "Jaguars", Abbreviation = "JAX" },
-            new Team { Id = 16, City = "Kansas City", Nickname = "Chiefs", Abbreviation = "KC" },
-            new Team { Id = 17, City = "Las Vegas", Nickname = "Raiders", Abbreviation = "LV" },
-            new Team { Id = 18, City = "Los Angeles", Nickname = "Chargers", Abbreviation = "LAC" },
-            new Team { Id = 19, City = "Los Angeles", Nickname = "Rams", Abbreviation = "LAR" },
-            new Team { Id = 20, City = "Miami", Nickname = "Dolphins", Abbreviation = "MIA" },
-            new Team { Id = 21, City = "Minnesota", Nickname = "Vikings", Abbreviation = "MIN" },
-            new Team { Id = 22, City = "New England", Nickname = "Patriots", Abbreviation = "NE" },
-            new Team { Id = 23, City = "New Orleans", Nickname = "Saints", Abbreviation = "NO" },
-            new Team { Id = 24, City = "New York", Nickname = "Giants", Abbreviation = "NYG" },
-            new Team { Id = 25, City = "New York", Nickname = "Jets", Abbreviation = "NYJ" },
-            new Team { Id = 26, City = "Philadelphia", Nickname = "Eagles", Abbreviation = "PHI" },
-            new Team { Id = 27, City = "Pittsburgh", Nickname = "Steelers", Abbreviation = "PIT" },
-            new Team { Id = 28, City = "San Francisco", Nickname = "49ers", Abbreviation = "SF" },
-            new Team { Id = 29, City = "Seattle", Nickname = "Seahawks", Abbreviation = "SEA" },
-            new Team { Id = 30, City = "Tampa Bay", Nickname = "Buccaneers", Abbreviation = "TB" },
-            new Team { Id = 31, City = "Tennessee", Nickname = "Titans", Abbreviation = "TEN" },
-            new Team { Id = 32, City = "Washington", Nickname = "Commanders", Abbreviation = "WAS" }
+            new Team { Id = 1, City = "Arizona", Nickname = "Cardinals", Abbreviation = "ARI", Conference = "NFC", Division = "West" },
+            new Team { Id = 2, City = "Atlanta", Nickname = "Falcons", Abbreviation = "ATL", Conference = "NFC", Division = "South" },
+            new Team { Id = 3, City = "Baltimore", Nickname = "Ravens", Abbreviation = "BAL", Conference = "AFC", Division = "North" },
+            new Team { Id = 4, City = "Buffalo", Nickname = "Bills", Abbreviation = "BUF", Conference = "AFC", Division = "East" },
+            new Team { Id = 5, City = "Carolina", Nickname = "Panthers", Abbreviation = "CAR", Conference = "NFC", Division = "South" },
+            new Team { Id = 6, City = "Chicago", Nickname = "Bears", Abbreviation = "CHI", Conference = "NFC", Division = "North" },
+            new Team { Id = 7, City = "Cincinnati", Nickname = "Bengals", Abbreviation = "CIN", Conference = "AFC", Division = "North" },
+            new Team { Id = 8, City = "Cleveland", Nickname = "Browns", Abbreviation = "CLE", Conference = "AFC", Division = "North" },
+            new Team { Id = 9, City = "Dallas", Nickname = "Cowboys", Abbreviation = "DAL", Conference = "NFC", Division = "East" },
+            new Team { Id = 10, City = "Denver", Nickname = "Broncos", Abbreviation = "DEN", Conference = "AFC", Division = "West" },
+            new Team { Id = 11, City = "Detroit", Nickname = "Lions", Abbreviation = "DET", Conference = "NFC", Division = "North" },
+            new Team { Id = 12, City = "Green Bay", Nickname = "Packers", Abbreviation = "GB", Conference = "NFC", Division = "North" },
+            new Team { Id = 13, City = "Houston", Nickname = "Texans", Abbreviation = "HOU", Conference = "AFC", Division = "South" },
+            new Team { Id = 14, City = "Indianapolis", Nickname = "Colts", Abbreviation = "IND", Conference = "AFC", Division = "South" },
+            new Team { Id = 15, City = "Jacksonville", Nickname = "Jaguars", Abbreviation = "JAX", Conference = "AFC", Division = "South" },
+            new Team { Id = 16, City = "Kansas City", Nickname = "Chiefs", Abbreviation = "KC", Conference = "AFC", Division = "West" },
+            new Team { Id = 17, City = "Las Vegas", Nickname = "Raiders", Abbreviation = "LV", Conference = "AFC", Division = "West" },
+            new Team { Id = 18, City = "Los Angeles", Nickname = "Chargers", Abbreviation = "LAC", Conference = "AFC", Division = "West" },
+            new Team { Id = 19, City = "Los Angeles", Nickname = "Rams", Abbreviation = "LAR", Conference = "NFC", Division = "West" },
+            new Team { Id = 20, City = "Miami", Nickname = "Dolphins", Abbreviation = "MIA", Conference = "AFC", Division = "East" },
+            new Team { Id = 21, City = "Minnesota", Nickname = "Vikings", Abbreviation = "MIN", Conference = "NFC", Division = "North" },
+            new Team { Id = 22, City = "New England", Nickname = "Patriots", Abbreviation = "NE", Conference = "AFC", Division = "East" },
+            new Team { Id = 23, City = "New Orleans", Nickname = "Saints", Abbreviation = "NO", Conference = "NFC", Division = "South" },
+            new Team { Id = 24, City = "New York", Nickname = "Giants", Abbreviation = "NYG", Conference = "NFC", Division = "East" },
+            new Team { Id = 25, City = "New York", Nickname = "Jets", Abbreviation = "NYJ", Conference = "AFC", Division = "East" },
+            new Team { Id = 26, City = "Philadelphia", Nickname = "Eagles", Abbreviation = "PHI", Conference = "NFC", Division = "East" },
+            new Team { Id = 27, City = "Pittsburgh", Nickname = "Steelers", Abbreviation = "PIT", Conference = "AFC", Division = "North" },
+            new Team { Id = 28, City = "San Francisco", Nickname = "49ers", Abbreviation = "SF", Conference = "NFC", Division = "West" },
+            new Team { Id = 29, City = "Seattle", Nickname = "Seahawks", Abbreviation = "SEA", Conference = "NFC", Division = "West" },
+            new Team { Id = 30, City = "Tampa Bay", Nickname = "Buccaneers", Abbreviation = "TB", Conference = "NFC", Division = "South" },
+            new Team { Id = 31, City = "Tennessee", Nickname = "Titans", Abbreviation = "TEN", Conference = "AFC", Division = "South" },
+            new Team { Id = 32, City = "Washington", Nickname = "Commanders", Abbreviation = "WAS", Conference = "NFC", Division = "East" }
         );
     }
 
@@ -85,7 +85,7 @@ public static class DbInitializer
     {
         if (string.IsNullOrEmpty(discordId)) return;
 
-        // 1. Find or create the User record based on your custom User entity
+        // 1. Find or create the User record
         var user = await db.Users
             .Include(u => u.UserRoles)
             .FirstOrDefaultAsync(u => u.DiscordId == discordId);
@@ -108,7 +108,8 @@ public static class DbInitializer
         }
 
         // 2. Assign the Commissioner Role (RoleId 1)
-        // Check using the composite key properties
+        // Now checking for existence based on the single PK structure 
+        // with null Team/Position (League-wide admin)
         var hasCommRole = await db.UserRoles.AnyAsync(ur =>
             ur.UserId == user.Id &&
             ur.RoleId == 1 &&
@@ -122,7 +123,8 @@ public static class DbInitializer
                 UserId = user.Id,
                 RoleId = 1,
                 PositionId = null,
-                TeamId = null
+                TeamId = null,
+                AssignedAt = DateTime.UtcNow
             });
 
             await db.SaveChangesAsync();
