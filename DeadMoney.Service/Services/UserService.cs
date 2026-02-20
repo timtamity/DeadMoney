@@ -40,8 +40,6 @@ namespace DeadMoney.Service.Services
             var user = await db.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
-                .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Positions)
                 .FirstOrDefaultAsync(u => u.DiscordId == discordId);
 
             if (user == null)
@@ -77,28 +75,27 @@ namespace DeadMoney.Service.Services
                 new Claim("TimeZoneId", user.TimeZoneId)
             };
 
-            // 4. Map Roles and Positions
+            // 4. Map Contextual Roles (Team & Position)
             if (user.UserRoles != null)
             {
                 foreach (var userRole in user.UserRoles)
                 {
+                    // Add the basic Role Name (e.g., "Agent", "GM")
                     if (userRole.Role != null)
                     {
                         appClaims.Add(new Claim(ClaimTypes.Role, userRole.Role.Name));
                     }
 
+                    // Add Team context if it exists
                     if (userRole.TeamId.HasValue)
                     {
                         appClaims.Add(new Claim("TeamId", userRole.TeamId.Value.ToString()));
                     }
 
-                    // Add Agent Position Claims (e.g., "QB", "WR")
-                    if (userRole.Positions != null)
+                    // Add Position context if it exists (Replaces the nested loop)
+                    if (userRole.PositionId.HasValue && userRole.Position != null)
                     {
-                        foreach (var pos in userRole.Positions)
-                        {
-                            appClaims.Add(new Claim("AgentPosition", pos.Code));
-                        }
+                        appClaims.Add(new Claim("AgentPosition", userRole.Position.Code));
                     }
                 }
             }

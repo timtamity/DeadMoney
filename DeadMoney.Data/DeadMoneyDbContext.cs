@@ -97,11 +97,20 @@ public class DeadMoneyDbContext : DbContext
             entity.Ignore(cy => cy.TotalCash);
         });
 
-        // 6. Many-to-Many: UserRole <-> Position
-        builder.Entity<UserRole>()
-            .HasMany(ur => ur.Positions)
-            .WithMany(p => p.UserRoles)
-            .UsingEntity(j => j.ToTable("UserRolePositions", "Auth"));
+        builder.Entity<UserRole>(entity =>
+        {
+            entity.ToTable("UserRoles", "Auth");
+
+            entity.HasKey(ur => new { ur.UserId, ur.RoleId, ur.PositionId, ur.TeamId });
+
+            entity.HasOne(ur => ur.Position)
+                .WithMany(p => p.UserRoles)
+                .HasForeignKey(ur => ur.PositionId);
+
+            entity.HasOne(ur => ur.Team)
+                .WithMany(t => t.UserRoles)
+                .HasForeignKey(ur => ur.TeamId);
+        });
 
         // 7. Seeding
         builder.SeedLeagueData();

@@ -45,8 +45,11 @@ public class NflVerseImportService(
     public async Task SyncPlayerMasterListAsync()
     {
         var records = await GetCsvRecordsAsync(PlayersUrl);
+
+        // Load existing data into memory for fast lookup
         var existingPlayers = (await context.Players.Where(p => p.GsisId != null).ToListAsync())
             .GroupBy(p => p.GsisId!).ToDictionary(g => g.Key, g => g.First());
+
         var existingPositions = (await context.Positions.ToListAsync())
             .GroupBy(p => p.Code).ToDictionary(g => g.Key, g => g.First());
 
@@ -58,15 +61,20 @@ public class NflVerseImportService(
 
             if (string.IsNullOrEmpty(gsisId) || status == "RET") continue;
 
+            // 1. Resolve the Position
             string posCode = MapPosition(dict["position"]?.ToString() ?? "UNK");
-            if (!existingPositions.ContainsKey(posCode))
+
+            if (!existingPositions.TryGetValue(posCode, out var position))
             {
-                var newPos = new Position { Code = posCode, Name = posCode };
-                context.Positions.Add(newPos);
-                existingPositions.Add(posCode, newPos);
+                position = new Position { Code = posCode, Name = posCode };
+                context.Positions.Add(position);
+
+                // We must save here to generate the Integer ID for the new Position
                 await context.SaveChangesAsync();
+                existingPositions.Add(posCode, position);
             }
 
+            // 2. Resolve the Player
             if (!existingPlayers.TryGetValue(gsisId, out Player? player))
             {
                 player = new Player { GsisId = gsisId };
@@ -74,11 +82,15 @@ public class NflVerseImportService(
                 existingPlayers.Add(gsisId, player);
             }
 
+            // 3. Map Properties
             player.FirstName = dict["first_name"]?.ToString() ?? "";
             player.LastName = dict["last_name"]?.ToString() ?? "";
             player.OtcId = dict["otc_id"]?.ToString();
-            player.PositionCode = posCode;
+
+            // THE FIX: Assign the Integer ID from our resolved Position entity
+            player.PositionId = position.Id;
         }
+
         await context.SaveChangesAsync();
     }
 

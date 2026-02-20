@@ -23,10 +23,13 @@ namespace DeadMoney.Core.Entities
         public virtual Team? Team { get; set; }
 
         /// <summary>
-        /// For Agents: Specific positions they manage.
-        /// For other roles, this collection will simply be empty.
+        /// For Agents: The specific position they manage.
+        /// If null, the role applies generally (e.g., a GM or a global Admin).
         /// </summary>
-        public virtual ICollection<Position> Positions { get; set; } = new List<Position>();
+        public int? PositionId { get; set; }
+
+        [ForeignKey(nameof(PositionId))]
+        public virtual Position? Position { get; set; }
 
         public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
     }

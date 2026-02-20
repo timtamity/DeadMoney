@@ -29,7 +29,7 @@ public partial class Player
     public string? Suffix { get; set; } // Jr., III, etc.
 
     [Required]
-    public string PositionCode { get; set; } = string.Empty;
+    public int PositionId { get; set; }
 
     public int? TeamId { get; set; }
 
@@ -49,7 +49,7 @@ public partial class Player
     public string? Number { get; set; }
     public string? HeadshotUrl { get; set; }
 
-    [ForeignKey(nameof(PositionCode))]
+    [ForeignKey(nameof(PositionId))]
     public virtual Position Position { get; set; } = null!;
 
     [ForeignKey(nameof(TeamId))]

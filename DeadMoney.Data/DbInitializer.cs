@@ -20,24 +20,24 @@ public static class DbInitializer
             new Role { Id = 4, Name = "Assistant GM" }
         );
 
-        // 2. Positions (League Schema - Codes are the Primary Key)
+        // 2. Positions (League Schema - Now using Integer IDs as Primary Key)
         builder.Entity<Position>().HasData(
-            new Position { Code = "QB", Name = "Quarterback", DisplayOrder = 1, Unit = PositionUnit.Offense },
-            new Position { Code = "RB", Name = "Running Back", DisplayOrder = 2, Unit = PositionUnit.Offense },
-            new Position { Code = "FB", Name = "Fullback", DisplayOrder = 3, Unit = PositionUnit.Offense },
-            new Position { Code = "WR", Name = "Wide Receiver", DisplayOrder = 4, Unit = PositionUnit.Offense },
-            new Position { Code = "TE", Name = "Tight End", DisplayOrder = 5, Unit = PositionUnit.Offense },
-            new Position { Code = "OT", Name = "Offensive Tackle", DisplayOrder = 6, Unit = PositionUnit.Offense },
-            new Position { Code = "G", Name = "Offensive Guard", DisplayOrder = 7, Unit = PositionUnit.Offense },
-            new Position { Code = "C", Name = "Center", DisplayOrder = 8, Unit = PositionUnit.Offense },
-            new Position { Code = "EDGE", Name = "Edge Defender", DisplayOrder = 10, Unit = PositionUnit.Defense },
-            new Position { Code = "DT", Name = "Interior Defensive Line", DisplayOrder = 11, Unit = PositionUnit.Defense },
-            new Position { Code = "LB", Name = "Linebacker", DisplayOrder = 12, Unit = PositionUnit.Defense },
-            new Position { Code = "CB", Name = "Cornerback", DisplayOrder = 13, Unit = PositionUnit.Defense },
-            new Position { Code = "S", Name = "Safety", DisplayOrder = 14, Unit = PositionUnit.Defense },
-            new Position { Code = "K", Name = "Kicker", DisplayOrder = 20, Unit = PositionUnit.SpecialTeams },
-            new Position { Code = "P", Name = "Punter", DisplayOrder = 21, Unit = PositionUnit.SpecialTeams },
-            new Position { Code = "LS", Name = "Long Snapper", DisplayOrder = 22, Unit = PositionUnit.SpecialTeams }
+            new Position { Id = 1, Code = "QB", Name = "Quarterback", DisplayOrder = 1, Unit = PositionUnit.Offense },
+            new Position { Id = 2, Code = "RB", Name = "Running Back", DisplayOrder = 2, Unit = PositionUnit.Offense },
+            new Position { Id = 3, Code = "FB", Name = "Fullback", DisplayOrder = 3, Unit = PositionUnit.Offense },
+            new Position { Id = 4, Code = "WR", Name = "Wide Receiver", DisplayOrder = 4, Unit = PositionUnit.Offense },
+            new Position { Id = 5, Code = "TE", Name = "Tight End", DisplayOrder = 5, Unit = PositionUnit.Offense },
+            new Position { Id = 6, Code = "OT", Name = "Offensive Tackle", DisplayOrder = 6, Unit = PositionUnit.Offense },
+            new Position { Id = 7, Code = "G", Name = "Offensive Guard", DisplayOrder = 7, Unit = PositionUnit.Offense },
+            new Position { Id = 8, Code = "C", Name = "Center", DisplayOrder = 8, Unit = PositionUnit.Offense },
+            new Position { Id = 9, Code = "EDGE", Name = "Edge Defender", DisplayOrder = 10, Unit = PositionUnit.Defense },
+            new Position { Id = 10, Code = "DT", Name = "Interior Defensive Line", DisplayOrder = 11, Unit = PositionUnit.Defense },
+            new Position { Id = 11, Code = "LB", Name = "Linebacker", DisplayOrder = 12, Unit = PositionUnit.Defense },
+            new Position { Id = 12, Code = "CB", Name = "Cornerback", DisplayOrder = 13, Unit = PositionUnit.Defense },
+            new Position { Id = 13, Code = "S", Name = "Safety", DisplayOrder = 14, Unit = PositionUnit.Defense },
+            new Position { Id = 14, Code = "K", Name = "Kicker", DisplayOrder = 20, Unit = PositionUnit.SpecialTeams },
+            new Position { Id = 15, Code = "P", Name = "Punter", DisplayOrder = 21, Unit = PositionUnit.SpecialTeams },
+            new Position { Id = 16, Code = "LS", Name = "Long Snapper", DisplayOrder = 22, Unit = PositionUnit.SpecialTeams }
         );
 
         // 3. Teams (League Schema - Ids are the Primary Key)

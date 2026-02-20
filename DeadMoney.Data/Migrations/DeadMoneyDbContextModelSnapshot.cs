@@ -207,9 +207,8 @@ namespace DeadMoney.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("PositionCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(10)");
+                    b.Property<int>("PositionId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Suffix")
                         .HasColumnType("nvarchar(max)");
@@ -225,7 +224,7 @@ namespace DeadMoney.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PositionCode");
+                    b.HasIndex("PositionId");
 
                     b.HasIndex("TeamId");
 
@@ -234,7 +233,14 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Position", b =>
                 {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
                     b.Property<string>("Code")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
@@ -250,13 +256,14 @@ namespace DeadMoney.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Code");
+                    b.HasKey("Id");
 
                     b.ToTable("Positions", "League");
 
                     b.HasData(
                         new
                         {
+                            Id = 1,
                             Code = "QB",
                             DisplayOrder = 1,
                             Name = "Quarterback",
@@ -264,6 +271,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 2,
                             Code = "RB",
                             DisplayOrder = 2,
                             Name = "Running Back",
@@ -271,6 +279,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 3,
                             Code = "FB",
                             DisplayOrder = 3,
                             Name = "Fullback",
@@ -278,6 +287,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 4,
                             Code = "WR",
                             DisplayOrder = 4,
                             Name = "Wide Receiver",
@@ -285,6 +295,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 5,
                             Code = "TE",
                             DisplayOrder = 5,
                             Name = "Tight End",
@@ -292,6 +303,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 6,
                             Code = "OT",
                             DisplayOrder = 6,
                             Name = "Offensive Tackle",
@@ -299,6 +311,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 7,
                             Code = "G",
                             DisplayOrder = 7,
                             Name = "Offensive Guard",
@@ -306,6 +319,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 8,
                             Code = "C",
                             DisplayOrder = 8,
                             Name = "Center",
@@ -313,6 +327,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 9,
                             Code = "EDGE",
                             DisplayOrder = 10,
                             Name = "Edge Defender",
@@ -320,6 +335,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 10,
                             Code = "DT",
                             DisplayOrder = 11,
                             Name = "Interior Defensive Line",
@@ -327,6 +343,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 11,
                             Code = "LB",
                             DisplayOrder = 12,
                             Name = "Linebacker",
@@ -334,6 +351,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 12,
                             Code = "CB",
                             DisplayOrder = 13,
                             Name = "Cornerback",
@@ -341,6 +359,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 13,
                             Code = "S",
                             DisplayOrder = 14,
                             Name = "Safety",
@@ -348,6 +367,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 14,
                             Code = "K",
                             DisplayOrder = 20,
                             Name = "Kicker",
@@ -355,6 +375,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 15,
                             Code = "P",
                             DisplayOrder = 21,
                             Name = "Punter",
@@ -362,6 +383,7 @@ namespace DeadMoney.Data.Migrations
                         },
                         new
                         {
+                            Id = 16,
                             Code = "LS",
                             DisplayOrder = 22,
                             Name = "Long Snapper",
@@ -890,48 +912,33 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("DeadMoney.Core.Entities.UserRole", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int>("UserId")
                         .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("TeamId")
+                    b.Property<int>("PositionId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserId")
+                    b.Property<int>("TeamId")
                         .HasColumnType("int");
 
-                    b.HasKey("Id");
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId", "RoleId", "PositionId", "TeamId");
+
+                    b.HasIndex("PositionId");
 
                     b.HasIndex("RoleId");
 
                     b.HasIndex("TeamId");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("UserRoles", "Auth");
-                });
-
-            modelBuilder.Entity("PositionUserRole", b =>
-                {
-                    b.Property<string>("PositionsCode")
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<int>("UserRolesId")
-                        .HasColumnType("int");
-
-                    b.HasKey("PositionsCode", "UserRolesId");
-
-                    b.HasIndex("UserRolesId");
-
-                    b.ToTable("UserRolePositions", "Auth");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Contract", b =>
@@ -966,7 +973,7 @@ namespace DeadMoney.Data.Migrations
                 {
                     b.HasOne("DeadMoney.Core.Entities.Position", "Position")
                         .WithMany("Players")
-                        .HasForeignKey("PositionCode")
+                        .HasForeignKey("PositionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -981,6 +988,12 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("DeadMoney.Core.Entities.UserRole", b =>
                 {
+                    b.HasOne("DeadMoney.Core.Entities.Position", "Position")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("PositionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("DeadMoney.Core.Entities.Role", "Role")
                         .WithMany("UserRoles")
                         .HasForeignKey("RoleId")
@@ -989,7 +1002,9 @@ namespace DeadMoney.Data.Migrations
 
                     b.HasOne("DeadMoney.Core.Entities.Team", "Team")
                         .WithMany("UserRoles")
-                        .HasForeignKey("TeamId");
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("DeadMoney.Core.Entities.User", "User")
                         .WithMany("UserRoles")
@@ -997,26 +1012,13 @@ namespace DeadMoney.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Position");
+
                     b.Navigation("Role");
 
                     b.Navigation("Team");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("PositionUserRole", b =>
-                {
-                    b.HasOne("DeadMoney.Core.Entities.Position", null)
-                        .WithMany()
-                        .HasForeignKey("PositionsCode")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("DeadMoney.Core.Entities.UserRole", null)
-                        .WithMany()
-                        .HasForeignKey("UserRolesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Contract", b =>
@@ -1032,6 +1034,8 @@ namespace DeadMoney.Data.Migrations
             modelBuilder.Entity("DeadMoney.Core.Entities.Position", b =>
                 {
                     b.Navigation("Players");
+
+                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Role", b =>
