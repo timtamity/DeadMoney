@@ -1,44 +1,89 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
 
 <div class="page">
-    <div class="sidebar">
+    <div class="sidebar @(menuOpen ? "open" : "")">
         <NavMenu />
     </div>
 
-    <main>
-        <header class="top-bar px-4">
-            <div class="brand">DEAD MONEY</div>
+    @if (menuOpen)
+    {
+        <div class="menu-backdrop" @onclick="CloseMenu"></div>
+    }
 
-            <div class="user-auth">
+    <main>
+        <header class="top-bar px-3 px-md-4">
+            <div class="d-flex align-items-center gap-2">
+                <button class="hamburger-btn" @onclick="ToggleMenu" aria-label="Toggle menu">
+                    <i class="bi @(menuOpen ? "bi-x-lg" : "bi-list")"></i>
+                </button>
+                <div class="brand">DEAD MONEY</div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
                 <AuthorizeView>
                     <Authorized>
-                        <span class="me-3 welcome-text">
-                            Hello, @(context.User.FindFirst("DisplayName")?.Value ?? context.User.Identity?.Name)!
+                        <AuthorizeView Roles="Admin" Context="adminCtx">
+                            <Authorized>
+                                <span class="commish-indicator d-none d-sm-inline" style="color: var(--dm-danger);">
+                                    <i class="bi bi-shield-fill"></i> ADMIN
+                                </span>
+                            </Authorized>
+                        </AuthorizeView>
+                        <AuthorizeView Roles="Commissioner" Context="commCtx">
+                            <Authorized>
+                                <span class="commish-indicator d-none d-sm-inline">
+                                    <i class="bi bi-shield-check"></i> COMMISH
+                                </span>
+                            </Authorized>
+                        </AuthorizeView>
+                        <span class="welcome-text d-none d-sm-inline me-1">
+                            @(context.User.FindFirst("DisplayName")?.Value ?? context.User.Identity?.Name)
                         </span>
                         <form action="logout" method="post" style="display:inline">
                             <AntiforgeryToken />
-                            <button type="submit" class="dm-button-outline">
-                                Logout
+                            <button type="submit" class="dm-btn-outline dm-btn-sm">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span class="d-none d-sm-inline">Logout</span>
                             </button>
                         </form>
                     </Authorized>
                     <NotAuthorized>
-                        <a href="login" class="dm-button-primary">Log in with Discord</a>
+                        <a href="login" class="dm-btn-primary dm-btn-sm">
+                            <i class="bi bi-discord"></i>
+                            <span>Login</span>
+                        </a>
                     </NotAuthorized>
                 </AuthorizeView>
             </div>
         </header>
 
-        <AuthorizeView Roles="Commissioner">
-            <Authorized>
-                <div class="commish-banner">
-                    <i class="bi bi-shield-check me-2"></i> COMMISSIONER ACCESS ENABLED
-                </div>
-            </Authorized>
-        </AuthorizeView>
-
-        <article class="content px-4">
+        <article class="content px-3 px-md-4">
             @Body
         </article>
     </main>
 </div>
+
+@code {
+    private bool menuOpen = false;
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        menuOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+    private void ToggleMenu() => menuOpen = !menuOpen;
+    private void CloseMenu() => menuOpen = false;
+}

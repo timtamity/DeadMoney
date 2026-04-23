@@ -1,0 +1,184 @@
+@page "/teams/{teamId:int}"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components
+@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject LeagueSettingsService LeagueSettingsSvc
+
+<PageTitle>@(team != null ? $"{team.Abbreviation} — {team.City} {team.Name}" : "Team") — Dead Money</PageTitle>
+
+<div class="mb-3">
+    <button class="dm-btn-ghost" @onclick="@(() => Navigation.NavigateTo("/teams"))">
+        <i class="bi bi-arrow-left"></i> Teams
+    </button>
+</div>
+
+@if (team == null)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading team...
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>@team.Abbreviation <span style="font-weight: 400; font-size: 1.1rem;">@team.City @team.Name</span></h1>
+            <div class="d-flex align-items-center gap-2 mt-1">
+                <span class="conf-badge @(team.Conference == "AFC" ? "afc" : "nfc")">
+                    @team.Conference — @team.Division
+                </span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <label style="color: var(--dm-text-muted); font-size: 0.8rem; margin: 0;">Year:</label>
+            <select class="form-select w-auto" @onchange="OnYearChanged">
+                @foreach (var y in availableYears)
+                {
+                    <option value="@y" selected="@(y == selectedYear)">@y</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="stats-row mb-4">
+        <div class="stat-card">
+            <div class="stat-label">@selectedYear Cap Hit</div>
+            <div class="stat-value gold">@FormatMoney(capHit)</div>
+            <div class="cap-bar-wrap mt-2">
+                <div class="cap-bar-fill @CapBarClass" style="width: @(CapPct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+            </div>
+            <div style="font-size: 0.7rem; color: var(--dm-text-muted); margin-top: 3px;">@(CapPct.ToString("F0"))% used</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Cap Space</div>
+            <div class="stat-value @(CapSpace < 0 ? "red" : "green")">@FormatMoney(CapSpace)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Carryover</div>
+            <div class="stat-value green">@FormatMoney(team.CarryoverCap)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Roster Size</div>
+            <div class="stat-value">@roster.Count</div>
+        </div>
+    </div>
+
+    <h2 style="font-size: 1.1rem; margin-bottom: 1rem;">Roster</h2>
+
+    @if (!roster.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <p>No players on roster.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="dm-table">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Pos</th>
+                        <th style="text-align:right;">Cap Hit (@selectedYear)</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in roster)
+                    {
+                        var cy = p.Contracts.SelectMany(c => c.ContractYears).FirstOrDefault(x => x.Year == selectedYear);
+                        <tr style="cursor: pointer;" @onclick="@(() => GoToPlayer(p.Id))">
+                            <td>
+                                <span class="t-name">@p.FirstName @p.LastName</span>
+                                @if (!string.IsNullOrEmpty(p.Number))
+                                {
+                                    <span class="t-jersey">#@p.Number</span>
+                                }
+                            </td>
+                            <td><span class="@PosBadgeClass(p.Position?.Code)">@(p.Position?.Code ?? "—")</span></td>
+                            <td class="text-end t-money">@(cy != null ? FormatMoney(cy.CapNumber) : "—")</td>
+                            <td class="text-end">
+                                <button class="dm-btn-ghost dm-btn-sm" @onclick:stopPropagation="true" @onclick="@(() => GoToPlayer(p.Id))">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private const decimal LeagueCapLimit = 279_200_000m;
+
+    private decimal CapSpace  => LeagueCapLimit + (team?.CarryoverCap ?? 0m) - capHit;
+    private double  CapPct    => team != null && (LeagueCapLimit + team.CarryoverCap) > 0
+                                    ? Math.Min((double)capHit / (double)(LeagueCapLimit + team.CarryoverCap) * 100.0, 100.0)
+                                    : 0.0;
+    private string  CapBarClass => CapPct >= 100 ? "red" : CapPct >= 85 ? "yellow" : "green";
+
+    private DeadMoney.Core.Entities.Team? team;
+    private List<int> availableYears = new();
+    private int selectedYear;
+    private decimal capHit = 0m;
+    private List<DeadMoney.Core.Entities.Player> roster = new();
+
+    [Parameter]
+    public int teamId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        selectedYear = await LeagueSettingsSvc.GetCurrentYearAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        team = await db.Teams.FirstOrDefaultAsync(t => t.Id == teamId);
+
+        var years = await db.ContractYears
+            .Where(cy => cy.TeamId == teamId)
+            .Select(cy => cy.Year)
+            .Distinct()
+            .OrderByDescending(y => y)
+            .ToListAsync();
+
+        availableYears = years.Any() ? years : new List<int> { selectedYear };
+        if (!availableYears.Contains(selectedYear)) selectedYear = availableYears.First();
+
+        roster = await db.Players
+            .Where(p => p.TeamId == teamId)
+            .Include(p => p.Position)
+            .Include(p => p.Contracts).ThenInclude(c => c.ContractYears)
+            .OrderBy(p => p.Position != null ? p.Position.DisplayOrder : 99).ThenBy(p => p.LastName)
+            .ToListAsync();
+
+        await RefreshCapHitAsync();
+    }
+
+    private async Task RefreshCapHitAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        capHit = await db.ContractYears
+            .Where(cy => cy.TeamId == teamId && cy.Year == selectedYear)
+            .SumAsync(cy => (decimal?)cy.CapNumber) ?? 0m;
+    }
+
+    private async Task OnYearChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e?.Value?.ToString(), out var y))
+        {
+            selectedYear = y;
+            await RefreshCapHitAsync();
+        }
+    }
+
+    private void GoToPlayer(int playerId) => Navigation.NavigateTo($"/players/{playerId}");
+    private static string FormatMoney(decimal value) => value >= 1_000_000m ? $"${value / 1_000_000m:F1}M" : value >= 1_000m ? $"${value / 1_000m:F0}K" : value.ToString("C0");
+}

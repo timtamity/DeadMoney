@@ -29,8 +29,4 @@
     <ProjectReference Include="..\DeadMoney.Service\DeadMoney.Service.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Components\Pages\Contracts\" />
-  </ItemGroup>
-
 </Project>

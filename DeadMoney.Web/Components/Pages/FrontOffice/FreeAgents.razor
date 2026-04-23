@@ -1,48 +1,37 @@
-@page "/players"
+@page "/free-agents"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
 @implements IDisposable
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
-@inject LeagueSettingsService LeagueSettingsSvc
 
-<PageTitle>Players — Dead Money</PageTitle>
+<PageTitle>Free Agents — Dead Money</PageTitle>
 
 <div class="page-header">
     <div>
-        <h1>Players</h1>
+        <h1>Free Agents</h1>
         @if (players != null)
         {
-            <div class="subtitle">@totalPlayers players &middot; page @currentPage of @totalPages</div>
+            <div class="subtitle">@totalPlayers available &middot; page @currentPage of @totalPages</div>
         }
     </div>
 </div>
 
 <div class="filter-bar bento-card mb-4">
     <div class="row g-3">
-        <div class="col-12 col-sm-4">
+        <div class="col-12 col-sm-6">
             <label>Search</label>
-            <input type="text" class="form-control" placeholder="Player name..." value="@searchName"
-                   @oninput="@(e => OnSearchInput(e.Value?.ToString() ?? ""))" />
+            <input type="text" class="form-control" placeholder="Player name..."
+                   value="@searchName" @oninput="@(e => OnSearchInput(e.Value?.ToString() ?? ""))" />
         </div>
-        <div class="col-6 col-sm-4">
+        <div class="col-12 col-sm-6">
             <label>Position</label>
             <select class="form-select" @bind="filterPosition" @bind:after="OnFilterChanged">
                 <option value="">All Positions</option>
                 @foreach (var pos in positions)
                 {
                     <option value="@pos.Code">@pos.Code — @pos.Name</option>
-                }
-            </select>
-        </div>
-        <div class="col-6 col-sm-4">
-            <label>Team</label>
-            <select class="form-select" @bind="filterTeam" @bind:after="OnFilterChanged">
-                <option value="">All Teams</option>
-                @foreach (var team in teams)
-                {
-                    <option value="@team.Abbreviation">@team.Abbreviation — @team.City</option>
                 }
             </select>
         </div>
@@ -53,14 +42,14 @@
 {
     <div class="loading-state">
         <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
-        Loading players...
+        Loading free agents...
     </div>
 }
 else if (!players.Any())
 {
     <div class="empty-state">
-        <i class="bi bi-people"></i>
-        <p>No players found matching your filters.</p>
+        <i class="bi bi-person-plus"></i>
+        <p>No free agents found matching your filters.</p>
     </div>
 }
 else
@@ -69,34 +58,47 @@ else
         <table class="dm-table">
             <thead>
                 <tr>
-                    <th class="sortable" @onclick="@(async () => await SortAndLoad("Name"))">
-                        Player @GetSortIndicator("Name")
-                    </th>
-                    <th class="sortable" @onclick="@(async () => await SortAndLoad("Team"))">
-                        Team @GetSortIndicator("Team")
-                    </th>
-                    <th class="sortable" @onclick="@(async () => await SortAndLoad("Position"))">
-                        Pos @GetSortIndicator("Position")
-                    </th>
-                    <th style="text-align:right;" class="d-none d-sm-table-cell">@currentYear Cap</th>
+                    <th>Player</th>
+                    <th>Pos</th>
+                    <th class="d-none d-sm-table-cell">Age</th>
+                    <th class="d-none d-md-table-cell">College</th>
+                    <th class="d-none d-sm-table-cell">Last Team</th>
+                    <th>Contract</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var p in players)
                 {
+                    var activeContract = p.Contracts.FirstOrDefault(c => c.IsActive);
+                    var lastContract   = p.Contracts.OrderByDescending(c => c.Id).FirstOrDefault();
                     <tr style="cursor: pointer;" @onclick="@(() => GoToPlayer(p.Id))">
                         <td>
                             <span class="t-name">@p.FirstName @p.LastName</span>
-                            @if (!string.IsNullOrEmpty(p.Number))
+                            @if (p.IsRetired)
                             {
-                                <span class="t-jersey">#@p.Number</span>
+                                <span class="t-jersey">Retired</span>
                             }
                         </td>
-                        <td class="t-sub">@(p.Team?.Abbreviation ?? "FA")</td>
                         <td><span class="@PosBadgeClass(p.Position?.Code)">@(p.Position?.Code ?? "—")</span></td>
-                        <td class="text-end t-money d-none d-sm-table-cell">
-                            @(_capHitByPlayer.TryGetValue(p.Id, out var ch) && ch > 0 ? FormatMoney(ch) : "—")
+                        <td class="d-none d-sm-table-cell t-sub">@(p.Age.HasValue ? p.Age.ToString() : "—")</td>
+                        <td class="d-none d-md-table-cell t-sub">@(string.IsNullOrEmpty(p.College) ? "—" : p.College)</td>
+                        <td class="d-none d-sm-table-cell t-sub">
+                            @(lastContract?.ContractYears.OrderByDescending(cy => cy.Year).FirstOrDefault()?.Team?.Abbreviation ?? "—")
+                        </td>
+                        <td>
+                            @if (activeContract != null)
+                            {
+                                <span class="t-money t-sub">@FormatMoney(activeContract.TotalValue)</span>
+                            }
+                            else if (lastContract != null)
+                            {
+                                <span class="t-tiny">Prev: @FormatMoney(lastContract.TotalValue)</span>
+                            }
+                            else
+                            {
+                                <span class="t-tiny">No contract</span>
+                            }
                         </td>
                         <td class="text-end">
                             <button class="dm-btn-ghost dm-btn-sm" @onclick:stopPropagation="true" @onclick="@(() => GoToPlayer(p.Id))">
@@ -124,7 +126,6 @@ else
         <div class="d-flex align-items-center gap-2">
             <span style="font-size: 0.8rem; color: var(--dm-text-muted);">Per page:</span>
             <select class="form-select form-select-sm w-auto" @bind="pageSize" @bind:after="OnPageSizeChangedAsync">
-                <option value="10">10</option>
                 <option value="25">25</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
@@ -136,27 +137,19 @@ else
 @code {
     private List<DeadMoney.Core.Entities.Player>? players;
     private List<DeadMoney.Core.Entities.Position> positions = new();
-    private List<DeadMoney.Core.Entities.Team> teams = new();
-    private Dictionary<int, decimal> _capHitByPlayer = new();
     private Timer? _debounceTimer;
 
     private string searchName = "";
     private string filterPosition = "";
-    private string filterTeam = "";
-    private string sortColumn = "Name";
-    private bool sortAscending = true;
     private int currentPage = 1;
     private int pageSize = 25;
     private int totalPlayers = 0;
     private int totalPages = 0;
-    private int currentYear;
 
     protected override async Task OnInitializedAsync()
     {
-        currentYear = await LeagueSettingsSvc.GetCurrentYearAsync();
         using var db = await DbFactory.CreateDbContextAsync();
         positions = await db.Positions.OrderBy(p => p.DisplayOrder).ToListAsync();
-        teams = await db.Teams.OrderBy(t => t.Abbreviation).ToListAsync();
         await LoadPlayersAsync();
     }
 
@@ -183,8 +176,9 @@ else
         using var db = await DbFactory.CreateDbContextAsync();
 
         var query = db.Players
-            .Include(p => p.Team)
+            .Where(p => p.TeamId == null && !p.IsRetired)
             .Include(p => p.Position)
+            .Include(p => p.Contracts).ThenInclude(c => c.ContractYears).ThenInclude(cy => cy.Team)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(searchName))
@@ -195,46 +189,16 @@ else
         if (!string.IsNullOrEmpty(filterPosition))
             query = query.Where(p => p.Position.Code == filterPosition);
 
-        if (!string.IsNullOrEmpty(filterTeam))
-            query = query.Where(p => p.Team != null && p.Team.Abbreviation == filterTeam);
-
         totalPlayers = await query.CountAsync();
         totalPages = Math.Max(1, (totalPlayers + pageSize - 1) / pageSize);
         if (currentPage > totalPages) currentPage = totalPages;
 
-        query = sortColumn switch
-        {
-            "Team"     => sortAscending ? query.OrderBy(p => p.Team != null ? p.Team.Abbreviation : "") : query.OrderByDescending(p => p.Team != null ? p.Team.Abbreviation : ""),
-            "Position" => sortAscending ? query.OrderBy(p => p.Position != null ? p.Position.Code : "") : query.OrderByDescending(p => p.Position != null ? p.Position.Code : ""),
-            _          => sortAscending ? query.OrderBy(p => p.LastName).ThenBy(p => p.FirstName) : query.OrderByDescending(p => p.LastName).ThenByDescending(p => p.FirstName)
-        };
-
-        players = await query.Skip((currentPage - 1) * pageSize).Take(pageSize).ToListAsync();
-
-        if (players.Any())
-        {
-            var ids = players.Select(p => p.Id).ToList();
-            _capHitByPlayer = await db.Contracts
-                .Where(c => c.IsActive && ids.Contains(c.PlayerId))
-                .Select(c => new {
-                    c.PlayerId,
-                    CapHit = c.ContractYears.Where(cy => cy.Year == currentYear).Sum(cy => cy.CapNumber)
-                })
-                .Where(x => x.CapHit > 0)
-                .ToDictionaryAsync(x => x.PlayerId, x => x.CapHit);
-        }
-        else
-        {
-            _capHitByPlayer = new();
-        }
-    }
-
-    private async Task SortAndLoad(string column)
-    {
-        sortAscending = sortColumn == column ? !sortAscending : true;
-        sortColumn = column;
-        currentPage = 1;
-        await LoadPlayersAsync();
+        players = await query
+            .OrderBy(p => p.Position != null ? p.Position.DisplayOrder : 99)
+            .ThenBy(p => p.LastName)
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
     }
 
     private async Task OnPageSizeChangedAsync()
@@ -245,24 +209,11 @@ else
 
     private async Task SetPage(int page)
     {
-        if (page >= 1 && page <= totalPages)
-        {
-            currentPage = page;
-            await LoadPlayersAsync();
-        }
+        if (page >= 1 && page <= totalPages) { currentPage = page; await LoadPlayersAsync(); }
     }
-
-    private string GetSortIndicator(string column)
-    {
-        if (sortColumn != column) return "";
-        return sortAscending ? " ▲" : " ▼";
-    }
-
-    private void GoToPlayer(int playerId) => Navigation.NavigateTo($"/players/{playerId}");
 
     public void Dispose() => _debounceTimer?.Dispose();
 
-    private static string FormatMoney(decimal v) =>
-        v >= 1_000_000m ? $"${v / 1_000_000m:F1}M" :
-        v >= 1_000m     ? $"${v / 1_000m:F0}K"     : v.ToString("C0");
+    private void GoToPlayer(int playerId) => Navigation.NavigateTo($"/players/{playerId}");
+    private static string FormatMoney(decimal v) => v >= 1_000_000m ? $"${v / 1_000_000m:F1}M" : v >= 1_000m ? $"${v / 1_000m:F0}K" : v.ToString("C0");
 }

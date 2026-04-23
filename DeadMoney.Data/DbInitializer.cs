@@ -17,7 +17,8 @@ public static class DbInitializer
             new Role { Id = 1, Name = "Commissioner", Description = "Full administrative access to league settings and users." },
             new Role { Id = 2, Name = "Agent", Description = "Manages specific player positions across the league." },
             new Role { Id = 3, Name = "GM", Description = "Manages a specific team's roster and salary cap." },
-            new Role { Id = 4, Name = "Assistant GM", Description = "Assists in managing team operations." }
+            new Role { Id = 4, Name = "Assistant GM", Description = "Assists in managing team operations." },
+            new Role { Id = 5, Name = "Admin", Description = "System administrator with full access to all features and settings." }
         );
 
         // 2. Positions (League Schema)
@@ -40,7 +41,13 @@ public static class DbInitializer
             new Position { Id = 16, Code = "LS", Name = "Long Snapper", DisplayOrder = 22, Unit = PositionUnit.SpecialTeams }
         );
 
-        // 3. Teams (League Schema)
+        // 3. League Settings
+        builder.Entity<LeagueSetting>().HasData(
+            new LeagueSetting { Id = 1, Year = 2026, SalaryCap = 279_200_000m, IsCurrent = false },
+            new LeagueSetting { Id = 2, Year = 2027, SalaryCap = 279_200_000m, IsCurrent = true }
+        );
+
+        // 4. Teams (League Schema)
         builder.Entity<Team>().HasData(
             new Team { Id = 1, City = "Arizona", Nickname = "Cardinals", Abbreviation = "ARI", Conference = "NFC", Division = "West" },
             new Team { Id = 2, City = "Atlanta", Nickname = "Falcons", Abbreviation = "ATL", Conference = "NFC", Division = "South" },
@@ -107,21 +114,19 @@ public static class DbInitializer
             await db.SaveChangesAsync();
         }
 
-        // 2. Assign the Commissioner Role (RoleId 1)
-        // Now checking for existence based on the single PK structure 
-        // with null Team/Position (League-wide admin)
-        var hasCommRole = await db.UserRoles.AnyAsync(ur =>
+        // 2. Assign the Admin Role (RoleId 5) — top of the hierarchy
+        var hasAdminRole = await db.UserRoles.AnyAsync(ur =>
             ur.UserId == user.Id &&
-            ur.RoleId == 1 &&
+            ur.RoleId == 5 &&
             ur.PositionId == null &&
             ur.TeamId == null);
 
-        if (!hasCommRole)
+        if (!hasAdminRole)
         {
             db.UserRoles.Add(new UserRole
             {
                 UserId = user.Id,
-                RoleId = 1,
+                RoleId = 5,
                 PositionId = null,
                 TeamId = null,
                 AssignedAt = DateTime.UtcNow

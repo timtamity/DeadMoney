@@ -6,4 +6,5 @@
   <Project Path="DeadMoney.Data/DeadMoney.Data.csproj" />
   <Project Path="DeadMoney.Service/DeadMoney.Service.csproj" />
   <Project Path="DeadMoney.Web/DeadMoney.Web.csproj" />
+  <Project Path="DeadMoney.Tests/DeadMoney.Tests.csproj" />
 </Solution>

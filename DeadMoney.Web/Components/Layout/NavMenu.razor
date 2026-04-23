@@ -1,5 +1,10 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
+
+<!-- Mobile-only sidebar header -->
+<div class="sidebar-top d-md-none">
+    <div class="brand">DEAD MONEY</div>
+</div>
 
 <div class="nav-container">
     <div class="nav-scrollable">
@@ -12,28 +17,42 @@
                     <i class="bi bi-house-door-fill"></i> <span>Home</span>
                 </NavLink>
             </div>
-
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="standings">
-                    <i class="bi bi-list-ol"></i> <span>Standings</span>
+                <NavLink class="nav-link" href="teams">
+                    <i class="bi bi-flag-fill"></i> <span>Teams</span>
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="players">
+                    <i class="bi bi-people-fill"></i> <span>Players</span>
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="contracts">
+                    <i class="bi bi-file-earmark-text-fill"></i> <span>Contracts</span>
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="free-agents">
+                    <i class="bi bi-person-plus-fill"></i> <span>Free Agents</span>
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="salary-cap">
+                    <i class="bi bi-bank2"></i> <span>Salary Cap</span>
                 </NavLink>
             </div>
 
-            <AuthorizeView Roles="GM, Assistant GM, Commissioner">
+            <AuthorizeView Roles="Admin, GM, Assistant GM, Commissioner">
                 <div class="nav-section-label">Front Office</div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="roster">
-                        <i class="bi bi-people-fill"></i> <span>My Roster</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="salary-cap">
-                        <i class="bi bi-bank2"></i> <span>Salary Cap</span>
+                        <i class="bi bi-clipboard2-check-fill"></i> <span>My Roster</span>
                     </NavLink>
                 </div>
             </AuthorizeView>
 
-            <AuthorizeView Roles="Agent, Commissioner">
+            <AuthorizeView Roles="Admin, Agent, Commissioner">
                 <div class="nav-section-label">Agency</div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="my-clients">
@@ -42,8 +61,13 @@
                 </div>
             </AuthorizeView>
 
-            <AuthorizeView Roles="Commissioner">
-                <div class="nav-section-label admin-label">League Office</div>
+            <AuthorizeView Roles="Admin">
+                <div class="nav-section-label admin-label">Admin</div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link admin-link" href="admin/league-settings">
+                        <i class="bi bi-sliders"></i> <span>League Settings</span>
+                    </NavLink>
+                </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link admin-link" href="admin/users">
                         <i class="bi bi-person-gear"></i> <span>User Management</span>
@@ -58,8 +82,10 @@
 
         </nav>
     </div>
-</div>
 
-@code {
-    // Logic can be added here for toggling mobile menus in the future
-}
+    <div class="nav-footer px-3">
+        <NavLink class="nav-link" href="profile">
+            <i class="bi bi-person-circle"></i> <span>Profile</span>
+        </NavLink>
+    </div>
+</div>

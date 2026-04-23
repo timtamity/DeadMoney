@@ -1,45 +1,135 @@
 @import 'theme.css';
 
-html, body {
-    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--dm-bg-main);
-    color: var(--dm-text-main);
-}
+html, body { height: 100%; margin: 0; }
 
+/* --- Layout Shell --- */
 .page {
-    position: relative;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
 }
 
 main {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
 
+.content {
+    flex: 1;
+    padding-top: 1.5rem;
+    padding-bottom: 2.5rem;
+    animation: pageEnter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes pageEnter {
+    from { opacity: 0; transform: translateY(7px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Sidebar --- */
 .sidebar {
     background-color: var(--dm-bg-nav);
     border-right: 1px solid var(--dm-border);
 }
 
-/* Fix for the standard Blazor Top Row */
+/* --- Top Bar --- */
 .top-bar {
-    background-color: var(--dm-bg-nav);
-    height: 64px;
+    background: rgba(13, 17, 23, 0.97);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    height: 56px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--dm-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-shrink: 0;
 }
 
-@media (min-width: 641px) {
-    .page {
-        flex-direction: row;
+.brand {
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: var(--dm-gold);
+    font-size: 1.05rem;
+}
+
+.welcome-text {
+    color: var(--dm-text-muted);
+    font-size: 0.85rem;
+}
+
+/* --- Hamburger --- */
+.hamburger-btn {
+    background: none;
+    border: none;
+    color: var(--dm-text-bright);
+    font-size: 1.35rem;
+    padding: 0;
+    border-radius: var(--dm-radius-sm);
+    cursor: pointer;
+    transition: background 0.15s ease;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+}
+.hamburger-btn:hover { background: rgba(255,255,255,0.07); }
+
+/* --- Mobile Backdrop --- */
+.menu-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 1040;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+/* ============================================
+   MOBILE  (<768px)
+   ============================================ */
+@media (max-width: 767px) {
+    .sidebar {
+        position: fixed;
+        left: -285px;
+        top: 0;
+        width: 285px;
+        height: 100%;
+        z-index: 1050;
+        transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
+    .sidebar.open {
+        left: 0;
+        box-shadow: 8px 0 32px rgba(0, 0, 0, 0.6);
+    }
+}
+
+/* ============================================
+   DESKTOP  (>=768px)
+   ============================================ */
+@media (min-width: 768px) {
+    .page { flex-direction: row; }
+
     .sidebar {
-        width: 250px;
+        width: 240px;
         height: 100vh;
         position: sticky;
         top: 0;
+        flex-shrink: 0;
     }
+
+    .hamburger-btn { display: none !important; }
+
+    main { flex: 1; min-width: 0; }
 }

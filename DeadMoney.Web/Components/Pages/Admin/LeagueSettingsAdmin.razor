@@ -1,0 +1,131 @@
+@page "/admin/league-settings"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@inject LeagueSettingsService LeagueSettingsSvc
+
+<PageTitle>League Settings — Dead Money</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>League Settings</h1>
+        <div class="subtitle">Manage the active season and salary cap limits</div>
+    </div>
+</div>
+
+@if (settings == null)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading...
+    </div>
+}
+else
+{
+    <div class="bento-card mb-4">
+        <h2 class="section-title mb-3">Season Settings</h2>
+        <div class="table-responsive">
+            <table class="dm-table">
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th style="text-align:right;">Salary Cap</th>
+                        <th style="text-align:center;">Active Season</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in settings)
+                    {
+                        <tr>
+                            <td style="font-weight: 700; color: var(--dm-text-bright);">@s.Year</td>
+                            <td style="text-align:right;" class="t-money">@FormatMoney(s.SalaryCap)</td>
+                            <td style="text-align:center;">
+                                @if (s.IsCurrent)
+                                {
+                                    <span style="color: var(--dm-success); font-weight: 700;">
+                                        <i class="bi bi-check-circle-fill"></i> Active
+                                    </span>
+                                }
+                                else
+                                {
+                                    <button class="dm-btn-ghost dm-btn-sm" @onclick="@(async () => await SetCurrentAsync(s.Id))"
+                                            disabled="@isSaving">
+                                        Set Active
+                                    </button>
+                                }
+                            </td>
+                            <td></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bento-card">
+        <h2 class="section-title mb-3">Add / Update Season</h2>
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-sm-3">
+                <label class="t-tiny d-block mb-1">Year</label>
+                <input type="number" class="form-control" @bind="_editYear" min="2020" max="2040" />
+            </div>
+            <div class="col-6 col-sm-3">
+                <label class="t-tiny d-block mb-1">Salary Cap ($)</label>
+                <input type="number" class="form-control" @bind="_editCap" min="0" step="100000" />
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(_saveMessage))
+        {
+            <div class="dm-alert dm-alert-@(_saveError ? "warning" : "success") mb-3">@_saveMessage</div>
+        }
+        <button class="dm-btn-outline" @onclick="SaveAsync" disabled="@(isSaving || _editYear < 2020 || _editCap <= 0)">
+            @if (isSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+            Save
+        </button>
+    </div>
+}
+
+@code {
+    private List<DeadMoney.Core.Entities.LeagueSetting>? settings;
+    private bool isSaving = false;
+    private int _editYear = DateTime.UtcNow.Year + 1;
+    private decimal _editCap = 279_200_000m;
+    private string _saveMessage = "";
+    private bool _saveError = false;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        settings = await LeagueSettingsSvc.GetAllAsync();
+    }
+
+    private async Task SetCurrentAsync(int id)
+    {
+        isSaving = true;
+        await LeagueSettingsSvc.SetCurrentYearAsync(id);
+        await LoadAsync();
+        isSaving = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        isSaving = true;
+        _saveMessage = "";
+        try
+        {
+            await LeagueSettingsSvc.UpsertAsync(_editYear, _editCap);
+            _saveMessage = $"{_editYear} settings saved.";
+            _saveError   = false;
+            await LoadAsync();
+        }
+        catch
+        {
+            _saveMessage = "Save failed. Please try again.";
+            _saveError   = true;
+        }
+        isSaving = false;
+    }
+
+    private static string FormatMoney(decimal v) => $"${v / 1_000_000m:F1}M";
+}

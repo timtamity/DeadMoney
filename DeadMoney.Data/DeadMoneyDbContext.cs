@@ -15,6 +15,7 @@ public class DeadMoneyDbContext : DbContext
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractYear> ContractYears => Set<ContractYear>();
+    public DbSet<LeagueSetting> LeagueSettings => Set<LeagueSetting>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -91,6 +92,12 @@ public class DeadMoneyDbContext : DbContext
         builder.Entity<ContractYear>(entity =>
         {
             entity.ToTable("ContractYears", "League");
+        });
+
+        builder.Entity<LeagueSetting>(entity =>
+        {
+            entity.ToTable("LeagueSettings", "League");
+            entity.Property(s => s.SalaryCap).HasPrecision(18, 2);
         });
 
         // 4. Static Seeding

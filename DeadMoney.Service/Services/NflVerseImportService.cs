@@ -147,7 +147,8 @@ public class NflVerseImportService(
                             (COALESCE(year_struct.roster_bonus, 0) * 1000000) as roster_bonus,
                             (COALESCE(year_struct.workout_bonus, 0) * 1000000) as workout_bonus,
                             (COALESCE(year_struct.per_game_roster_bonus, 0) * 1000000) as per_game_bonus,
-                            (COALESCE(year_struct.cap_number, 0) * 1000000) as cap_number
+                            (COALESCE(year_struct.cap_number, 0) * 1000000) as cap_number,
+                            (COALESCE(year_struct.guaranteed, 0) * 1000000) as year_guaranteed
                         FROM flattened
                         WHERE year_struct.year != 'Total' 
                           AND TRY_CAST(year_struct.year AS INTEGER) >= year_signed
@@ -230,6 +231,7 @@ public class NflVerseImportService(
                 RosterBonus = Math.Round(csv.GetField<decimal>("roster_bonus"), 2),
                 WorkoutBonus = Math.Round(csv.GetField<decimal>("workout_bonus"), 2),
                 PerGameRosterBonus = Math.Round(csv.GetField<decimal>("per_game_bonus"), 2),
+                GuaranteedAmount = Math.Round(csv.GetField<decimal>("year_guaranteed"), 2),
                 CapNumber = Math.Round(csv.GetField<decimal>("cap_number"), 2),
                 IsVoidYear = isVoidYear
             });

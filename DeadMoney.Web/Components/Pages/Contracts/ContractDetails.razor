@@ -1,0 +1,143 @@
+@page "/contracts/{contractId:int}"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components
+@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Contract — Dead Money</PageTitle>
+
+<div class="mb-3 d-flex gap-2">
+    <button class="dm-btn-ghost" @onclick="@(() => Navigation.NavigateTo("/contracts"))">
+        <i class="bi bi-arrow-left"></i> Contracts
+    </button>
+</div>
+
+@if (contract == null)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading contract...
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>
+                <a href="/players/@contract.PlayerId" style="color: var(--dm-text-bright);">
+                    @contract.Player?.FirstName @contract.Player?.LastName
+                </a>
+            </h1>
+            <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                <span style="color: var(--dm-text-muted); font-size: 0.875rem;">
+                    @(contract.ContractYears.FirstOrDefault()?.Team?.Abbreviation ?? contract.Player?.Team?.Abbreviation ?? "FA")
+                </span>
+                @if (!contract.IsActive)
+                {
+                    <span class="t-tiny ms-1">· Inactive</span>
+                }
+                @if (contract.IsModifiedBySim)
+                {
+                    <span class="sim-tag">· ✦ Sim Modified</span>
+                }
+            </div>
+        </div>
+        <button class="dm-btn-outline dm-btn-sm" @onclick="@(() => GoToPlayer(contract.PlayerId))">
+            <i class="bi bi-person"></i> View Player
+        </button>
+    </div>
+
+    <div class="stats-row mb-4">
+        <div class="stat-card">
+            <div class="stat-label">Total Value</div>
+            <div class="stat-value gold">@FormatMoney(contract.TotalValue)</div>
+            <div class="stat-sub">@contract.ContractYears.Count(y => !y.IsVoidYear) years</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Guaranteed</div>
+            <div class="stat-value">@FormatMoney(contract.TotalGuaranteed)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Signing Bonus</div>
+            <div class="stat-value">@FormatMoney(contract.SigningBonus)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Avg Per Year</div>
+            <div class="stat-value" style="font-size: 1.1rem;">
+                @{
+                    var realYears = contract.ContractYears.Count(y => !y.IsVoidYear);
+                    var avg = realYears > 0 ? contract.TotalValue / realYears : 0;
+                }
+                @FormatMoney(avg)
+            </div>
+        </div>
+    </div>
+
+    @if (contract.IsModifiedBySim)
+    {
+        <div class="dm-alert dm-alert-warning mb-4">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            This contract has been modified by the simulation (e.g., cut or restructured).
+        </div>
+    }
+
+    <h2 class="section-title">
+        Year-by-Year Breakdown
+        <span class="section-title-meta">(@contract.ContractYears.Count rows incl. void years)</span>
+    </h2>
+
+    <div class="table-responsive">
+        <table class="dm-table">
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Team</th>
+                    <th style="text-align:right;">Base</th>
+                    <th style="text-align:right;" class="d-none d-sm-table-cell">SB Pro</th>
+                    <th style="text-align:right;" class="d-none d-md-table-cell">Roster Bonus</th>
+                    <th style="text-align:right;" class="d-none d-lg-table-cell">Option Pro</th>
+                    <th style="text-align:right;" class="d-none d-lg-table-cell">Guaranteed</th>
+                    <th style="text-align:right;">Cap Hit</th>
+                    <th style="text-align:center;" class="d-none d-sm-table-cell">Void</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var y in contract.ContractYears.OrderBy(cy => cy.Year))
+                {
+                    <tr style="@(y.IsVoidYear ? "opacity: 0.5;" : "")">
+                        <td style="font-weight: 700; color: var(--dm-text-bright);">@y.Year</td>
+                        <td style="color: var(--dm-text-muted); font-size: 0.85rem;">@(y.Team?.Abbreviation ?? "—")</td>
+                        <td style="text-align:right;">@FormatMoney(y.BaseSalary)</td>
+                        <td style="text-align:right;" class="d-none d-sm-table-cell">@FormatMoney(y.SigningBonusProration)</td>
+                        <td style="text-align:right;" class="d-none d-md-table-cell">@FormatMoney(y.RosterBonus)</td>
+                        <td style="text-align:right;" class="d-none d-lg-table-cell">@FormatMoney(y.OptionBonusProration)</td>
+                        <td style="text-align:right;" class="d-none d-lg-table-cell">@FormatMoney(y.GuaranteedAmount)</td>
+                        <td style="text-align:right; font-weight: 700; color: var(--dm-gold);">@FormatMoney(y.CapNumber)</td>
+                        <td style="text-align:center;" class="d-none d-sm-table-cell">
+                            @if (y.IsVoidYear) { <span style="color: var(--dm-text-muted); font-size: 0.8rem;">Void</span> }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private DeadMoney.Core.Entities.Contract? contract;
+
+    [Parameter]
+    public int contractId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        contract = await db.Contracts
+            .Include(c => c.Player).ThenInclude(p => p.Team)
+            .Include(c => c.ContractYears).ThenInclude(cy => cy.Team)
+            .FirstOrDefaultAsync(c => c.Id == contractId);
+    }
+
+    private void GoToPlayer(int playerId) => Navigation.NavigateTo($"/players/{playerId}");
+    private static string FormatMoney(decimal value) => value >= 1_000_000m ? $"${value / 1_000_000m:F1}M" : value >= 1_000m ? $"${value / 1_000m:F0}K" : value.ToString("C0");
+}
