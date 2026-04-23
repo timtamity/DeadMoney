@@ -433,6 +433,107 @@ a:hover { color: var(--dm-gold); }
 /* --- Sim-modified indicator --- */
 .sim-tag { color: var(--dm-warning); font-size: 0.72rem; font-weight: 600; margin-left: 6px; }
 
+/* --- Transaction Feed (full) --- */
+.txn-feed-list { display: flex; flex-direction: column; gap: 2px; }
+
+.txn-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--dm-radius-sm);
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.txn-row:hover { background: var(--dm-bg-row-hover); }
+
+.txn-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    min-width: 64px;
+    text-align: center;
+}
+.txn-row-body { flex: 1; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+.txn-player   { font-weight: 600; color: var(--dm-text-bright); font-size: 0.875rem; }
+.txn-team     { color: var(--dm-text-muted); font-size: 0.8rem; }
+.txn-details  { color: var(--dm-text-muted); font-size: 0.8rem; }
+.txn-time     { font-size: 0.75rem; color: var(--dm-text-muted); flex-shrink: 0; white-space: nowrap; }
+
+/* Transaction type colours */
+.txn-cut      { background: rgba(248, 81, 73, 0.15);  color: var(--dm-danger);  }
+.txn-signed   { background: rgba(63, 185, 80, 0.15);  color: var(--dm-success); }
+.txn-extended { background: rgba(88, 166, 255, 0.15); color: var(--dm-accent);  }
+.txn-traded   { background: rgba(201, 163, 65, 0.15); color: var(--dm-gold);    }
+
+/* --- Transaction Feed (compact sidebar) --- */
+.txn-compact { padding: 0 0 0.5rem; }
+
+.txn-compact-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1.25rem;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.txn-compact-row:hover { background: rgba(201, 163, 65, 0.06); }
+
+.txn-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.txn-compact-body { flex: 1; min-width: 0; }
+.txn-compact-name { font-size: 0.8rem; font-weight: 600; color: var(--dm-text-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.txn-compact-meta { font-size: 0.7rem; color: var(--dm-text-muted); }
+.txn-compact-time { font-size: 0.68rem; color: var(--dm-text-muted); flex-shrink: 0; white-space: nowrap; }
+.txn-compact-empty { font-size: 0.78rem; color: var(--dm-text-muted); padding: 0.4rem 1.25rem; }
+
+/* --- Trade UI --- */
+.trade-roster-list { display: flex; flex-direction: column; gap: 2px; max-height: 420px; overflow-y: auto; }
+
+.trade-player-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: var(--dm-radius-sm);
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.trade-player-row:hover   { background: var(--dm-bg-row-hover); }
+.trade-player-row.selected { background: rgba(88, 166, 255, 0.1); }
+.trade-player-row input[type=checkbox] { flex-shrink: 0; accent-color: var(--dm-accent); }
+.trade-player-name { flex: 1; font-weight: 600; color: var(--dm-text-bright); font-size: 0.875rem; }
+.trade-player-cap  { font-size: 0.8rem; }
+
+.trade-pick-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: var(--dm-radius-sm);
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.trade-pick-row:hover   { background: var(--dm-bg-row-hover); }
+.trade-pick-row.selected { background: rgba(201, 163, 65, 0.1); }
+.trade-pick-row input[type=checkbox] { flex-shrink: 0; accent-color: var(--dm-gold); }
+.trade-pick-label { flex: 1; font-size: 0.875rem; color: var(--dm-text-bright); }
+
+.trade-summary-player { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem; font-size: 0.875rem; color: var(--dm-text-main); }
+.trade-section-label  { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; color: var(--dm-text-muted); text-transform: uppercase; margin: 0.75rem 0 0.35rem; }
+
 /* ============================================
    SCROLLBAR (webkit)
    ============================================ */

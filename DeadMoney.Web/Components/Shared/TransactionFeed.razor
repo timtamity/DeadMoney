@@ -1,0 +1,145 @@
+@implements IDisposable
+@inject TransactionFeedService FeedSvc
+@inject NavigationManager Navigation
+
+@if (Compact)
+{
+    <div class="txn-compact">
+        <div class="nav-section-label">Recent Activity</div>
+        @if (_feed == null)
+        {
+            <div class="txn-compact-empty">Loading...</div>
+        }
+        else if (!_feed.Any())
+        {
+            <div class="txn-compact-empty">No transactions yet.</div>
+        }
+        else
+        {
+            @foreach (var t in _feed.Take(5))
+            {
+                <div class="txn-compact-row" @onclick="@(() => Navigation.NavigateTo(t.PlayerId.HasValue ? $"/players/{t.PlayerId}" : $"/transactions/{t.Id}"))">
+                    <span class="txn-icon @TxnClass(t.Type)">@TxnIcon(t.Type)</span>
+                    <div class="txn-compact-body">
+                        <div class="txn-compact-name">@t.SubjectName</div>
+                        <div class="txn-compact-meta">@TxnLabel(t.Type) @(t.TeamAbbr != null ? $"· {t.TeamAbbr}" : "")</div>
+                    </div>
+                    <div class="txn-compact-time">@Relative(t.OccurredAt)</div>
+                </div>
+            }
+        }
+    </div>
+}
+else
+{
+    <div class="bento-card">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h2 class="section-title mb-0">Transaction Feed</h2>
+            @if (_feed != null)
+            {
+                <span class="t-tiny">@_feed.Count transactions</span>
+            }
+        </div>
+
+        @if (_feed == null)
+        {
+            <div class="loading-state">
+                <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+                Loading...
+            </div>
+        }
+        else if (!_feed.Any())
+        {
+            <div class="empty-state">
+                <i class="bi bi-megaphone"></i>
+                <p>No transactions yet. Moves will appear here in real time.</p>
+            </div>
+        }
+        else
+        {
+            <div class="txn-feed-list">
+                @foreach (var t in _feed)
+                {
+                    <div class="txn-row" @onclick="@(() => Navigation.NavigateTo(t.PlayerId.HasValue ? $"/players/{t.PlayerId}" : $"/transactions/{t.Id}"))">
+                        <span class="txn-badge @TxnClass(t.Type)">@TxnLabel(t.Type)</span>
+                        <div class="txn-row-body">
+                            <span class="txn-player">@t.SubjectName</span>
+                            @if (t.TeamAbbr != null)
+                            {
+                                <span class="txn-team">@(t.ToTeamAbbr != null ? $"{t.TeamAbbr} → {t.ToTeamAbbr}" : t.TeamAbbr)</span>
+                            }
+                            @if (!string.IsNullOrEmpty(t.Details))
+                            {
+                                <span class="txn-details">@t.Details</span>
+                            }
+                        </div>
+                        <div class="txn-time">@Relative(t.OccurredAt)</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool Compact { get; set; }
+
+    private IReadOnlyList<TransactionDto>? _feed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        FeedSvc.OnChange += OnFeedChanged;
+        _feed = await FeedSvc.GetFeedAsync();
+    }
+
+    private async void OnFeedChanged()
+    {
+        _feed = await FeedSvc.GetFeedAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => FeedSvc.OnChange -= OnFeedChanged;
+
+    private static string TxnClass(TransactionType t) => t switch
+    {
+        TransactionType.Cut           => "txn-cut",
+        TransactionType.Signed        => "txn-signed",
+        TransactionType.Extended      => "txn-extended",
+        TransactionType.Traded        => "txn-traded",
+        TransactionType.PickGranted   => "txn-signed",
+        TransactionType.PickForfeited => "txn-cut",
+        _                             => ""
+    };
+
+    private static string TxnLabel(TransactionType t) => t switch
+    {
+        TransactionType.Cut           => "CUT",
+        TransactionType.Signed        => "SIGNED",
+        TransactionType.Extended      => "EXTENDED",
+        TransactionType.Traded        => "TRADED",
+        TransactionType.PickGranted   => "PICK",
+        TransactionType.PickForfeited => "FORFEITED",
+        _                             => t.ToString().ToUpper()
+    };
+
+    private static string TxnIcon(TransactionType t) => t switch
+    {
+        TransactionType.Cut           => "✂",
+        TransactionType.Signed        => "+",
+        TransactionType.Extended      => "↑",
+        TransactionType.Traded        => "⇄",
+        TransactionType.PickGranted   => "⊕",
+        TransactionType.PickForfeited => "✕",
+        _                             => "·"
+    };
+
+    private static string Relative(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt;
+        if (diff.TotalSeconds < 60)  return "just now";
+        if (diff.TotalMinutes < 60)  return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours   < 24)  return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays    < 7)   return $"{(int)diff.TotalDays}d ago";
+        return dt.ToString("MMM d");
+    }
+}

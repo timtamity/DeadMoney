@@ -16,6 +16,8 @@ public class DeadMoneyDbContext : DbContext
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractYear> ContractYears => Set<ContractYear>();
     public DbSet<LeagueSetting> LeagueSettings => Set<LeagueSetting>();
+    public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<DraftPick> DraftPicks => Set<DraftPick>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -98,6 +100,44 @@ public class DeadMoneyDbContext : DbContext
         {
             entity.ToTable("LeagueSettings", "League");
             entity.Property(s => s.SalaryCap).HasPrecision(18, 2);
+        });
+
+        builder.Entity<Transaction>(entity =>
+        {
+            entity.ToTable("Transactions", "League");
+            entity.HasOne(t => t.Player)
+                  .WithMany()
+                  .HasForeignKey(t => t.PlayerId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.Team)
+                  .WithMany()
+                  .HasForeignKey(t => t.TeamId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.ToTeam)
+                  .WithMany()
+                  .HasForeignKey(t => t.ToTeamId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.DraftPick)
+                  .WithMany()
+                  .HasForeignKey(t => t.DraftPickId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<DraftPick>(entity =>
+        {
+            entity.ToTable("DraftPicks", "League");
+            entity.HasOne(dp => dp.OriginalTeam)
+                  .WithMany()
+                  .HasForeignKey(dp => dp.OriginalTeamId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(dp => dp.CurrentTeam)
+                  .WithMany()
+                  .HasForeignKey(dp => dp.CurrentTeamId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // 4. Static Seeding

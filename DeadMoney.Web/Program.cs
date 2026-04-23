@@ -65,8 +65,9 @@ builder.Services.AddSingleton<IAuthorizationHandler, CommissionerHandler>();
 // --- 3. CUSTOM SERVICES ---
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<CapEngineService>();
-builder.Services.AddScoped<RosterService>();
 builder.Services.AddScoped<LeagueSettingsService>();
+builder.Services.AddSingleton<TransactionFeedService>();
+builder.Services.AddScoped<RosterService>();
 
 // NEW: Typed HttpClient for the Import Service. 
 // This automatically handles the HttpClient injection into NflVerseImportService.

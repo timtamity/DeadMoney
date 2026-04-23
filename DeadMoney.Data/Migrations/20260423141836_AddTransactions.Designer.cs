@@ -4,6 +4,7 @@ using DeadMoney.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeadMoney.Data.Migrations
 {
     [DbContext(typeof(DeadMoneyDbContext))]
-    partial class DeadMoneyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260423141836_AddTransactions")]
+    partial class AddTransactions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -112,47 +115,6 @@ namespace DeadMoney.Data.Migrations
                     b.HasIndex("TeamId");
 
                     b.ToTable("ContractYears", "League");
-                });
-
-            modelBuilder.Entity("DeadMoney.Core.Entities.DraftPick", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CurrentTeamId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsUsed")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsVoided")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("OriginalTeamId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("PickNumber")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Round")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CurrentTeamId");
-
-                    b.HasIndex("OriginalTeamId");
-
-                    b.ToTable("DraftPicks", "League");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.LeagueSetting", b =>
@@ -915,13 +877,10 @@ namespace DeadMoney.Data.Migrations
                     b.Property<string>("Details")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("DraftPickId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("OccurredAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("PlayerId")
+                    b.Property<int>("PlayerId")
                         .HasColumnType("int");
 
                     b.Property<int?>("TeamId")
@@ -934,8 +893,6 @@ namespace DeadMoney.Data.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DraftPickId");
 
                     b.HasIndex("PlayerId");
 
@@ -1064,25 +1021,6 @@ namespace DeadMoney.Data.Migrations
                     b.Navigation("Team");
                 });
 
-            modelBuilder.Entity("DeadMoney.Core.Entities.DraftPick", b =>
-                {
-                    b.HasOne("DeadMoney.Core.Entities.Team", "CurrentTeam")
-                        .WithMany()
-                        .HasForeignKey("CurrentTeamId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DeadMoney.Core.Entities.Team", "OriginalTeam")
-                        .WithMany()
-                        .HasForeignKey("OriginalTeamId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CurrentTeam");
-
-                    b.Navigation("OriginalTeam");
-                });
-
             modelBuilder.Entity("DeadMoney.Core.Entities.Player", b =>
                 {
                     b.HasOne("DeadMoney.Core.Entities.Position", "Position")
@@ -1103,15 +1041,11 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Transaction", b =>
                 {
-                    b.HasOne("DeadMoney.Core.Entities.DraftPick", "DraftPick")
-                        .WithMany()
-                        .HasForeignKey("DraftPickId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("DeadMoney.Core.Entities.Player", "Player")
                         .WithMany()
                         .HasForeignKey("PlayerId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("DeadMoney.Core.Entities.Team", "Team")
                         .WithMany()
@@ -1122,8 +1056,6 @@ namespace DeadMoney.Data.Migrations
                         .WithMany()
                         .HasForeignKey("ToTeamId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("DraftPick");
 
                     b.Navigation("Player");
 

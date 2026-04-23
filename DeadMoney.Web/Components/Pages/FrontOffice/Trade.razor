@@ -1,0 +1,422 @@
+@page "/trade"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@attribute [Authorize(Roles = "Admin, GM, Assistant GM, Commissioner")]
+@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject RosterService RosterService
+@inject LeagueSettingsService LeagueSettingsSvc
+
+<PageTitle>Trade — Dead Money</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Propose Trade</h1>
+        <div class="subtitle">Select players and picks from each side, then confirm.</div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading...
+    </div>
+}
+else
+{
+    <!-- Team selectors -->
+    <div class="bento-card mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-sm-5">
+                <label class="t-tiny d-block mb-1">Team A</label>
+                @if (isCommissionerOrAdmin)
+                {
+                    <select class="form-select" @bind="teamAId" @bind:after="OnTeamAChanged">
+                        <option value="0">— Select Team —</option>
+                        @foreach (var t in allTeams)
+                        {
+                            <option value="@t.Id">@t.Abbreviation — @t.City @t.Name</option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <div class="form-control" style="background: var(--dm-bg-row); cursor: default;">
+                        @(teamA?.Abbreviation) — @(teamA?.City) @(teamA?.Name)
+                    </div>
+                }
+            </div>
+            <div class="col-12 col-sm-2 text-center" style="font-size: 1.5rem; color: var(--dm-text-muted); padding-bottom: 0.5rem;">
+                ⇄
+            </div>
+            <div class="col-12 col-sm-5">
+                <label class="t-tiny d-block mb-1">Team B</label>
+                <select class="form-select" @bind="teamBId" @bind:after="OnTeamBChanged">
+                    <option value="0">— Select Team —</option>
+                    @foreach (var t in allTeams.Where(t => t.Id != teamAId))
+                    {
+                        <option value="@t.Id">@t.Abbreviation — @t.City @t.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
+    @if (teamAId > 0 && teamBId > 0)
+    {
+        <!-- Roster + picks panels -->
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-6">
+                <div class="bento-card h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h2 class="section-title mb-0">
+                            @teamA?.Abbreviation
+                            <span style="font-weight: 400; font-size: 0.875rem; color: var(--dm-text-muted);">sends</span>
+                        </h2>
+                        <span class="t-tiny">@(selectedA.Count + selectedPicksA.Count) selected</span>
+                    </div>
+
+                    @if (!rosterA.Any() && !picksA.Any())
+                    {
+                        <div class="empty-state" style="padding: 1rem 0;">
+                            <p>No players or picks.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @if (rosterA.Any())
+                        {
+                            <div class="trade-section-label">Players</div>
+                            <div class="trade-roster-list mb-3">
+                                @foreach (var row in rosterA)
+                                {
+                                    var id = row.Player.Id;
+                                    var checked_ = selectedA.Contains(id);
+                                    <label class="trade-player-row @(checked_ ? "selected" : "")">
+                                        <input type="checkbox" checked="@checked_"
+                                               @onchange="@(e => ToggleA(id, (bool)(e.Value ?? false)))" />
+                                        <span class="@PosBadgeClass(row.Player.Position?.Code)">@(row.Player.Position?.Code ?? "—")</span>
+                                        <span class="trade-player-name">@row.Player.FirstName @row.Player.LastName</span>
+                                        <span class="trade-player-cap t-sub">@(row.CapHit > 0 ? FormatMoney(row.CapHit) : "—")</span>
+                                        <span class="t-sub" style="font-size:0.75rem;">@(row.YearsLeft > 0 ? $"{row.YearsLeft}yr" : "Exp")</span>
+                                    </label>
+                                }
+                            </div>
+                        }
+
+                        @if (picksA.Any())
+                        {
+                            <div class="trade-section-label">Draft Picks</div>
+                            <div class="trade-roster-list">
+                                @foreach (var pick in picksA)
+                                {
+                                    var pickedA = selectedPicksA.Contains(pick.Id);
+                                    <label class="trade-pick-row @(pickedA ? "selected" : "")">
+                                        <input type="checkbox" checked="@pickedA"
+                                               @onchange="@(e => TogglePickA(pick.Id, (bool)(e.Value ?? false)))" />
+                                        <span class="trade-pick-label">@pick.Label</span>
+                                        @if (pick.OriginalTeamId != pick.CurrentTeamId)
+                                        {
+                                            <span class="t-sub" style="font-size:0.75rem;">via @(pick.OriginalTeam?.Abbreviation)</span>
+                                        }
+                                    </label>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="bento-card h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h2 class="section-title mb-0">
+                            @teamB?.Abbreviation
+                            <span style="font-weight: 400; font-size: 0.875rem; color: var(--dm-text-muted);">sends</span>
+                        </h2>
+                        <span class="t-tiny">@(selectedB.Count + selectedPicksB.Count) selected</span>
+                    </div>
+
+                    @if (!rosterB.Any() && !picksB.Any())
+                    {
+                        <div class="empty-state" style="padding: 1rem 0;">
+                            <p>No players or picks.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @if (rosterB.Any())
+                        {
+                            <div class="trade-section-label">Players</div>
+                            <div class="trade-roster-list mb-3">
+                                @foreach (var row in rosterB)
+                                {
+                                    var id = row.Player.Id;
+                                    var checked_ = selectedB.Contains(id);
+                                    <label class="trade-player-row @(checked_ ? "selected" : "")">
+                                        <input type="checkbox" checked="@checked_"
+                                               @onchange="@(e => ToggleB(id, (bool)(e.Value ?? false)))" />
+                                        <span class="@PosBadgeClass(row.Player.Position?.Code)">@(row.Player.Position?.Code ?? "—")</span>
+                                        <span class="trade-player-name">@row.Player.FirstName @row.Player.LastName</span>
+                                        <span class="trade-player-cap t-sub">@(row.CapHit > 0 ? FormatMoney(row.CapHit) : "—")</span>
+                                        <span class="t-sub" style="font-size:0.75rem;">@(row.YearsLeft > 0 ? $"{row.YearsLeft}yr" : "Exp")</span>
+                                    </label>
+                                }
+                            </div>
+                        }
+
+                        @if (picksB.Any())
+                        {
+                            <div class="trade-section-label">Draft Picks</div>
+                            <div class="trade-roster-list">
+                                @foreach (var pick in picksB)
+                                {
+                                    var pickedB = selectedPicksB.Contains(pick.Id);
+                                    <label class="trade-pick-row @(pickedB ? "selected" : "")">
+                                        <input type="checkbox" checked="@pickedB"
+                                               @onchange="@(e => TogglePickB(pick.Id, (bool)(e.Value ?? false)))" />
+                                        <span class="trade-pick-label">@pick.Label</span>
+                                        @if (pick.OriginalTeamId != pick.CurrentTeamId)
+                                        {
+                                            <span class="t-sub" style="font-size:0.75rem;">via @(pick.OriginalTeam?.Abbreviation)</span>
+                                        }
+                                    </label>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Trade summary + confirm -->
+        @if (selectedA.Any() || selectedB.Any() || selectedPicksA.Any() || selectedPicksB.Any())
+        {
+            <div class="bento-card" style="border-color: rgba(88,166,255,0.4);">
+                <h2 class="section-title mb-3">Trade Summary</h2>
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-sm-6">
+                        <div class="t-tiny mb-2">@teamA?.Abbreviation sends</div>
+                        @if (!selectedA.Any() && !selectedPicksA.Any())
+                        {
+                            <span class="t-sub">Nothing</span>
+                        }
+                        @foreach (var id in selectedA)
+                        {
+                            var p = rosterA.FirstOrDefault(r => r.Player.Id == id);
+                            <div class="trade-summary-player">
+                                <span class="@PosBadgeClass(p?.Player.Position?.Code)">@(p?.Player.Position?.Code ?? "—")</span>
+                                @p?.Player.FirstName @p?.Player.LastName
+                                <span class="t-sub ms-1">@(p?.CapHit > 0 ? FormatMoney(p!.CapHit) : "")</span>
+                            </div>
+                        }
+                        @foreach (var id in selectedPicksA)
+                        {
+                            var pick = picksA.FirstOrDefault(p => p.Id == id);
+                            <div class="trade-summary-player">
+                                <span class="pos-badge" style="background:rgba(201,163,65,0.15);color:var(--dm-gold);">PICK</span>
+                                @pick?.Label
+                            </div>
+                        }
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="t-tiny mb-2">@teamB?.Abbreviation sends</div>
+                        @if (!selectedB.Any() && !selectedPicksB.Any())
+                        {
+                            <span class="t-sub">Nothing</span>
+                        }
+                        @foreach (var id in selectedB)
+                        {
+                            var p = rosterB.FirstOrDefault(r => r.Player.Id == id);
+                            <div class="trade-summary-player">
+                                <span class="@PosBadgeClass(p?.Player.Position?.Code)">@(p?.Player.Position?.Code ?? "—")</span>
+                                @p?.Player.FirstName @p?.Player.LastName
+                                <span class="t-sub ms-1">@(p?.CapHit > 0 ? FormatMoney(p!.CapHit) : "")</span>
+                            </div>
+                        }
+                        @foreach (var id in selectedPicksB)
+                        {
+                            var pick = picksB.FirstOrDefault(p => p.Id == id);
+                            <div class="trade-summary-player">
+                                <span class="pos-badge" style="background:rgba(201,163,65,0.15);color:var(--dm-gold);">PICK</span>
+                                @pick?.Label
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="dm-btn-outline" @onclick="ConfirmTradeAsync"
+                            disabled="@(isExecuting || (!selectedA.Any() && !selectedB.Any() && !selectedPicksA.Any() && !selectedPicksB.Any()))">
+                        @if (isExecuting) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-check-lg me-1"></i> Confirm Trade
+                    </button>
+                    <button class="dm-btn-ghost" @onclick="ClearSelections">Clear</button>
+                </div>
+            </div>
+        }
+    }
+}
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="dm-alert dm-alert-success mt-3">
+        <i class="bi bi-check-circle-fill me-2"></i> @successMessage
+    </div>
+}
+
+@code {
+    private record RosterRow(DeadMoney.Core.Entities.Player Player, decimal CapHit, int YearsLeft);
+
+    private List<DeadMoney.Core.Entities.Team> allTeams = new();
+    private DeadMoney.Core.Entities.Team? teamA;
+    private DeadMoney.Core.Entities.Team? teamB;
+    private List<RosterRow> rosterA = new();
+    private List<RosterRow> rosterB = new();
+    private List<DeadMoney.Core.Entities.DraftPick> picksA = new();
+    private List<DeadMoney.Core.Entities.DraftPick> picksB = new();
+    private HashSet<int> selectedA     = new();
+    private HashSet<int> selectedB     = new();
+    private HashSet<int> selectedPicksA = new();
+    private HashSet<int> selectedPicksB = new();
+
+    private bool isLoading             = true;
+    private bool isExecuting           = false;
+    private bool isCommissionerOrAdmin = false;
+    private int  teamAId;
+    private int  teamBId;
+    private int  currentYear;
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentYear = await LeagueSettingsSvc.GetCurrentYearAsync();
+
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+        isCommissionerOrAdmin = user.IsInRole("Admin") || user.IsInRole("Commissioner");
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        allTeams = await db.Teams.OrderBy(t => t.Abbreviation).ToListAsync();
+
+        if (!isCommissionerOrAdmin)
+        {
+            var teamIdStr = user.FindFirst("TeamId")?.Value;
+            if (int.TryParse(teamIdStr, out var myTeamId))
+            {
+                teamAId = myTeamId;
+                teamA   = allTeams.FirstOrDefault(t => t.Id == myTeamId);
+                await LoadSideA();
+            }
+        }
+
+        isLoading = false;
+    }
+
+    private async Task OnTeamAChanged()
+    {
+        teamA = allTeams.FirstOrDefault(t => t.Id == teamAId);
+        selectedA.Clear(); selectedPicksA.Clear();
+        if (teamBId == teamAId) { teamBId = 0; teamB = null; rosterB = new(); picksB = new(); selectedB.Clear(); selectedPicksB.Clear(); }
+        await LoadSideA();
+    }
+
+    private async Task OnTeamBChanged()
+    {
+        teamB = allTeams.FirstOrDefault(t => t.Id == teamBId);
+        selectedB.Clear(); selectedPicksB.Clear();
+        await LoadSideB();
+    }
+
+    private async Task LoadSideA()
+    {
+        if (teamAId == 0) { rosterA = new(); picksA = new(); return; }
+        rosterA = await LoadRoster(teamAId);
+        picksA  = await LoadPicks(teamAId);
+    }
+
+    private async Task LoadSideB()
+    {
+        if (teamBId == 0) { rosterB = new(); picksB = new(); return; }
+        rosterB = await LoadRoster(teamBId);
+        picksB  = await LoadPicks(teamBId);
+    }
+
+    private async Task<List<RosterRow>> LoadRoster(int teamId)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var players = await db.Players
+            .Where(p => p.TeamId == teamId)
+            .Include(p => p.Position)
+            .Include(p => p.Contracts).ThenInclude(c => c.ContractYears)
+            .AsNoTracking()
+            .ToListAsync();
+
+        return players.Select(p =>
+        {
+            var contract  = p.Contracts.FirstOrDefault(c => c.IsActive);
+            var cy        = contract?.ContractYears.FirstOrDefault(y => y.Year == currentYear);
+            var capHit    = cy?.CapNumber ?? 0m;
+            var yearsLeft = contract?.ContractYears.Count(y => y.Year >= currentYear && !y.IsVoidYear) ?? 0;
+            return new RosterRow(p, capHit, yearsLeft);
+        })
+        .OrderBy(r => r.Player.Position?.DisplayOrder ?? 99)
+        .ThenByDescending(r => r.CapHit)
+        .ToList();
+    }
+
+    private async Task<List<DeadMoney.Core.Entities.DraftPick>> LoadPicks(int teamId)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        return await db.DraftPicks
+            .Where(dp => dp.CurrentTeamId == teamId && !dp.IsUsed && !dp.IsVoided)
+            .Include(dp => dp.OriginalTeam)
+            .OrderBy(dp => dp.Year).ThenBy(dp => dp.Round).ThenBy(dp => dp.PickNumber)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    private void ToggleA(int id, bool on)     { if (on) selectedA.Add(id);      else selectedA.Remove(id); }
+    private void ToggleB(int id, bool on)     { if (on) selectedB.Add(id);      else selectedB.Remove(id); }
+    private void TogglePickA(int id, bool on) { if (on) selectedPicksA.Add(id); else selectedPicksA.Remove(id); }
+    private void TogglePickB(int id, bool on) { if (on) selectedPicksB.Add(id); else selectedPicksB.Remove(id); }
+
+    private void ClearSelections()
+    {
+        selectedA.Clear(); selectedB.Clear();
+        selectedPicksA.Clear(); selectedPicksB.Clear();
+        successMessage = "";
+    }
+
+    private async Task ConfirmTradeAsync()
+    {
+        if (!selectedA.Any() && !selectedB.Any() && !selectedPicksA.Any() && !selectedPicksB.Any()) return;
+        isExecuting = true;
+        successMessage = "";
+
+        await RosterService.ExecuteTradeAsync(
+            teamAId, selectedA.ToList(), selectedPicksA.ToList(),
+            teamBId, selectedB.ToList(), selectedPicksB.ToList(),
+            currentYear);
+
+        var aPlayerNames = selectedA.Select(id => rosterA.FirstOrDefault(r => r.Player.Id == id)?.Player.LastName ?? "").Where(n => n != "");
+        var bPlayerNames = selectedB.Select(id => rosterB.FirstOrDefault(r => r.Player.Id == id)?.Player.LastName ?? "").Where(n => n != "");
+        var aPickLabels  = selectedPicksA.Select(id => picksA.FirstOrDefault(p => p.Id == id)?.Label ?? "").Where(n => n != "");
+        var bPickLabels  = selectedPicksB.Select(id => picksB.FirstOrDefault(p => p.Id == id)?.Label ?? "").Where(n => n != "");
+
+        var bGets = bPlayerNames.Concat(aPickLabels);
+        var aGets = aPlayerNames.Concat(bPickLabels);
+
+        successMessage = $"Trade complete. {teamA?.Abbreviation} gets {(bGets.Any() ? string.Join(", ", bGets) : "nothing")}; {teamB?.Abbreviation} gets {(aGets.Any() ? string.Join(", ", aGets) : "nothing")}.";
+
+        ClearSelections();
+        await LoadSideA();
+        await LoadSideB();
+        isExecuting = false;
+    }
+
+    private static string FormatMoney(decimal v) => v >= 1_000_000m ? $"${v / 1_000_000m:F1}M" : v >= 1_000m ? $"${v / 1_000m:F0}K" : "—";
+}

@@ -1,0 +1,458 @@
+@page "/admin/draft-picks"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize(Roles = "Admin")]
+@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject TransactionFeedService FeedSvc
+@inject LeagueSettingsService LeagueSettingsSvc
+
+<PageTitle>Draft Picks — Dead Money Admin</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Draft Pick Management</h1>
+        <div class="subtitle">Generate picks, add comp picks, reassign ownership, and forfeit picks.</div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading...
+    </div>
+}
+else
+{
+    <!-- Year tabs -->
+    <div class="dm-tabs mb-4">
+        @foreach (var y in years)
+        {
+            <button class="dm-tab @(selectedYear == y ? "active" : "")" @onclick="@(() => SelectYearAsync(y))">@y</button>
+        }
+    </div>
+
+    <!-- Action bar -->
+    <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+        <button class="dm-btn-outline" @onclick="GeneratePicksAsync" disabled="@isBusy">
+            <i class="bi bi-magic"></i> Generate @selectedYear picks
+        </button>
+        <button class="dm-btn-ghost" @onclick="@(() => OpenAdd())">
+            <i class="bi bi-plus-lg"></i> Add comp/special pick
+        </button>
+        @if (activePicks.Count > 0 || voidedPicks.Count > 0)
+        {
+            <span class="t-tiny ms-auto">@activePicks.Count active · @voidedPicks.Count voided</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMsg))
+    {
+        <div class="dm-alert @(isError ? "dm-alert-danger" : "dm-alert-success") mb-4">
+            <i class="bi @(isError ? "bi-exclamation-circle-fill" : "bi-check-circle-fill") me-2"></i> @statusMsg
+        </div>
+    }
+
+    <!-- Add pick panel -->
+    @if (action == "add")
+    {
+        <div class="bento-card mb-4" style="border-color: rgba(201,163,65,0.4);">
+            <h2 class="section-title mb-3">Add Pick</h2>
+            <div class="row g-3">
+                <div class="col-6 col-sm-3 col-md-2">
+                    <label class="t-tiny d-block mb-1">Year</label>
+                    <input type="number" class="form-control" @bind="addYear" min="2020" max="2040" />
+                </div>
+                <div class="col-6 col-sm-3 col-md-2">
+                    <label class="t-tiny d-block mb-1">Round</label>
+                    <select class="form-select" @bind="addRound">
+                        @for (int r = 1; r <= 7; r++) { <option value="@r">Round @r</option> }
+                        <option value="8">Comp (8)</option>
+                        <option value="9">Comp (9)</option>
+                    </select>
+                </div>
+                <div class="col-6 col-sm-3 col-md-2">
+                    <label class="t-tiny d-block mb-1">Pick # (optional)</label>
+                    <input type="number" class="form-control" @bind="addPickNumber" placeholder="—" min="1" max="260" />
+                </div>
+                <div class="col-12 col-sm-3 col-md-3">
+                    <label class="t-tiny d-block mb-1">Assigned to Team</label>
+                    <select class="form-select" @bind="addTeamId">
+                        <option value="0">— Select —</option>
+                        @foreach (var t in allTeams)
+                        {
+                            <option value="@t.Id">@t.Abbreviation — @t.City</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="t-tiny d-block mb-1">Notes</label>
+                    <input type="text" class="form-control" @bind="addNotes" placeholder="e.g. Comp pick for losing WR1" />
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button class="dm-btn-outline" @onclick="SaveAddAsync" disabled="@(isBusy || addTeamId == 0)">
+                    <i class="bi bi-plus-lg me-1"></i> Add Pick
+                </button>
+                <button class="dm-btn-ghost" @onclick="CancelAction">Cancel</button>
+            </div>
+        </div>
+    }
+
+    <!-- Active picks table -->
+    @if (!activePicks.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-list-check"></i>
+            <p>No picks for @selectedYear. Use "Generate" to create the full draft board, or add individual picks above.</p>
+        </div>
+    }
+    else
+    {
+        <div class="bento-card mb-4">
+            <div class="table-responsive">
+                <table class="dm-table">
+                    <thead>
+                        <tr>
+                            <th>Round</th>
+                            <th>Original</th>
+                            <th>Current Owner</th>
+                            <th class="d-none d-md-table-cell">Notes</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pick in activePicks)
+                        {
+                            var isEditing = actionPick?.Id == pick.Id;
+                            <tr>
+                                <td>
+                                    <span class="pos-badge" style="background:rgba(201,163,65,0.15);color:var(--dm-gold);">
+                                        R@(pick.Round)@(pick.PickNumber.HasValue ? $" #{pick.PickNumber}" : "")
+                                    </span>
+                                </td>
+                                <td class="t-sub">@(pick.OriginalTeam?.Abbreviation ?? "—")</td>
+                                <td>
+                                    @if (isEditing && action == "reassign")
+                                    {
+                                        <select class="form-select form-select-sm" style="max-width:200px;"
+                                                @bind="editOwnerId">
+                                            @foreach (var t in allTeams)
+                                            {
+                                                <option value="@t.Id">@t.Abbreviation — @t.City</option>
+                                            }
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <span style="font-weight:600;color:var(--dm-text-bright);">@(pick.CurrentTeam?.Abbreviation ?? "—")</span>
+                                        @if (pick.OriginalTeamId != pick.CurrentTeamId)
+                                        {
+                                            <span class="t-sub ms-2" style="font-size:0.75rem;">via @(pick.OriginalTeam?.Abbreviation)</span>
+                                        }
+                                    }
+                                </td>
+                                <td class="t-sub d-none d-md-table-cell">
+                                    @if (isEditing && action == "reassign")
+                                    {
+                                        <input type="text" class="form-control form-control-sm" @bind="editNotes" placeholder="Notes..." style="max-width:220px;" />
+                                    }
+                                    else
+                                    {
+                                        @(pick.Notes ?? "—")
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (isEditing && action == "reassign")
+                                    {
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <button class="dm-btn-outline dm-btn-sm" @onclick="SaveReassignAsync" disabled="@isBusy">Save</button>
+                                            <button class="dm-btn-ghost dm-btn-sm" @onclick="CancelAction">Cancel</button>
+                                        </div>
+                                    }
+                                    else if (isEditing && action == "void")
+                                    {
+                                        <div class="d-flex gap-1 justify-content-end align-items-center flex-wrap">
+                                            <input type="text" class="form-control form-control-sm" @bind="voidReason"
+                                                   placeholder="Reason..." style="max-width:180px;" />
+                                            <button class="dm-btn-outline dm-btn-sm" style="border-color:var(--dm-danger);color:var(--dm-danger);"
+                                                    @onclick="SaveVoidAsync" disabled="@isBusy">Forfeit</button>
+                                            <button class="dm-btn-ghost dm-btn-sm" @onclick="CancelAction">Cancel</button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <button class="dm-btn-ghost dm-btn-sm" @onclick="@(() => OpenReassign(pick))">
+                                                <i class="bi bi-arrow-left-right"></i> Reassign
+                                            </button>
+                                            <button class="dm-btn-ghost dm-btn-sm" style="color:var(--dm-danger);"
+                                                    @onclick="@(() => OpenVoid(pick))">
+                                                <i class="bi bi-x-circle"></i> Forfeit
+                                            </button>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- Voided picks -->
+    @if (voidedPicks.Any())
+    {
+        <details class="bento-card">
+            <summary style="cursor:pointer;font-weight:600;color:var(--dm-text-muted);padding:0.5rem 0;">
+                <i class="bi bi-x-circle me-2" style="color:var(--dm-danger);"></i>
+                Forfeited Picks (@voidedPicks.Count)
+            </summary>
+            <div class="table-responsive mt-3">
+                <table class="dm-table">
+                    <thead>
+                        <tr>
+                            <th>Round</th>
+                            <th>Original</th>
+                            <th>Was Owned By</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pick in voidedPicks)
+                        {
+                            <tr style="opacity:0.6;">
+                                <td>
+                                    <span class="pos-badge" style="background:rgba(248,81,73,0.1);color:var(--dm-danger);">
+                                        R@(pick.Round)@(pick.PickNumber.HasValue ? $" #{pick.PickNumber}" : "")
+                                    </span>
+                                </td>
+                                <td class="t-sub">@(pick.OriginalTeam?.Abbreviation ?? "—")</td>
+                                <td class="t-sub">@(pick.CurrentTeam?.Abbreviation ?? "—")</td>
+                                <td class="t-sub">@(pick.Notes ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </details>
+    }
+}
+
+@code {
+    private List<DeadMoney.Core.Entities.Team> allTeams = new();
+    private List<DeadMoney.Core.Entities.DraftPick> activePicks = new();
+    private List<DeadMoney.Core.Entities.DraftPick> voidedPicks = new();
+    private List<int> years = new();
+
+    private int selectedYear;
+    private bool isLoading = true;
+    private bool isBusy    = false;
+    private string? statusMsg;
+    private bool isError;
+
+    // Action state
+    private string? action;                                       // "reassign" | "void" | "add"
+    private DeadMoney.Core.Entities.DraftPick? actionPick;
+    private int  editOwnerId;
+    private string editNotes = "";
+    private string voidReason = "";
+
+    // Add-pick form
+    private int    addYear;
+    private int    addRound     = 1;
+    private int?   addPickNumber;
+    private int    addTeamId;
+    private string addNotes = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentYear = await LeagueSettingsSvc.GetCurrentYearAsync();
+        years = Enumerable.Range(currentYear, 5).ToList();
+        selectedYear = currentYear;
+        addYear = currentYear;
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        allTeams = await db.Teams.OrderBy(t => t.Abbreviation).AsNoTracking().ToListAsync();
+
+        await LoadPicksAsync();
+        isLoading = false;
+    }
+
+    private async Task SelectYearAsync(int year)
+    {
+        selectedYear = year;
+        CancelAction();
+        await LoadPicksAsync();
+    }
+
+    private async Task LoadPicksAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var all = await db.DraftPicks
+            .Where(dp => dp.Year == selectedYear)
+            .Include(dp => dp.OriginalTeam)
+            .Include(dp => dp.CurrentTeam)
+            .OrderBy(dp => dp.Round).ThenBy(dp => dp.PickNumber).ThenBy(dp => dp.OriginalTeamId)
+            .AsNoTracking()
+            .ToListAsync();
+
+        activePicks = all.Where(dp => !dp.IsVoided && !dp.IsUsed).ToList();
+        voidedPicks = all.Where(dp => dp.IsVoided).ToList();
+    }
+
+    private async Task GeneratePicksAsync()
+    {
+        isBusy = true; statusMsg = null;
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        var existingCount = await db.DraftPicks.CountAsync(dp => dp.Year == selectedYear && !dp.IsVoided);
+        if (existingCount > 0)
+        {
+            statusMsg = $"{selectedYear} already has {existingCount} active pick(s). Remove them first or add individually.";
+            isError = true;
+            isBusy = false;
+            return;
+        }
+
+        var teams = await db.Teams.OrderBy(t => t.Id).ToListAsync();
+        foreach (var team in teams)
+            for (int r = 1; r <= 7; r++)
+                db.DraftPicks.Add(new DeadMoney.Core.Entities.DraftPick
+                {
+                    Year = selectedYear, Round = r,
+                    OriginalTeamId = team.Id, CurrentTeamId = team.Id
+                });
+
+        await db.SaveChangesAsync();
+        await LoadPicksAsync();
+        statusMsg = $"Generated {teams.Count * 7} picks for {selectedYear}.";
+        isError = false;
+        isBusy = false;
+    }
+
+    private void OpenAdd()
+    {
+        action = "add"; actionPick = null;
+        addYear = selectedYear; addRound = 1; addPickNumber = null; addTeamId = 0; addNotes = "";
+    }
+
+    private void OpenReassign(DeadMoney.Core.Entities.DraftPick pick)
+    {
+        action = "reassign"; actionPick = pick;
+        editOwnerId = pick.CurrentTeamId;
+        editNotes = pick.Notes ?? "";
+    }
+
+    private void OpenVoid(DeadMoney.Core.Entities.DraftPick pick)
+    {
+        action = "void"; actionPick = pick;
+        voidReason = "";
+    }
+
+    private void CancelAction() { action = null; actionPick = null; }
+
+    private async Task SaveAddAsync()
+    {
+        if (addTeamId == 0) return;
+        isBusy = true; statusMsg = null;
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        var pick = new DeadMoney.Core.Entities.DraftPick
+        {
+            Year = addYear, Round = addRound, PickNumber = addPickNumber,
+            OriginalTeamId = addTeamId, CurrentTeamId = addTeamId,
+            Notes = string.IsNullOrWhiteSpace(addNotes) ? null : addNotes
+        };
+        db.DraftPicks.Add(pick);
+
+        db.Transactions.Add(new DeadMoney.Core.Entities.Transaction
+        {
+            Type       = TransactionType.PickGranted,
+            DraftPickId = 0, // will be set after SaveChanges — handled below
+            TeamId     = addTeamId,
+            Details    = $"Added: {pick.Label}{(string.IsNullOrWhiteSpace(addNotes) ? "" : $" — {addNotes}")}",
+            OccurredAt = DateTime.UtcNow
+        });
+
+        await db.SaveChangesAsync();
+
+        // update the transaction's DraftPickId now that pick.Id is set
+        var txn = await db.Transactions
+            .OrderByDescending(t => t.OccurredAt)
+            .FirstAsync(t => t.Type == TransactionType.PickGranted && t.TeamId == addTeamId);
+        txn.DraftPickId = pick.Id;
+        await db.SaveChangesAsync();
+
+        var team = allTeams.FirstOrDefault(t => t.Id == addTeamId);
+        FeedSvc.Notify(new TransactionDto(0, TransactionType.PickGranted, pick.Label, null, pick.Id,
+            team?.Abbreviation, addTeamId, null, txn.Details, DateTime.UtcNow));
+
+        await LoadPicksAsync();
+        action = null;
+        statusMsg = $"Added {pick.Label} to {team?.Abbreviation}.";
+        isError = false;
+        isBusy = false;
+    }
+
+    private async Task SaveReassignAsync()
+    {
+        if (actionPick == null) return;
+        isBusy = true; statusMsg = null;
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        var pick = await db.DraftPicks.FindAsync(actionPick.Id);
+        if (pick == null) { isBusy = false; return; }
+
+        pick.CurrentTeamId = editOwnerId;
+        pick.Notes = string.IsNullOrWhiteSpace(editNotes) ? null : editNotes;
+        await db.SaveChangesAsync();
+
+        var fromTeam = allTeams.FirstOrDefault(t => t.Id == actionPick.CurrentTeamId);
+        var toTeam   = allTeams.FirstOrDefault(t => t.Id == editOwnerId);
+
+        await LoadPicksAsync();
+        action = null; actionPick = null;
+        statusMsg = $"Reassigned to {toTeam?.Abbreviation}.";
+        isError = false;
+        isBusy = false;
+    }
+
+    private async Task SaveVoidAsync()
+    {
+        if (actionPick == null) return;
+        isBusy = true; statusMsg = null;
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        var pick = await db.DraftPicks.FindAsync(actionPick.Id);
+        if (pick == null) { isBusy = false; return; }
+
+        var label = actionPick.Label;
+        var ownerId = pick.CurrentTeamId;
+        pick.IsVoided = true;
+        pick.Notes = string.IsNullOrWhiteSpace(voidReason) ? pick.Notes : voidReason;
+
+        db.Transactions.Add(new DeadMoney.Core.Entities.Transaction
+        {
+            Type        = TransactionType.PickForfeited,
+            DraftPickId = pick.Id,
+            TeamId      = ownerId,
+            Details     = string.IsNullOrWhiteSpace(voidReason) ? $"Forfeited: {label}" : voidReason,
+            OccurredAt  = DateTime.UtcNow
+        });
+
+        await db.SaveChangesAsync();
+
+        var team = allTeams.FirstOrDefault(t => t.Id == ownerId);
+        FeedSvc.Notify(new TransactionDto(0, TransactionType.PickForfeited, label, null, pick.Id,
+            team?.Abbreviation, ownerId, null,
+            string.IsNullOrWhiteSpace(voidReason) ? null : voidReason, DateTime.UtcNow));
+
+        await LoadPicksAsync();
+        action = null; actionPick = null;
+        statusMsg = $"{label} forfeited.";
+        isError = false;
+        isBusy = false;
+    }
+}

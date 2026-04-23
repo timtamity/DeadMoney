@@ -1,0 +1,192 @@
+@page "/transactions/{transactionId:int}"
+@using Microsoft.EntityFrameworkCore
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Transaction — Dead Money</PageTitle>
+
+<div class="mb-3">
+    <button class="dm-btn-ghost" @onclick="@(() => Navigation.NavigateTo("/transactions"))">
+        <i class="bi bi-arrow-left"></i> Transactions
+    </button>
+</div>
+
+@if (transaction == null)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading...
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>
+                <span class="txn-badge @TxnClass(transaction.Type)" style="font-size: 0.8rem; vertical-align: middle; margin-right: 0.5rem;">
+                    @transaction.Type.ToString().ToUpper()
+                </span>
+                @if (transaction.Player != null)
+                {
+                    <a href="/players/@transaction.PlayerId" style="color: var(--dm-text-bright);">
+                        @transaction.Player.FirstName @transaction.Player.LastName
+                    </a>
+                }
+                else
+                {
+                    <span style="color: var(--dm-gold);">@(transaction.DraftPick?.Label ?? transaction.Details ?? "Pick")</span>
+                }
+            </h1>
+            <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                @if (transaction.Player?.Position != null)
+                {
+                    <span class="@PosBadgeClass(transaction.Player.Position.Code)">@transaction.Player.Position.Code</span>
+                }
+                else if (transaction.DraftPick != null)
+                {
+                    <span class="pos-badge" style="background:rgba(201,163,65,0.15);color:var(--dm-gold);">PICK</span>
+                }
+                <span class="t-tiny">@transaction.OccurredAt.ToString("dddd, MMMM d, yyyy · HH:mm UTC")</span>
+            </div>
+        </div>
+        @if (transaction.Player != null)
+        {
+            <button class="dm-btn-outline dm-btn-sm" @onclick="@(() => Navigation.NavigateTo($"/players/{transaction.PlayerId}"))">
+                <i class="bi bi-person"></i> View Player
+            </button>
+        }
+    </div>
+
+    <div class="stats-row mb-4">
+        <div class="stat-card">
+            <div class="stat-label">Transaction Type</div>
+            <div class="stat-value" style="font-size: 1.1rem;">
+                <span class="txn-badge @TxnClass(transaction.Type)">@transaction.Type.ToString().ToUpper()</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">@(transaction.Type == TransactionType.Traded ? "From Team" : "Team")</div>
+            <div class="stat-value gold" style="font-size: 1.1rem;">
+                @if (transaction.Team != null)
+                {
+                    <a href="/teams/@transaction.TeamId" style="color: var(--dm-gold);">@transaction.Team.Abbreviation</a>
+                }
+                else { <span>—</span> }
+            </div>
+            @if (transaction.Team != null)
+            {
+                <div class="stat-sub">@transaction.Team.City @transaction.Team.Name</div>
+            }
+        </div>
+        @if (transaction.ToTeam != null)
+        {
+            <div class="stat-card">
+                <div class="stat-label">To Team</div>
+                <div class="stat-value gold" style="font-size: 1.1rem;">
+                    <a href="/teams/@transaction.ToTeamId" style="color: var(--dm-gold);">@transaction.ToTeam.Abbreviation</a>
+                </div>
+                <div class="stat-sub">@transaction.ToTeam.City @transaction.ToTeam.Name</div>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(transaction.Details))
+        {
+            <div class="stat-card">
+                <div class="stat-label">Details</div>
+                <div class="stat-value" style="font-size: 1.1rem;">@transaction.Details</div>
+            </div>
+        }
+    </div>
+
+    @if (transaction.Player != null)
+    {
+        <div class="bento-card">
+            <h2 class="section-title mb-3">Player at Time of Transaction</h2>
+            <div class="row g-3">
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="t-tiny mb-1">Name</div>
+                    <div style="font-weight: 600; color: var(--dm-text-bright);">
+                        <a href="/players/@transaction.PlayerId">
+                            @transaction.Player.FirstName @transaction.Player.LastName
+                        </a>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3 col-md-2">
+                    <div class="t-tiny mb-1">Position</div>
+                    <span class="@PosBadgeClass(transaction.Player.Position?.Code)">
+                        @(transaction.Player.Position?.Code ?? "—")
+                    </span>
+                </div>
+                @if (transaction.Player.Age.HasValue)
+                {
+                    <div class="col-6 col-sm-3 col-md-2">
+                        <div class="t-tiny mb-1">Age</div>
+                        <div style="color: var(--dm-text-bright);">@transaction.Player.Age</div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(transaction.Player.College))
+                {
+                    <div class="col-6 col-sm-3 col-md-4">
+                        <div class="t-tiny mb-1">College</div>
+                        <div style="color: var(--dm-text-main);">@transaction.Player.College</div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (transaction.DraftPick != null)
+    {
+        <div class="bento-card">
+            <h2 class="section-title mb-3">Draft Pick Details</h2>
+            <div class="row g-3">
+                <div class="col-6 col-sm-3">
+                    <div class="t-tiny mb-1">Year</div>
+                    <div style="font-weight: 600; color: var(--dm-text-bright);">@transaction.DraftPick.Year</div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="t-tiny mb-1">Round</div>
+                    <div style="font-weight: 600; color: var(--dm-text-bright);">@transaction.DraftPick.Round</div>
+                </div>
+                @if (transaction.DraftPick.PickNumber.HasValue)
+                {
+                    <div class="col-6 col-sm-3">
+                        <div class="t-tiny mb-1">Pick #</div>
+                        <div style="font-weight: 600; color: var(--dm-text-bright);">@transaction.DraftPick.PickNumber</div>
+                    </div>
+                }
+                <div class="col-6 col-sm-3">
+                    <div class="t-tiny mb-1">Original Team</div>
+                    <div style="font-weight: 600; color: var(--dm-gold);">@(transaction.DraftPick.OriginalTeam?.Abbreviation ?? "—")</div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public int transactionId { get; set; }
+
+    private DeadMoney.Core.Entities.Transaction? transaction;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        transaction = await db.Transactions
+            .Include(t => t.Player).ThenInclude(p => p!.Position)
+            .Include(t => t.Team)
+            .Include(t => t.ToTeam)
+            .Include(t => t.DraftPick).ThenInclude(dp => dp!.OriginalTeam)
+            .FirstOrDefaultAsync(t => t.Id == transactionId);
+    }
+
+    private static string TxnClass(TransactionType t) => t switch
+    {
+        TransactionType.Cut           => "txn-cut",
+        TransactionType.Signed        => "txn-signed",
+        TransactionType.Extended      => "txn-extended",
+        TransactionType.Traded        => "txn-traded",
+        TransactionType.PickGranted   => "txn-signed",
+        TransactionType.PickForfeited => "txn-cut",
+        _                             => ""
+    };
+}

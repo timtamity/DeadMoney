@@ -1,4 +1,5 @@
 using DeadMoney.Core.Entities;
+using DeadMoney.Core.Enums;
 using DeadMoney.Service.Services;
 using DeadMoney.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -66,7 +67,7 @@ public class RosterServiceTests
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory);
         await SeedContractAsync(factory, player.Id, 3, 7_000_000m, 2_000_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.CutPlayerAsync(player.Id, TeamId, Year, isPostJune1: false);
 
@@ -81,7 +82,7 @@ public class RosterServiceTests
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory);
         var contract = await SeedContractAsync(factory, player.Id, 3, 7_000_000m, 2_000_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.CutPlayerAsync(player.Id, TeamId, Year, isPostJune1: false);
 
@@ -97,7 +98,7 @@ public class RosterServiceTests
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory);
         var contract = await SeedContractAsync(factory, player.Id, 3, 7_000_000m, 2_000_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.CutPlayerAsync(player.Id, TeamId, Year, isPostJune1: false);
 
@@ -115,7 +116,7 @@ public class RosterServiceTests
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory);
         var contract = await SeedContractAsync(factory, player.Id, 3, 7_000_000m, 2_000_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.CutPlayerAsync(player.Id, TeamId, Year, isPostJune1: false);
 
@@ -140,7 +141,7 @@ public class RosterServiceTests
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory);
         var contract = await SeedContractAsync(factory, player.Id, 3, 7_000_000m, 2_000_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.CutPlayerAsync(player.Id, TeamId, Year, isPostJune1: true);
 
@@ -158,7 +159,7 @@ public class RosterServiceTests
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory);
         var contract = await SeedContractAsync(factory, player.Id, 3, 7_000_000m, 2_000_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.CutPlayerAsync(player.Id, TeamId, Year, isPostJune1: true);
 
@@ -179,7 +180,7 @@ public class RosterServiceTests
         var player  = await SeedPlayerAsync(factory);
         // Single year contract — no future proration to defer
         var contract = await SeedContractAsync(factory, player.Id, 1, 5_000_000m, 2_000_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.CutPlayerAsync(player.Id, TeamId, Year, isPostJune1: true);
 
@@ -197,7 +198,7 @@ public class RosterServiceTests
     {
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory, teamId: null); // free agent
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.SignFreeAgentAsync(player.Id, TeamId, Year,
             new ContractInput(Years: 3, TotalValueM: 30m, GuaranteedM: 15m, SigningBonusM: 6m));
@@ -219,7 +220,7 @@ public class RosterServiceTests
     {
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory, teamId: null);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.SignFreeAgentAsync(player.Id, TeamId, Year,
             new ContractInput(Years: 4, TotalValueM: 40m, GuaranteedM: 20m, SigningBonusM: 8m));
@@ -236,7 +237,7 @@ public class RosterServiceTests
     {
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory, teamId: null);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.SignFreeAgentAsync(player.Id, TeamId, Year,
             new ContractInput(Years: 2, TotalValueM: 20m, GuaranteedM: 10m, SigningBonusM: 4m));
@@ -251,7 +252,7 @@ public class RosterServiceTests
     {
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory, teamId: null);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         // $30M total, $6M signing bonus → $24M base over 3 years = $8M/yr base, $2M/yr proration
         await svc.SignFreeAgentAsync(player.Id, TeamId, Year,
@@ -273,7 +274,7 @@ public class RosterServiceTests
     {
         var factory  = MakeFactory();
         var player   = await SeedPlayerAsync(factory, teamId: TeamId); // already on a team
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.SignFreeAgentAsync(player.Id, Team2Id, Year,
             new ContractInput(Years: 2, TotalValueM: 20m, GuaranteedM: 10m, SigningBonusM: 4m));
@@ -290,7 +291,7 @@ public class RosterServiceTests
         var player  = await SeedPlayerAsync(factory, teamId: null);
         // Seed an old active contract (e.g., leftover data)
         await SeedContractAsync(factory, player.Id, 1, 3_000_000m, 500_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.SignFreeAgentAsync(player.Id, TeamId, Year,
             new ContractInput(Years: 2, TotalValueM: 20m, GuaranteedM: 10m, SigningBonusM: 4m));
@@ -311,7 +312,7 @@ public class RosterServiceTests
         var factory  = MakeFactory();
         var player   = await SeedPlayerAsync(factory);
         var oldContract = await SeedContractAsync(factory, player.Id, 2, 8_000_000m, 2_000_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.ExtendPlayerAsync(player.Id, TeamId, Year,
             new ContractInput(Years: 3, TotalValueM: 30m, GuaranteedM: 15m, SigningBonusM: 6m));
@@ -328,7 +329,7 @@ public class RosterServiceTests
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory);
         await SeedContractAsync(factory, player.Id, 2, 8_000_000m, 2_000_000m);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.ExtendPlayerAsync(player.Id, TeamId, Year,
             new ContractInput(Years: 3, TotalValueM: 30m, GuaranteedM: 15m, SigningBonusM: 6m));
@@ -350,7 +351,7 @@ public class RosterServiceTests
     {
         var factory = MakeFactory();
         var player  = await SeedPlayerAsync(factory);
-        var svc = new RosterService(factory);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
 
         await svc.ExtendPlayerAsync(player.Id, TeamId, Year,
             new ContractInput(Years: 2, TotalValueM: 16m, GuaranteedM: 8m, SigningBonusM: 4m));
@@ -358,5 +359,92 @@ public class RosterServiceTests
         using var db = factory.CreateDbContext();
         var count = await db.Contracts.CountAsync(c => c.PlayerId == player.Id && c.IsActive);
         Assert.Equal(1, count);
+    }
+
+    // ── ExecuteTradeAsync ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Trade_MovesPlayersToCorrectTeams()
+    {
+        var factory = MakeFactory();
+        var playerA = await SeedPlayerAsync(factory, teamId: TeamId);
+        var playerB = await SeedPlayerAsync(factory, teamId: Team2Id);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
+
+        await svc.ExecuteTradeAsync(TeamId, [playerA.Id], [], Team2Id, [playerB.Id], [], Year);
+
+        using var db = factory.CreateDbContext();
+        var a = await db.Players.FindAsync(playerA.Id);
+        var b = await db.Players.FindAsync(playerB.Id);
+        Assert.Equal(Team2Id, a!.TeamId);
+        Assert.Equal(TeamId,  b!.TeamId);
+    }
+
+    [Fact]
+    public async Task Trade_UpdatesContractYearTeamIds()
+    {
+        var factory = MakeFactory();
+        var playerA  = await SeedPlayerAsync(factory, teamId: TeamId);
+        await SeedContractAsync(factory, playerA.Id, 3, 10_000_000m, 2_000_000m);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
+
+        await svc.ExecuteTradeAsync(TeamId, [playerA.Id], [], Team2Id, [], [], Year);
+
+        using var db = factory.CreateDbContext();
+        var contract = await db.Contracts.FirstAsync(c => c.PlayerId == playerA.Id);
+        var futureYears = await db.ContractYears
+            .Where(cy => cy.ContractId == contract.Id && cy.Year >= Year)
+            .ToListAsync();
+
+        Assert.All(futureYears, cy => Assert.Equal(Team2Id, cy.TeamId));
+    }
+
+    [Fact]
+    public async Task Trade_WritesTransactionPerPlayer()
+    {
+        var factory = MakeFactory();
+        var playerA = await SeedPlayerAsync(factory, teamId: TeamId);
+        var playerB = await SeedPlayerAsync(factory, teamId: Team2Id);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
+
+        await svc.ExecuteTradeAsync(TeamId, [playerA.Id], [], Team2Id, [playerB.Id], [], Year);
+
+        using var db = factory.CreateDbContext();
+        var txns = await db.Transactions
+            .Where(t => t.Type == TransactionType.Traded)
+            .ToListAsync();
+
+        Assert.Equal(2, txns.Count);
+        Assert.Contains(txns, t => t.PlayerId == playerA.Id && t.TeamId == TeamId  && t.ToTeamId == Team2Id);
+        Assert.Contains(txns, t => t.PlayerId == playerB.Id && t.TeamId == Team2Id && t.ToTeamId == TeamId);
+    }
+
+    [Fact]
+    public async Task Trade_IgnoresPlayerNotOnExpectedTeam()
+    {
+        var factory = MakeFactory();
+        var playerA = await SeedPlayerAsync(factory, teamId: TeamId);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
+
+        // playerA is on TeamId, but we claim he's on Team2Id — should be skipped
+        await svc.ExecuteTradeAsync(Team2Id, [playerA.Id], [], TeamId, [], [], Year);
+
+        using var db = factory.CreateDbContext();
+        var unchanged = await db.Players.FindAsync(playerA.Id);
+        Assert.Equal(TeamId, unchanged!.TeamId);
+    }
+
+    [Fact]
+    public async Task Trade_OneSided_MovesPlayerWithNoReturn()
+    {
+        var factory = MakeFactory();
+        var playerA = await SeedPlayerAsync(factory, teamId: TeamId);
+        var svc = new RosterService(factory, new TransactionFeedService(factory));
+
+        await svc.ExecuteTradeAsync(TeamId, [playerA.Id], [], Team2Id, [], [], Year);
+
+        using var db = factory.CreateDbContext();
+        var moved = await db.Players.FindAsync(playerA.Id);
+        Assert.Equal(Team2Id, moved!.TeamId);
     }
 }
