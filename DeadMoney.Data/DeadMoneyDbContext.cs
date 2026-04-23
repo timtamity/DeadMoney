@@ -18,6 +18,7 @@ public class DeadMoneyDbContext : DbContext
     public DbSet<LeagueSetting> LeagueSettings => Set<LeagueSetting>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<DraftPick> DraftPicks => Set<DraftPick>();
+    public DbSet<FaOffer> FaOffers => Set<FaOffer>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -138,6 +139,22 @@ public class DeadMoneyDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(dp => dp.CurrentTeamId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<FaOffer>(entity =>
+        {
+            entity.ToTable("FaOffers", "League");
+            entity.Property(o => o.TotalValueM).HasPrecision(18, 2);
+            entity.Property(o => o.AnnualValueM).HasPrecision(18, 2);
+            entity.Property(o => o.GuaranteedM).HasPrecision(18, 2);
+            entity.HasOne(o => o.Player)
+                  .WithMany()
+                  .HasForeignKey(o => o.PlayerId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(o => o.Team)
+                  .WithMany()
+                  .HasForeignKey(o => o.TeamId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // 4. Static Seeding

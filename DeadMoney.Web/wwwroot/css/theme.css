@@ -499,6 +499,55 @@ a:hover { color: var(--dm-gold); }
 .txn-compact-time { font-size: 0.68rem; color: var(--dm-text-muted); flex-shrink: 0; white-space: nowrap; }
 .txn-compact-empty { font-size: 0.78rem; color: var(--dm-text-muted); padding: 0.4rem 1.25rem; }
 
+/* --- FA Heat Indicator --- */
+.heat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.heat-cold    { background: rgba(255,255,255,0.04); color: var(--dm-text-muted); }
+.heat-warm    { background: rgba(88,166,255,0.12);  color: var(--dm-accent); }
+.heat-hot     { background: rgba(201,163,65,0.15);  color: var(--dm-gold); }
+.heat-blazing { background: rgba(248,81,73,0.15);   color: var(--dm-danger); }
+
+.heat-range   { font-size: 0.75rem; color: var(--dm-text-muted); }
+
+/* FA offer form / competitiveness bar */
+.offer-card { background: var(--dm-bg-row); border-radius: var(--dm-radius-sm); padding: 0.75rem 1rem; }
+
+.offer-range-bar {
+    position: relative;
+    height: 6px;
+    background: var(--dm-bg-row-hover);
+    border-radius: 3px;
+    margin: 0.5rem 0 0.25rem;
+}
+.offer-range-fill {
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--dm-accent) 0%, var(--dm-gold) 50%, var(--dm-danger) 100%);
+    opacity: 0.4;
+}
+.offer-marker {
+    position: absolute;
+    top: -4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--dm-gold);
+    border: 2px solid var(--dm-bg-card);
+    transform: translateX(-50%);
+    transition: left 0.3s ease;
+}
+.offer-range-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--dm-text-muted); }
+
 /* --- Trade UI --- */
 .trade-roster-list { display: flex; flex-direction: column; gap: 2px; max-height: 420px; overflow-y: auto; }
 

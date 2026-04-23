@@ -68,6 +68,7 @@ builder.Services.AddScoped<CapEngineService>();
 builder.Services.AddScoped<LeagueSettingsService>();
 builder.Services.AddSingleton<TransactionFeedService>();
 builder.Services.AddScoped<RosterService>();
+builder.Services.AddScoped<FaOfferService>();
 
 // NEW: Typed HttpClient for the Import Service. 
 // This automatically handles the HttpClient injection into NflVerseImportService.

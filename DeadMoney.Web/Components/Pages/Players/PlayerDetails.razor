@@ -1,8 +1,12 @@
 @page "/players/{playerId:int}"
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components
+@using System.Security.Claims
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject FaOfferService FaOfferSvc
 
 <PageTitle>@(player != null ? $"{player.FirstName} {player.LastName}" : "Player") — Dead Money</PageTitle>
 
@@ -80,6 +84,166 @@ else
             </div>
         }
     </div>
+
+    <!-- FA Offers section (free agents only) -->
+    @if (player.TeamId == null && !player.IsRetired)
+    {
+        <div class="bento-card mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h2 class="section-title mb-0">Market Interest</h2>
+                @if (heat != null)
+                {
+                    <span class="heat-badge @heat.HeatClass">@heat.HeatLabel</span>
+                }
+            </div>
+
+            @if (heat == null || heat.OfferCount == 0)
+            {
+                <p class="t-sub" style="margin: 0;">No offers on file yet.</p>
+            }
+            else
+            {
+                <!-- Range bar -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-baseline mb-1">
+                        <span class="t-tiny">APY Range</span>
+                        <span class="heat-range">@heat.RangeLabel</span>
+                    </div>
+                    <div class="offer-range-bar">
+                        <div class="offer-range-fill"></div>
+                        @if (myOffer != null)
+                        {
+                            <div class="offer-marker" style="left: @(heat.CompetitivenessPercent(myOffer.AnnualValueM))%;"></div>
+                        }
+                    </div>
+                    <div class="offer-range-labels">
+                        <span>$@heat.MinApyM.ToString("F1")M/yr</span>
+                        @if (heat.MinApyM != heat.MaxApyM)
+                        {
+                            <span>Avg $@heat.AvgApyM.ToString("F1")M/yr</span>
+                            <span>$@heat.MaxApyM.ToString("F1")M/yr</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- GM's own offer -->
+            @if (isGmOrAbove)
+            {
+                <hr style="border-color: var(--dm-border); margin: 1rem 0;" />
+
+                @if (myOffer != null)
+                {
+                    <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
+                        <div>
+                            <div class="t-tiny mb-1">Your Offer</div>
+                            <span style="font-weight: 700; color: var(--dm-text-bright); font-size: 1rem;">
+                                @myOffer.Years yr / $@myOffer.TotalValueM.ToString("F1")M
+                            </span>
+                            <span class="t-sub ms-2">$@myOffer.AnnualValueM.ToString("F1")M/yr · $@myOffer.GuaranteedM.ToString("F1")M gtd</span>
+                            @if (heat != null && heat.OfferCount > 1)
+                            {
+                                <span class="ms-2 t-tiny" style="color: @(myOffer.AnnualValueM >= heat.AvgApyM * 1.05m ? "var(--dm-success)" : myOffer.AnnualValueM <= heat.AvgApyM * 0.95m ? "var(--dm-danger)" : "var(--dm-gold)");">
+                                    @heat.CompetitivenessLabel(myOffer.AnnualValueM)
+                                </span>
+                            }
+                        </div>
+                        <button class="dm-btn-ghost dm-btn-sm" style="color:var(--dm-danger);"
+                                @onclick="WithdrawOfferAsync">
+                            <i class="bi bi-x-circle me-1"></i>Withdraw
+                        </button>
+                    </div>
+                    <!-- Update form -->
+                    <div class="d-flex gap-2 flex-wrap align-items-end">
+                        <div>
+                            <div class="t-tiny mb-1">Years</div>
+                            <select class="form-select form-select-sm" style="width:90px;" @bind="offerYears">
+                                @for (int y = 1; y <= 5; y++) { <option value="@y">@y yr</option> }
+                            </select>
+                        </div>
+                        <div>
+                            <div class="t-tiny mb-1">Total ($M)</div>
+                            <input type="number" class="form-control form-control-sm" style="width:110px;"
+                                   @bind="offerTotalM" min="0.1" step="0.5" />
+                        </div>
+                        <div>
+                            <div class="t-tiny mb-1">Gtd ($M)</div>
+                            <input type="number" class="form-control form-control-sm" style="width:110px;"
+                                   @bind="offerGuaranteedM" min="0" step="0.5" />
+                        </div>
+                        <button class="dm-btn-outline dm-btn-sm" @onclick="SubmitOfferAsync" disabled="@isBusy">
+                            Update Offer
+                        </button>
+                    </div>
+                }
+                else if (!isAdminOrCommish)
+                {
+                    <div class="t-tiny mb-2">Submit Offer</div>
+                    <div class="d-flex gap-2 flex-wrap align-items-end">
+                        <div>
+                            <div class="t-tiny mb-1">Years</div>
+                            <select class="form-select form-select-sm" style="width:90px;" @bind="offerYears">
+                                @for (int y = 1; y <= 5; y++) { <option value="@y">@y yr</option> }
+                            </select>
+                        </div>
+                        <div>
+                            <div class="t-tiny mb-1">Total ($M)</div>
+                            <input type="number" class="form-control form-control-sm" style="width:110px;"
+                                   @bind="offerTotalM" min="0.1" step="0.5" />
+                        </div>
+                        <div>
+                            <div class="t-tiny mb-1">Gtd ($M)</div>
+                            <input type="number" class="form-control form-control-sm" style="width:110px;"
+                                   @bind="offerGuaranteedM" min="0" step="0.5" />
+                        </div>
+                        <button class="dm-btn-outline dm-btn-sm" @onclick="SubmitOfferAsync" disabled="@isBusy">
+                            <i class="bi bi-send me-1"></i>Make Offer
+                        </button>
+                    </div>
+                    @if (!string.IsNullOrEmpty(offerMsg))
+                    {
+                        <div class="t-sub mt-2" style="color: var(--dm-success);">@offerMsg</div>
+                    }
+                }
+
+                <!-- Admin: all offers table -->
+                @if (isAdminOrCommish && allOffers.Count > 0)
+                {
+                    <div class="table-responsive mt-3">
+                        <table class="dm-table">
+                            <thead>
+                                <tr>
+                                    <th>Team</th>
+                                    <th>Years</th>
+                                    <th style="text-align:right;">Total</th>
+                                    <th style="text-align:right;">APY</th>
+                                    <th style="text-align:right;">Gtd</th>
+                                    <th class="text-end">Submitted</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var o in allOffers)
+                                {
+                                    <tr>
+                                        <td style="font-weight:600;color:var(--dm-text-bright);">@(o.Team?.Abbreviation ?? "—")</td>
+                                        <td class="t-sub">@o.Years yr</td>
+                                        <td class="text-end" style="color:var(--dm-gold);font-weight:600;">$@o.TotalValueM.ToString("F1")M</td>
+                                        <td class="text-end t-sub">$@o.AnnualValueM.ToString("F1")M/yr</td>
+                                        <td class="text-end t-sub">$@o.GuaranteedM.ToString("F1")M</td>
+                                        <td class="text-end t-sub">@Relative(o.SubmittedAt)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else if (isAdminOrCommish)
+                {
+                    <p class="t-sub mt-2" style="margin:0;">No offers submitted yet.</p>
+                }
+            }
+        </div>
+    }
 
     <!-- Contracts -->
     <h2 class="section-title">
@@ -171,13 +335,34 @@ else
 }
 
 @code {
-    private DeadMoney.Core.Entities.Player? player;
+    [Parameter] public int playerId { get; set; }
 
-    [Parameter]
-    public int playerId { get; set; }
+    private Player? player;
+
+    // Role state
+    private bool isGmOrAbove;
+    private bool isAdminOrCommish;
+    private int  myTeamId;
+
+    // Offer state
+    private FaHeatDto?  heat;
+    private FaOffer?    myOffer;
+    private List<FaOffer> allOffers = new();
+    private int     offerYears       = 3;
+    private decimal offerTotalM      = 10m;
+    private decimal offerGuaranteedM = 5m;
+    private bool    isBusy;
+    private string  offerMsg = "";
 
     protected override async Task OnInitializedAsync()
     {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+        isAdminOrCommish = user.IsInRole("Admin") || user.IsInRole("Commissioner");
+        isGmOrAbove = isAdminOrCommish || user.IsInRole("GM") || user.IsInRole("Assistant GM");
+        if (isGmOrAbove && !isAdminOrCommish && int.TryParse(user.FindFirst("TeamId")?.Value, out var tid))
+            myTeamId = tid;
+
         using var db = await DbFactory.CreateDbContextAsync();
         player = await db.Players
             .Include(p => p.Position)
@@ -186,8 +371,63 @@ else
                 .ThenInclude(c => c.ContractYears)
                     .ThenInclude(cy => cy.Team)
             .FirstOrDefaultAsync(p => p.Id == playerId);
+
+        if (player?.TeamId == null && player?.IsRetired == false)
+            await LoadOfferDataAsync();
+    }
+
+    private async Task LoadOfferDataAsync()
+    {
+        heat = await FaOfferSvc.GetHeatAsync(playerId);
+
+        if (isGmOrAbove && !isAdminOrCommish && myTeamId > 0)
+        {
+            myOffer = await FaOfferSvc.GetMyOfferAsync(myTeamId, playerId);
+            if (myOffer != null)
+            {
+                offerYears       = myOffer.Years;
+                offerTotalM      = myOffer.TotalValueM;
+                offerGuaranteedM = myOffer.GuaranteedM;
+            }
+        }
+
+        if (isAdminOrCommish)
+            allOffers = await FaOfferSvc.GetOffersForPlayerAsync(playerId);
+    }
+
+    private async Task SubmitOfferAsync()
+    {
+        if (offerTotalM <= 0 || offerYears <= 0 || myTeamId == 0) return;
+        isBusy = true; offerMsg = "";
+        myOffer = await FaOfferSvc.SubmitOrUpdateAsync(myTeamId, playerId, offerYears, offerTotalM, offerGuaranteedM);
+        heat = await FaOfferSvc.GetHeatAsync(playerId);
+        offerMsg = "Offer submitted.";
+        isBusy = false;
+    }
+
+    private async Task WithdrawOfferAsync()
+    {
+        if (myOffer == null) return;
+        isBusy = true;
+        await FaOfferSvc.WithdrawAsync(myOffer.Id, myTeamId);
+        myOffer = null;
+        heat = await FaOfferSvc.GetHeatAsync(playerId);
+        isBusy = false;
     }
 
     private void GoToContract(int contractId) => Navigation.NavigateTo($"/contracts/{contractId}");
-    private static string FormatMoney(decimal value) => value >= 1_000_000m ? $"${value / 1_000_000m:F1}M" : value >= 1_000m ? $"${value / 1_000m:F0}K" : value.ToString("C0");
+
+    private static string Relative(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt;
+        if (diff.TotalMinutes < 60)  return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours   < 24)  return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays    < 7)   return $"{(int)diff.TotalDays}d ago";
+        return dt.ToString("MMM d");
+    }
+
+    private static string FormatMoney(decimal value) =>
+        value >= 1_000_000m ? $"${value / 1_000_000m:F1}M" :
+        value >= 1_000m     ? $"${value / 1_000m:F0}K" :
+        value.ToString("C0");
 }

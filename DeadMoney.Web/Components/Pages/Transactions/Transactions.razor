@@ -41,7 +41,7 @@
         <div class="col-6 col-sm-3 col-lg-2">
             <label>Team</label>
             <select class="form-select" @bind="filterTeam" @bind:after="OnFilterChanged">
-                <option value="">All Teams</option>
+                <option value="0">All Teams</option>
                 @foreach (var t in teams)
                 {
                     <option value="@t.Id">@t.Abbreviation — @t.City</option>
@@ -172,7 +172,7 @@ else
 
     private string searchName    = "";
     private string filterType    = "";
-    private int?   filterTeam;
+    private int    filterTeam;
     private int?   filterPosition;
     private int    currentPage   = 1;
     private int    pageSize      = 25;
@@ -239,7 +239,7 @@ else
         if (!string.IsNullOrEmpty(filterType) && Enum.TryParse<TransactionType>(filterType, out var txType))
             query = query.Where(t => t.Type == txType);
 
-        if (filterTeam.HasValue)
+        if (filterTeam > 0)
             query = query.Where(t => t.TeamId == filterTeam || t.ToTeamId == filterTeam);
 
         if (filterPosition.HasValue)

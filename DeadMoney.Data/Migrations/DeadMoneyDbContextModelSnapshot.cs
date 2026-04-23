@@ -155,6 +155,53 @@ namespace DeadMoney.Data.Migrations
                     b.ToTable("DraftPicks", "League");
                 });
 
+            modelBuilder.Entity("DeadMoney.Core.Entities.FaOffer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AnnualValueM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GuaranteedM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PlayerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TeamId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalValueM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Years")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId");
+
+                    b.HasIndex("TeamId");
+
+                    b.ToTable("FaOffers", "League");
+                });
+
             modelBuilder.Entity("DeadMoney.Core.Entities.LeagueSetting", b =>
                 {
                     b.Property<int>("Id")
@@ -1060,6 +1107,25 @@ namespace DeadMoney.Data.Migrations
                         .HasForeignKey("TeamId");
 
                     b.Navigation("Contract");
+
+                    b.Navigation("Team");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.FaOffer", b =>
+                {
+                    b.HasOne("DeadMoney.Core.Entities.Player", "Player")
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DeadMoney.Core.Entities.Team", "Team")
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Player");
 
                     b.Navigation("Team");
                 });
