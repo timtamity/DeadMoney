@@ -2,7 +2,6 @@
 
 public partial class Team
 {
-    // Total of all active contract cap hits for the current year
     public decimal TotalCapAllocated(int year) =>
         Roster.Sum(p => p.CurrentContract?.GetCapHitForYear(year) ?? 0);
 

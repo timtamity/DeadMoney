@@ -1,6 +1,6 @@
 @page "/transactions/{transactionId:int}"
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@attribute [Authorize]
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 
 <PageTitle>Transaction — Dead Money</PageTitle>
@@ -165,7 +165,7 @@ else
 @code {
     [Parameter] public int transactionId { get; set; }
 
-    private DeadMoney.Core.Entities.Transaction? transaction;
+    private Transaction? transaction;
 
     protected override async Task OnInitializedAsync()
     {
@@ -175,17 +175,8 @@ else
             .Include(t => t.Team)
             .Include(t => t.ToTeam)
             .Include(t => t.DraftPick).ThenInclude(dp => dp!.OriginalTeam)
+            .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == transactionId);
     }
 
-    private static string TxnClass(TransactionType t) => t switch
-    {
-        TransactionType.Cut           => "txn-cut",
-        TransactionType.Signed        => "txn-signed",
-        TransactionType.Extended      => "txn-extended",
-        TransactionType.Traded        => "txn-traded",
-        TransactionType.PickGranted   => "txn-signed",
-        TransactionType.PickForfeited => "txn-cut",
-        _                             => ""
-    };
 }

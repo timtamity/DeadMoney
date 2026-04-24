@@ -8,7 +8,6 @@ public partial class Player
     [Key]
     public int Id { get; set; }
 
-    // THE NEW ID CORE
     [MaxLength(50)]
     public string? GsisId { get; set; }  // NFL Official (e.g., 00-0036326)
 

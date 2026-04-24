@@ -85,7 +85,7 @@ else
 }
 
 @code {
-    private List<DeadMoney.Core.Entities.LeagueSetting>? settings;
+    private List<LeagueSetting>? settings;
     private bool isSaving = false;
     private int _editYear = DateTime.UtcNow.Year + 1;
     private decimal _editCap = 279_200_000m;
@@ -126,5 +126,4 @@ else
         isSaving = false;
     }
 
-    private static string FormatMoney(decimal v) => $"${v / 1_000_000m:F1}M";
 }

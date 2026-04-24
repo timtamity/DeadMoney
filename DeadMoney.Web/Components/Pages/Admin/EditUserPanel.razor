@@ -1,5 +1,3 @@
-﻿@using DeadMoney.Core.Entities
-@using DeadMoney.Data
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 
 <div class="side-panel @(_isOpen ? "is-open" : "")">
@@ -77,8 +75,8 @@
         _isOpen = true;
 
         using var db = await DbFactory.CreateDbContextAsync();
-        _availableRoles = await db.Roles.ToListAsync();
-        _availableTeams = await db.Teams.OrderBy(t => t.Abbreviation).ToListAsync();
+        _availableRoles = await db.Roles.AsNoTracking().ToListAsync();
+        _availableTeams = await db.Teams.OrderBy(t => t.Abbreviation).AsNoTracking().ToListAsync();
 
         // Pre-load existing assignments
         var mainRole = User.UserRoles.FirstOrDefault();
@@ -105,8 +103,6 @@
 
         if (dbUser != null)
         {
-            // Simple logic: Update the first role or add a new one
-            // We can expand this later for multiple roles
             var currentRole = dbUser.UserRoles.FirstOrDefault();
 
             if (currentRole != null)

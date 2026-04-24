@@ -1,5 +1,4 @@
-﻿@page "/admin/import"
-@using DeadMoney.Service.Interfaces
+@page "/admin/import"
 @attribute [Authorize(Policy = "AdminOnly")]
 @inject INflVerseImportService ImportService
 
@@ -112,13 +111,9 @@
     {
         _isProcessing = true;
         _statusMessage = "Analyzing Parquet File Schema...";
-
         try
         {
-            // Now returns a single formatted string
             var schemaDump = await ImportService.GetContractFileSchemaAsync();
-
-            // Add as one large log entry or split by newlines if you prefer
             AddLog("Schema Analysis Results:", false, true);
             AddLog(schemaDump, false, true);
         }
@@ -155,22 +150,8 @@
         }
     }
 
-    private void AddLog(string msg, bool isError = false, bool isDebug = false)
-    {
-        _logs.Insert(0, new SyncLog
-        {
-            Message = msg,
-            IsError = isError,
-            IsDebug = isDebug,
-            Timestamp = DateTime.Now
-        });
-    }
+    private void AddLog(string msg, bool isError = false, bool isDebug = false) =>
+        _logs.Insert(0, new SyncLog(msg, isError, isDebug, DateTime.Now));
 
-    private class SyncLog
-    {
-        public string Message { get; set; } = "";
-        public bool IsError { get; set; }
-        public bool IsDebug { get; set; }
-        public DateTime Timestamp { get; set; }
-    }
+    private record SyncLog(string Message, bool IsError, bool IsDebug, DateTime Timestamp);
 }

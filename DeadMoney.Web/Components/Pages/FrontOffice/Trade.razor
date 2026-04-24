@@ -1,6 +1,6 @@
 @page "/trade"
 @attribute [Authorize(Roles = "Admin, GM, Assistant GM, Commissioner")]
-@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject RosterService RosterService
@@ -266,15 +266,15 @@ else
 }
 
 @code {
-    private record RosterRow(DeadMoney.Core.Entities.Player Player, decimal CapHit, int YearsLeft);
+    private record RosterRow(Player Player, decimal CapHit, int YearsLeft);
 
-    private List<DeadMoney.Core.Entities.Team> allTeams = new();
-    private DeadMoney.Core.Entities.Team? teamA;
-    private DeadMoney.Core.Entities.Team? teamB;
+    private List<Team> allTeams = new();
+    private Team? teamA;
+    private Team? teamB;
     private List<RosterRow> rosterA = new();
     private List<RosterRow> rosterB = new();
-    private List<DeadMoney.Core.Entities.DraftPick> picksA = new();
-    private List<DeadMoney.Core.Entities.DraftPick> picksB = new();
+    private List<DraftPick> picksA = new();
+    private List<DraftPick> picksB = new();
     private HashSet<int> selectedA     = new();
     private HashSet<int> selectedB     = new();
     private HashSet<int> selectedPicksA = new();
@@ -365,7 +365,7 @@ else
         .ToList();
     }
 
-    private async Task<List<DeadMoney.Core.Entities.DraftPick>> LoadPicks(int teamId)
+    private async Task<List<DraftPick>> LoadPicks(int teamId)
     {
         using var db = await DbFactory.CreateDbContextAsync();
         return await db.DraftPicks
@@ -415,5 +415,4 @@ else
         isExecuting = false;
     }
 
-    private static string FormatMoney(decimal v) => v >= 1_000_000m ? $"${v / 1_000_000m:F1}M" : v >= 1_000m ? $"${v / 1_000m:F0}K" : "—";
 }

@@ -1,7 +1,7 @@
 @page "/contracts"
 @attribute [Authorize]
 @implements IDisposable
-@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 
 <PageTitle>Contracts — Dead Money</PageTitle>
@@ -125,8 +125,8 @@ else
 }
 
 @code {
-    private List<DeadMoney.Core.Entities.Contract>? contracts;
-    private List<DeadMoney.Core.Entities.Team> teams = new();
+    private List<Contract>? contracts;
+    private List<Team> teams = new();
     private Timer? _debounceTimer;
 
     private string searchName = "";
@@ -229,7 +229,4 @@ else
 
     private void GoToContract(int contractId) => Navigation.NavigateTo($"/contracts/{contractId}");
     public void Dispose() => _debounceTimer?.Dispose();
-
-    private void GoToPlayer(int playerId) => Navigation.NavigateTo($"/players/{playerId}");
-    private static string FormatMoney(decimal value) => value >= 1_000_000m ? $"${value / 1_000_000m:F1}M" : value >= 1_000m ? $"${value / 1_000m:F0}K" : value.ToString("C0");
 }

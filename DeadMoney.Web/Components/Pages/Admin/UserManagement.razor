@@ -1,6 +1,4 @@
-﻿@page "/admin/users"
-@using DeadMoney.Core.Entities
-@using DeadMoney.Data
+@page "/admin/users"
 @attribute [Authorize(Policy = "AdminOnly")]
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 
@@ -107,23 +105,15 @@
         using var db = await DbFactory.CreateDbContextAsync();
 
         _users = await db.Users
-            .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Role)
-            .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Team)
-            .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Position) // Updated to single reference
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Team)
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Position)
             .OrderByDescending(u => u.LastLogin)
+            .AsNoTracking()
             .ToListAsync();
     }
 
-    private async Task RefreshUsers()
-    {
-        await LoadUsers();
-    }
+    private Task RefreshUsers() => LoadUsers();
 
-    private async Task OpenEdit(User user)
-    {
-        await _editPanel.Open(user);
-    }
+    private Task OpenEdit(User user) => _editPanel.Open(user);
 }

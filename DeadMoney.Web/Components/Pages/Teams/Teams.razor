@@ -1,6 +1,6 @@
 @page "/teams"
 @attribute [Authorize]
-@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 
 <PageTitle>Teams — Dead Money</PageTitle>
@@ -81,7 +81,7 @@ else
 }
 
 @code {
-    private List<DeadMoney.Core.Entities.Team>? teams;
+    private List<Team>? teams;
 
     private string searchName = "";
     private string filterConference = "";
@@ -130,6 +130,7 @@ else
         teams = await query
             .OrderBy(t => t.Conference).ThenBy(t => t.Division).ThenBy(t => t.Abbreviation)
             .Skip((currentPage - 1) * pageSize).Take(pageSize)
+            .AsNoTracking()
             .ToListAsync();
     }
 

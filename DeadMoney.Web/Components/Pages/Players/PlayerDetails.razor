@@ -1,12 +1,11 @@
 @page "/players/{playerId:int}"
-@using Microsoft.AspNetCore.Components
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@attribute [Authorize]
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject FaOfferService FaOfferSvc
 
-<PageTitle>@(player != null ? $"{player.FirstName} {player.LastName}" : "Player") — Dead Money</PageTitle>
+<PageTitle>@(player != null ? player.FullName : "Player") — Dead Money</PageTitle>
 
 <div class="mb-3">
     <button class="dm-btn-ghost" @onclick="@(() => Navigation.NavigateTo("/players"))">
@@ -228,7 +227,7 @@ else
                                         <td class="text-end" style="color:var(--dm-gold);font-weight:600;">$@o.TotalValueM.ToString("F1")M</td>
                                         <td class="text-end t-sub">$@o.AnnualValueM.ToString("F1")M/yr</td>
                                         <td class="text-end t-sub">$@o.GuaranteedM.ToString("F1")M</td>
-                                        <td class="text-end t-sub">@Relative(o.SubmittedAt)</td>
+                                        <td class="text-end t-sub">@RelativeTime(o.SubmittedAt)</td>
                                     </tr>
                                 }
                             </tbody>
@@ -415,17 +414,4 @@ else
 
     private void GoToContract(int contractId) => Navigation.NavigateTo($"/contracts/{contractId}");
 
-    private static string Relative(DateTime dt)
-    {
-        var diff = DateTime.UtcNow - dt;
-        if (diff.TotalMinutes < 60)  return $"{(int)diff.TotalMinutes}m ago";
-        if (diff.TotalHours   < 24)  return $"{(int)diff.TotalHours}h ago";
-        if (diff.TotalDays    < 7)   return $"{(int)diff.TotalDays}d ago";
-        return dt.ToString("MMM d");
-    }
-
-    private static string FormatMoney(decimal value) =>
-        value >= 1_000_000m ? $"${value / 1_000_000m:F1}M" :
-        value >= 1_000m     ? $"${value / 1_000m:F0}K" :
-        value.ToString("C0");
 }

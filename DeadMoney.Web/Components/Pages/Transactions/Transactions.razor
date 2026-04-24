@@ -1,7 +1,7 @@
 @page "/transactions"
 @attribute [Authorize]
 @implements IDisposable
-@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 @inject TransactionFeedService FeedSvc
 
@@ -134,7 +134,7 @@ else
                             }
                         </td>
                         <td class="t-sub d-none d-md-table-cell">@(t.Details ?? "—")</td>
-                        <td class="text-end t-sub">@Relative(t.OccurredAt)</td>
+                        <td class="text-end t-sub">@RelativeTime(t.OccurredAt)</td>
                         <td class="text-end">
                             <button class="dm-btn-ghost dm-btn-sm" @onclick:stopPropagation="true"
                                     @onclick="@(() => GoToTransaction(t.Id))">
@@ -163,9 +163,9 @@ else
 }
 
 @code {
-    private List<DeadMoney.Core.Entities.Transaction>? transactions;
-    private List<DeadMoney.Core.Entities.Team> teams = new();
-    private List<DeadMoney.Core.Entities.Position> positions = new();
+    private List<Transaction>? transactions;
+    private List<Team> teams = new();
+    private List<Position> positions = new();
     private Timer? _debounce;
 
     private string searchName    = "";
@@ -268,24 +268,4 @@ else
         _debounce?.Dispose();
     }
 
-    private static string TxnClass(TransactionType t) => t switch
-    {
-        TransactionType.Cut           => "txn-cut",
-        TransactionType.Signed        => "txn-signed",
-        TransactionType.Extended      => "txn-extended",
-        TransactionType.Traded        => "txn-traded",
-        TransactionType.PickGranted   => "txn-signed",
-        TransactionType.PickForfeited => "txn-cut",
-        _                             => ""
-    };
-
-    private static string Relative(DateTime dt)
-    {
-        var diff = DateTime.UtcNow - dt;
-        if (diff.TotalSeconds < 60) return "just now";
-        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
-        if (diff.TotalHours   < 24) return $"{(int)diff.TotalHours}h ago";
-        if (diff.TotalDays    < 7)  return $"{(int)diff.TotalDays}d ago";
-        return dt.ToString("MMM d");
-    }
 }

@@ -87,7 +87,6 @@ public class DeadMoneyDbContext : DbContext
         {
             entity.ToTable("Contracts", "League");
 
-            // Matches the collection name in your Contract entity
             entity.HasMany(c => c.ContractYears)
                 .WithOne(y => y.Contract)
                 .HasForeignKey(y => y.ContractId)

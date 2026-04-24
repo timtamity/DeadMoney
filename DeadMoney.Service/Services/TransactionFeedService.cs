@@ -72,9 +72,7 @@ public class TransactionFeedService
     private static TransactionDto ToDto(Transaction t) => new(
         t.Id,
         t.Type,
-        t.Player != null
-            ? $"{t.Player.FirstName} {t.Player.LastName}".Trim()
-            : t.DraftPick?.Label ?? "Pick",
+        t.Player?.FullName ?? t.DraftPick?.Label ?? "Pick",
         t.PlayerId,
         t.DraftPickId,
         t.Team?.Abbreviation,

@@ -34,7 +34,7 @@ public class LeagueSettingsService
     public async Task<List<LeagueSetting>> GetAllAsync()
     {
         using var db = await _dbFactory.CreateDbContextAsync();
-        return await db.LeagueSettings.OrderByDescending(s => s.Year).ToListAsync();
+        return await db.LeagueSettings.OrderByDescending(s => s.Year).AsNoTracking().ToListAsync();
     }
 
     public async Task SetCurrentYearAsync(int settingId)

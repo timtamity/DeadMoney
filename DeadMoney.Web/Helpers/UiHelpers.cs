@@ -1,3 +1,5 @@
+using DeadMoney.Core.Enums;
+
 namespace DeadMoney.Web.Helpers;
 
 public static class UiHelpers
@@ -8,13 +10,24 @@ public static class UiHelpers
         "RB" or "FB" or "HB"                   => "pos-badge pos-rb",
         "WR"                                    => "pos-badge pos-wr",
         "TE"                                    => "pos-badge pos-te",
-        "C"  or "G" or "T"                     => "pos-badge pos-ol",
-        "DE" or "DT" or "NT"                   => "pos-badge pos-dl",
+        "C"  or "G" or "OT"                    => "pos-badge pos-ol",
+        "DT" or "NT"                            => "pos-badge pos-dl",
         "LB" or "ILB" or "OLB" or "MLB"
                      or "EDGE"                 => "pos-badge pos-lb",
         "CB" or "S"  or "DB"                   => "pos-badge pos-db",
         "K"  or "P"  or "LS"                   => "pos-badge pos-st",
         _                                       => "pos-badge"
+    };
+
+    public static string TxnClass(TransactionType t) => t switch
+    {
+        TransactionType.Cut           => "txn-cut",
+        TransactionType.Signed        => "txn-signed",
+        TransactionType.Extended      => "txn-extended",
+        TransactionType.Traded        => "txn-traded",
+        TransactionType.PickGranted   => "txn-signed",
+        TransactionType.PickForfeited => "txn-cut",
+        _                             => ""
     };
 
     public static string FormatMoney(decimal value)

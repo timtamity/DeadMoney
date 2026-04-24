@@ -4,8 +4,6 @@ namespace DeadMoney.Core.Entities;
 
 public partial class ContractYear
 {
-    // Fix: We use OtherBonus + PerGameRosterBonus to satisfy the logic 
-    // that previously looked for "MiscBonuses"
     [NotMapped]
     public decimal TotalBonuses =>
         RosterBonus +

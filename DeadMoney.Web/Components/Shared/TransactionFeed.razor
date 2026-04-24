@@ -100,17 +100,6 @@ else
 
     public void Dispose() => FeedSvc.OnChange -= OnFeedChanged;
 
-    private static string TxnClass(TransactionType t) => t switch
-    {
-        TransactionType.Cut           => "txn-cut",
-        TransactionType.Signed        => "txn-signed",
-        TransactionType.Extended      => "txn-extended",
-        TransactionType.Traded        => "txn-traded",
-        TransactionType.PickGranted   => "txn-signed",
-        TransactionType.PickForfeited => "txn-cut",
-        _                             => ""
-    };
-
     private static string TxnLabel(TransactionType t) => t switch
     {
         TransactionType.Cut           => "CUT",

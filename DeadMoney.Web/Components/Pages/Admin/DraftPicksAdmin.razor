@@ -1,6 +1,6 @@
 @page "/admin/draft-picks"
 @attribute [Authorize(Roles = "Admin")]
-@inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject TransactionFeedService FeedSvc
 @inject LeagueSettingsService LeagueSettingsSvc
 
@@ -239,9 +239,9 @@ else
 }
 
 @code {
-    private List<DeadMoney.Core.Entities.Team> allTeams = new();
-    private List<DeadMoney.Core.Entities.DraftPick> activePicks = new();
-    private List<DeadMoney.Core.Entities.DraftPick> voidedPicks = new();
+    private List<Team> allTeams = new();
+    private List<DraftPick> activePicks = new();
+    private List<DraftPick> voidedPicks = new();
     private List<int> years = new();
 
     private int selectedYear;
@@ -251,8 +251,8 @@ else
     private bool isError;
 
     // Action state
-    private string? action;                                       // "reassign" | "void" | "add"
-    private DeadMoney.Core.Entities.DraftPick? actionPick;
+    private string? action;
+    private DraftPick? actionPick;
     private int  editOwnerId;
     private string editNotes = "";
     private string voidReason = "";
@@ -317,7 +317,7 @@ else
         var teams = await db.Teams.OrderBy(t => t.Id).ToListAsync();
         foreach (var team in teams)
             for (int r = 1; r <= 7; r++)
-                db.DraftPicks.Add(new DeadMoney.Core.Entities.DraftPick
+                db.DraftPicks.Add(new DraftPick
                 {
                     Year = selectedYear, Round = r,
                     OriginalTeamId = team.Id, CurrentTeamId = team.Id
@@ -336,14 +336,14 @@ else
         addYear = selectedYear; addRound = 1; addPickNumber = null; addTeamId = 0; addNotes = "";
     }
 
-    private void OpenReassign(DeadMoney.Core.Entities.DraftPick pick)
+    private void OpenReassign(DraftPick pick)
     {
         action = "reassign"; actionPick = pick;
         editOwnerId = pick.CurrentTeamId;
         editNotes = pick.Notes ?? "";
     }
 
-    private void OpenVoid(DeadMoney.Core.Entities.DraftPick pick)
+    private void OpenVoid(DraftPick pick)
     {
         action = "void"; actionPick = pick;
         voidReason = "";
@@ -357,7 +357,7 @@ else
         isBusy = true; statusMsg = null;
 
         using var db = await DbFactory.CreateDbContextAsync();
-        var pick = new DeadMoney.Core.Entities.DraftPick
+        var pick = new DraftPick
         {
             Year = addYear, Round = addRound, PickNumber = addPickNumber,
             OriginalTeamId = addTeamId, CurrentTeamId = addTeamId,
@@ -365,13 +365,13 @@ else
         };
         db.DraftPicks.Add(pick);
 
-        db.Transactions.Add(new DeadMoney.Core.Entities.Transaction
+        db.Transactions.Add(new Transaction
         {
-            Type       = TransactionType.PickGranted,
-            DraftPickId = 0, // will be set after SaveChanges — handled below
-            TeamId     = addTeamId,
-            Details    = $"Added: {pick.Label}{(string.IsNullOrWhiteSpace(addNotes) ? "" : $" — {addNotes}")}",
-            OccurredAt = DateTime.UtcNow
+            Type        = TransactionType.PickGranted,
+            DraftPickId = 0,
+            TeamId      = addTeamId,
+            Details     = $"Added: {pick.Label}{(string.IsNullOrWhiteSpace(addNotes) ? "" : $" — {addNotes}")}",
+            OccurredAt  = DateTime.UtcNow
         });
 
         await db.SaveChangesAsync();
@@ -431,7 +431,7 @@ else
         pick.IsVoided = true;
         pick.Notes = string.IsNullOrWhiteSpace(voidReason) ? pick.Notes : voidReason;
 
-        db.Transactions.Add(new DeadMoney.Core.Entities.Transaction
+        db.Transactions.Add(new Transaction
         {
             Type        = TransactionType.PickForfeited,
             DraftPickId = pick.Id,
