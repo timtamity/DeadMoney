@@ -1,0 +1,556 @@
+@page "/proposals"
+@attribute [Authorize(Roles = "Admin, GM, Assistant GM, Commissioner")]
+@inject AuthenticationStateProvider AuthStateProvider
+@inject FaOfferService FaOfferSvc
+@inject ExtensionService ExtensionSvc
+@inject TradeProposalService TradeProposalSvc
+@inject LeagueSettingsService LeagueSettingsSvc
+@inject IUserService UserSvc
+
+<PageTitle>Proposals — Dead Money</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Proposals</h1>
+        <div class="subtitle">
+            @if (isCommissioner)
+            {
+                <span>League-wide view</span>
+            }
+            else
+            {
+                <span>Your team's pending proposals</span>
+            }
+        </div>
+    </div>
+</div>
+
+@if (!loaded)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading...
+    </div>
+}
+else
+{
+    <ul class="nav nav-pills mb-4 gap-2">
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "fa" ? "active" : "")" @onclick='@(() => activeTab = "fa")'>
+                FA Offers <span class="badge bg-secondary ms-1">@faPlayerGroups.Count</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "ext" ? "active" : "")" @onclick='@(() => activeTab = "ext")'>
+                Extensions <span class="badge bg-secondary ms-1">@extensionOffers.Count</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "trade" ? "active" : "")" @onclick='@(() => activeTab = "trade")'>
+                Trades <span class="badge bg-secondary ms-1">@trades.Count</span>
+            </button>
+        </li>
+    </ul>
+
+    @* ── FA OFFERS TAB ── *@
+    @if (activeTab == "fa")
+    {
+        @if (faPlayerGroups.Count == 0)
+        {
+            <div class="empty-state"><i class="bi bi-inbox"></i><p>No active FA offers.</p></div>
+        }
+        else
+        {
+            @foreach (var group in faPlayerGroups)
+            {
+                var player = group.First().Player;
+                var isExpanded = expandedFaPlayerId == group.Key;
+
+                <div class="bento-card mb-3">
+                    <div class="d-flex align-items-center justify-content-between"
+                         style="cursor:pointer;" @onclick="@(() => ToggleFaPlayer(group.Key))">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="@PosBadgeClass(player?.Position?.Code)">@(player?.Position?.Code ?? "—")</span>
+                            <span class="t-name">@player?.FirstName @player?.LastName</span>
+                            <span class="t-meta">@group.Count() offer@(group.Count() != 1 ? "s" : "")</span>
+                            <span class="t-meta d-none d-sm-inline">
+                                $@group.Min(o => o.AnnualValueM).ToString("F1")–@group.Max(o => o.AnnualValueM).ToString("F1")M/yr
+                            </span>
+                        </div>
+                        <i class="bi @(isExpanded ? "bi-chevron-up" : "bi-chevron-down") t-meta"></i>
+                    </div>
+
+                    @if (isExpanded)
+                    {
+                        <div class="mt-3">
+                            <table class="dm-table">
+                                <thead>
+                                    <tr>
+                                        <th>Team</th>
+                                        <th>Terms</th>
+                                        <th class="d-none d-sm-table-cell">Submitted</th>
+                                        @if (isCommissioner) { <th></th> }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var offer in group.OrderByDescending(o => o.AnnualValueM))
+                                    {
+                                        <tr>
+                                            <td class="t-sub">@(offer.Team?.Abbreviation ?? "—")</td>
+                                            <td>
+                                                <span class="t-bright">@offer.Years yr / $@offer.TotalValueM.ToString("F1")M</span>
+                                                <span class="t-meta d-block">$@offer.AnnualValueM.ToString("F1")M/yr · $@offer.GuaranteedM.ToString("F1")M gtd</span>
+                                            </td>
+                                            <td class="t-meta d-none d-sm-table-cell">@RelativeTime(offer.SubmittedAt)</td>
+                                            @if (isCommissioner)
+                                            {
+                                                <td class="text-end">
+                                                    <div class="d-flex gap-2 justify-content-end">
+                                                        <button class="dm-btn dm-btn-sm dm-btn-success"
+                                                                disabled="@actionPending"
+                                                                @onclick="@(() => AcceptFaOfferAsync(offer.Id))">
+                                                            Accept
+                                                        </button>
+                                                        <button class="dm-btn-ghost dm-btn-sm t-danger"
+                                                                disabled="@actionPending"
+                                                                @onclick="@(() => RejectFaOfferAsync(offer.Id))">
+                                                            Reject
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            }
+                                            else if (offer.TeamId == myTeamId)
+                                            {
+                                                <td class="text-end">
+                                                    <button class="dm-btn-ghost dm-btn-sm t-meta"
+                                                            disabled="@actionPending"
+                                                            @onclick="@(() => WithdrawFaOfferAsync(offer.Id))">
+                                                        Withdraw
+                                                    </button>
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    }
+
+    @* ── EXTENSIONS TAB ── *@
+    @if (activeTab == "ext")
+    {
+        @if (extensionOffers.Count == 0)
+        {
+            <div class="empty-state"><i class="bi bi-inbox"></i><p>No pending extension offers.</p></div>
+        }
+        else
+        {
+            <div class="bento-card">
+                <div class="table-responsive">
+                    <table class="dm-table">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>Pos</th>
+                                <th class="d-none d-sm-table-cell">Team</th>
+                                <th>Offer / Counter</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var offer in extensionOffers)
+                            {
+                                var activeTotalM = offer.CounterTotalValueM ?? offer.TotalValueM;
+                                var activeYears  = offer.CounterYears ?? offer.Years;
+                                var activeGtdM   = offer.CounterGuaranteedM ?? offer.GuaranteedM;
+
+                                <tr>
+                                    <td class="t-name">@offer.Player?.FirstName @offer.Player?.LastName</td>
+                                    <td><span class="@PosBadgeClass(offer.Player?.Position?.Code)">@(offer.Player?.Position?.Code ?? "—")</span></td>
+                                    <td class="d-none d-sm-table-cell t-sub">@(offer.Team?.Abbreviation ?? "—")</td>
+                                    <td>
+                                        <span class="t-bright">@activeYears yr / $@activeTotalM.ToString("F1")M</span>
+                                        <span class="t-meta d-block">$@activeGtdM.ToString("F1")M gtd</span>
+                                        @if (offer.Status == ExtensionOfferStatus.Countered)
+                                        {
+                                            <span class="t-meta d-block">Orig: @offer.Years yr / $@offer.TotalValueM.ToString("F1")M</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (offer.Status == ExtensionOfferStatus.Countered)
+                                        {
+                                            <span class="badge bg-warning text-dark">Countered</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Pending</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (extCounterOfferId == offer.Id)
+                                        {
+                                            <div class="p-2 bento-card mt-1">
+                                                <div class="row g-2 mb-2">
+                                                    <div class="col-6"><label class="t-label">Years</label><input type="number" class="form-control form-control-sm" min="1" @bind="extCounterYears" /></div>
+                                                    <div class="col-6"><label class="t-label">Total ($M)</label><input type="number" class="form-control form-control-sm" step="0.1" @bind="extCounterTotalM" /></div>
+                                                    <div class="col-6"><label class="t-label">Gtd ($M)</label><input type="number" class="form-control form-control-sm" step="0.1" @bind="extCounterGtdM" /></div>
+                                                    <div class="col-6"><label class="t-label">SB ($M)</label><input type="number" class="form-control form-control-sm" step="0.1" @bind="extCounterSbM" /></div>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <button class="dm-btn dm-btn-sm" disabled="@actionPending" @onclick="@(() => SubmitExtCounterAsync(offer.Id))">Send</button>
+                                                    <button class="dm-btn-ghost dm-btn-sm" @onclick="@(() => extCounterOfferId = null)">Cancel</button>
+                                                </div>
+                                            </div>
+                                        }
+                                        else if (isCommissioner || agentPositions.Contains(offer.Player?.Position?.Code ?? ""))
+                                        {
+                                            <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                                <button class="dm-btn dm-btn-sm dm-btn-success" disabled="@actionPending" @onclick="@(() => AgreeExtensionAsync(offer.Id))">Agree</button>
+                                                <button class="dm-btn-ghost dm-btn-sm" disabled="@actionPending" @onclick="@(() => OpenExtCounter(offer))">Counter</button>
+                                                <button class="dm-btn-ghost dm-btn-sm t-danger" disabled="@actionPending" @onclick="@(() => DeclineExtensionAsync(offer.Id))">Decline</button>
+                                            </div>
+                                        }
+                                        else if (offer.TeamId == myTeamId)
+                                        {
+                                            <button class="dm-btn-ghost dm-btn-sm t-meta" disabled="@actionPending" @onclick="@(() => WithdrawExtensionAsync(offer.Id))">Withdraw</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+
+    @* ── TRADES TAB ── *@
+    @if (activeTab == "trade")
+    {
+        @if (trades.Count == 0)
+        {
+            <div class="empty-state"><i class="bi bi-inbox"></i><p>No active trade proposals.</p></div>
+        }
+        else
+        {
+            @foreach (var trade in trades)
+            {
+                var aAssets = trade.Assets.Where(a => a.SendingTeamId == trade.TeamAId).ToList();
+                var bAssets = trade.Assets.Where(a => a.SendingTeamId == trade.TeamBId).ToList();
+                var isSender   = trade.TeamAId == myTeamId;
+                var isReceiver = trade.TeamBId == myTeamId;
+
+                <div class="bento-card mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="t-bright">@trade.TeamA?.Abbreviation</span>
+                            <i class="bi bi-arrow-left-right t-meta"></i>
+                            <span class="t-bright">@trade.TeamB?.Abbreviation</span>
+                            @if (trade.Status == TradeStatus.Proposed)
+                            {
+                                <span class="badge bg-secondary">Proposed</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-info text-dark">Pending Approval</span>
+                            }
+                        </div>
+                        <span class="t-meta">@RelativeTime(trade.ProposedAt)</span>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-sm-6">
+                            <div class="t-label mb-1">@trade.TeamA?.Abbreviation sends</div>
+                            @foreach (var a in aAssets)
+                            {
+                                @if (a.Player != null)
+                                {
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="@PosBadgeClass(a.Player.Position?.Code)">@(a.Player.Position?.Code ?? "—")</span>
+                                        <span class="t-sub">@a.Player.FirstName @a.Player.LastName</span>
+                                    </div>
+                                }
+                                else if (a.DraftPick != null)
+                                {
+                                    <div><span class="pos-badge pos-pick">PICK</span> <span class="t-sub">@a.DraftPick.Label</span></div>
+                                }
+                            }
+                            @if (!aAssets.Any()) { <span class="t-meta">Nothing</span> }
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <div class="t-label mb-1">@trade.TeamB?.Abbreviation sends</div>
+                            @foreach (var a in bAssets)
+                            {
+                                @if (a.Player != null)
+                                {
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="@PosBadgeClass(a.Player.Position?.Code)">@(a.Player.Position?.Code ?? "—")</span>
+                                        <span class="t-sub">@a.Player.FirstName @a.Player.LastName</span>
+                                    </div>
+                                }
+                                else if (a.DraftPick != null)
+                                {
+                                    <div><span class="pos-badge pos-pick">PICK</span> <span class="t-sub">@a.DraftPick.Label</span></div>
+                                }
+                            }
+                            @if (!bAssets.Any()) { <span class="t-meta">Nothing</span> }
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(trade.Notes))
+                    {
+                        <div class="t-meta mb-3"><i class="bi bi-chat-left-text me-1"></i>@trade.Notes</div>
+                    }
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        @if (isCommissioner && trade.Status == TradeStatus.Pending)
+                        {
+                            @if (rejectTradeId == trade.Id)
+                            {
+                                <div class="d-flex gap-2 align-items-center flex-wrap">
+                                    <input type="text" class="form-control form-control-sm w-auto"
+                                           placeholder="Reason (optional)" @bind="rejectTradeNotes" />
+                                    <button class="dm-btn dm-btn-sm" style="background:var(--dm-danger);border-color:var(--dm-danger);"
+                                            disabled="@actionPending" @onclick="@(() => RejectTradeAsync(trade.Id))">Confirm Reject</button>
+                                    <button class="dm-btn-ghost dm-btn-sm" @onclick="@(() => rejectTradeId = null)">Cancel</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="dm-btn dm-btn-sm dm-btn-success" disabled="@actionPending"
+                                        @onclick="@(() => ApproveTradeAsync(trade.Id))">Approve</button>
+                                <button class="dm-btn-ghost dm-btn-sm t-danger" disabled="@actionPending"
+                                        @onclick="@(() => { rejectTradeId = trade.Id; rejectTradeNotes = null; })">Reject</button>
+                            }
+                        }
+                        else if (isReceiver && trade.Status == TradeStatus.Proposed)
+                        {
+                            <button class="dm-btn dm-btn-sm dm-btn-success" disabled="@actionPending"
+                                    @onclick="@(() => AcceptTradeAsync(trade.Id))">Accept</button>
+                            <button class="dm-btn-ghost dm-btn-sm t-danger" disabled="@actionPending"
+                                    @onclick="@(() => DeclineTradeAsync(trade.Id))">Decline</button>
+                        }
+                        else if (isSender && (trade.Status == TradeStatus.Proposed || trade.Status == TradeStatus.Pending))
+                        {
+                            <button class="dm-btn-ghost dm-btn-sm t-meta" disabled="@actionPending"
+                                    @onclick="@(() => WithdrawTradeAsync(trade.Id))">Withdraw</button>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    }
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(statusIsError ? "alert-danger" : "alert-success") mt-3">@statusMessage</div>
+    }
+}
+
+@code {
+    private bool loaded;
+    private bool actionPending;
+    private bool isCommissioner;
+    private List<string> agentPositions = new();
+    private int myTeamId;
+    private int? myUserId;
+    private string? myDisplayName;
+    private int currentYear;
+    private string activeTab = "fa";
+
+    private List<IGrouping<int, FaOffer>> faPlayerGroups = new();
+    private List<ExtensionOffer> extensionOffers = new();
+    private List<PendingTrade> trades = new();
+
+    private int? expandedFaPlayerId;
+    private string? statusMessage;
+    private bool statusIsError;
+
+    // Extension counter state
+    private int? extCounterOfferId;
+    private int extCounterYears = 1;
+    private decimal extCounterTotalM;
+    private decimal extCounterGtdM;
+    private decimal extCounterSbM;
+
+    // Trade reject state
+    private int? rejectTradeId;
+    private string? rejectTradeNotes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+
+        isCommissioner  = user.IsInRole("Commissioner") || user.IsInRole("Admin");
+        agentPositions  = UserSvc.GetAgentPositions(user).ToList();
+
+        if (int.TryParse(user.FindFirst("UserId")?.Value, out var uid)) myUserId = uid;
+        if (int.TryParse(user.FindFirst("TeamId")?.Value, out var tid)) myTeamId = tid;
+        myDisplayName = user.FindFirst("DisplayName")?.Value;
+
+        currentYear = await LeagueSettingsSvc.GetCurrentYearAsync();
+        await LoadDataAsync();
+        loaded = true;
+    }
+
+    private async Task LoadDataAsync()
+    {
+        List<FaOffer> faOffers;
+        if (isCommissioner)
+        {
+            faOffers         = await FaOfferSvc.GetAllActiveAsync();
+            extensionOffers  = await ExtensionSvc.GetAllPendingAsync();
+            trades           = await TradeProposalSvc.GetActiveAsync();
+        }
+        else if (myTeamId > 0)
+        {
+            faOffers         = await FaOfferSvc.GetActiveForTeamAsync(myTeamId);
+            extensionOffers  = await ExtensionSvc.GetForTeamAsync(myTeamId);
+            trades           = await TradeProposalSvc.GetForTeamAsync(myTeamId);
+        }
+        else
+        {
+            faOffers = new();
+        }
+
+        faPlayerGroups = faOffers
+            .Where(o => o.Player != null)
+            .GroupBy(o => o.PlayerId)
+            .ToList();
+    }
+
+    private void ToggleFaPlayer(int playerId) =>
+        expandedFaPlayerId = expandedFaPlayerId == playerId ? null : playerId;
+
+    // FA actions
+    private async Task AcceptFaOfferAsync(int offerId)
+    {
+        actionPending = true;
+        var result = await FaOfferSvc.AcceptOfferAsync(offerId, currentYear, myUserId, myDisplayName);
+        SetStatus(result.Success ? "Offer accepted — player signed." : result.Error ?? "Failed.", !result.Success);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task RejectFaOfferAsync(int offerId)
+    {
+        actionPending = true;
+        await FaOfferSvc.RejectOfferAsync(offerId, myUserId, myDisplayName);
+        SetStatus("Offer rejected.", false);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task WithdrawFaOfferAsync(int offerId)
+    {
+        actionPending = true;
+        await FaOfferSvc.WithdrawAsync(offerId, myTeamId);
+        SetStatus("Offer withdrawn.", false);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    // Extension actions
+    private async Task AgreeExtensionAsync(int offerId)
+    {
+        actionPending = true;
+        var result = await ExtensionSvc.AgreeAsync(offerId, currentYear, myUserId, myDisplayName);
+        SetStatus(result.Success ? "Extension agreed — contract signed." : result.Error ?? "Failed.", !result.Success);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private void OpenExtCounter(ExtensionOffer offer)
+    {
+        extCounterOfferId = offer.Id;
+        extCounterYears   = offer.CounterYears ?? offer.Years;
+        extCounterTotalM  = offer.CounterTotalValueM ?? offer.TotalValueM;
+        extCounterGtdM    = offer.CounterGuaranteedM ?? offer.GuaranteedM;
+        extCounterSbM     = offer.CounterSigningBonusM ?? offer.SigningBonusM;
+    }
+
+    private async Task SubmitExtCounterAsync(int offerId)
+    {
+        actionPending = true;
+        var result = await ExtensionSvc.CounterAsync(offerId, extCounterYears, extCounterTotalM,
+            extCounterGtdM, extCounterSbM, null, myUserId, myDisplayName);
+        SetStatus(result.Success ? "Counter sent." : result.Error ?? "Failed.", !result.Success);
+        extCounterOfferId = null;
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task DeclineExtensionAsync(int offerId)
+    {
+        actionPending = true;
+        var result = await ExtensionSvc.DeclineAsync(offerId, myUserId, myDisplayName);
+        SetStatus(result.Success ? "Extension declined." : result.Error ?? "Failed.", !result.Success);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task WithdrawExtensionAsync(int offerId)
+    {
+        actionPending = true;
+        var result = await ExtensionSvc.WithdrawAsync(offerId, myTeamId, myUserId, myDisplayName);
+        SetStatus(result.Success ? "Extension withdrawn." : result.Error ?? "Failed.", !result.Success);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    // Trade actions
+    private async Task AcceptTradeAsync(int tradeId)
+    {
+        actionPending = true;
+        var result = await TradeProposalSvc.AcceptAsync(tradeId, myTeamId, myUserId, myDisplayName);
+        SetStatus(result.Success ? "Trade accepted — awaiting Commissioner approval." : result.Error ?? "Failed.", !result.Success);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task DeclineTradeAsync(int tradeId)
+    {
+        actionPending = true;
+        var result = await TradeProposalSvc.DeclineAsync(tradeId, myTeamId, myUserId, myDisplayName);
+        SetStatus(result.Success ? "Trade declined." : result.Error ?? "Failed.", !result.Success);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task WithdrawTradeAsync(int tradeId)
+    {
+        actionPending = true;
+        var result = await TradeProposalSvc.WithdrawAsync(tradeId, myTeamId, myUserId, myDisplayName);
+        SetStatus(result.Success ? "Trade withdrawn." : result.Error ?? "Failed.", !result.Success);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task ApproveTradeAsync(int tradeId)
+    {
+        actionPending = true;
+        var result = await TradeProposalSvc.ApproveAsync(tradeId, currentYear, myUserId, myDisplayName);
+        SetStatus(result.Success ? "Trade approved and executed." : result.Error ?? "Failed.", !result.Success);
+        rejectTradeId = null;
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task RejectTradeAsync(int tradeId)
+    {
+        actionPending = true;
+        var result = await TradeProposalSvc.RejectAsync(tradeId, myUserId, myDisplayName, rejectTradeNotes);
+        SetStatus(result.Success ? "Trade rejected." : result.Error ?? "Failed.", !result.Success);
+        rejectTradeId = null;
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private void SetStatus(string msg, bool isError) { statusMessage = msg; statusIsError = isError; }
+}

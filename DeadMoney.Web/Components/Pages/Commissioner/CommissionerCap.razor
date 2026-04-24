@@ -1,0 +1,183 @@
+@page "/commissioner/cap"
+@attribute [Authorize(Roles = "Admin, Commissioner")]
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+@inject LeagueSettingsService LeagueSettingsSvc
+@using DeadMoney.Core.Entities
+@using DeadMoney.Core.Enums
+@using DeadMoney.Data
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Cap Adjustments — Dead Money</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Cap Adjustments</h1>
+        <div class="subtitle">Carryover cap and manual adjustments</div>
+    </div>
+</div>
+
+@if (!loaded)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading...
+    </div>
+}
+else
+{
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(statusIsError ? "alert-danger" : "alert-success") mb-4">@statusMessage</div>
+    }
+
+    <div class="bento-card">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+            <span class="t-label">Carryover Cap by Team</span>
+            <span class="t-meta">Click a value to edit inline</span>
+        </div>
+        <div class="table-responsive">
+            <table class="dm-table">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th class="d-none d-sm-table-cell">Conf</th>
+                        <th class="d-none d-md-table-cell">Division</th>
+                        <th class="text-end">Carryover</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in rows)
+                    {
+                        <tr>
+                            <td>
+                                <span class="t-bright">@row.Team.Abbreviation</span>
+                                <span class="t-meta d-block">@row.Team.City @row.Team.Nickname</span>
+                            </td>
+                            <td class="d-none d-sm-table-cell t-sub">@row.Team.Conference</td>
+                            <td class="d-none d-md-table-cell t-sub">@row.Team.Division</td>
+                            <td class="text-end">
+                                @if (editingTeamId == row.Team.Id)
+                                {
+                                    <input type="number" class="form-control form-control-sm text-end"
+                                           style="max-width:120px;display:inline-block;"
+                                           step="0.01" @bind="editingValue" @bind:event="oninput"
+                                           @onkeydown="@(e => HandleKeyDown(e, row.Team.Id))" />
+                                }
+                                else
+                                {
+                                    <button class="dm-btn-ghost dm-btn-sm t-bright"
+                                            @onclick="@(() => StartEdit(row.Team.Id, row.Team.CarryoverCap))">
+                                        $@row.Team.CarryoverCap.ToString("F2")M
+                                    </button>
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (editingTeamId == row.Team.Id)
+                                {
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <button class="dm-btn dm-btn-sm dm-btn-success"
+                                                disabled="@actionPending"
+                                                @onclick="@(() => SaveAsync(row.Team.Id))">Save</button>
+                                        <button class="dm-btn-ghost dm-btn-sm"
+                                                @onclick="CancelEdit">Cancel</button>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private record CapRow(Team Team);
+
+    private bool loaded;
+    private bool actionPending;
+    private List<CapRow> rows = new();
+    private int? editingTeamId;
+    private decimal editingValue;
+    private string? statusMessage;
+    private bool statusIsError;
+    private int? myUserId;
+    private string? myDisplayName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+        if (int.TryParse(user.FindFirst("UserId")?.Value, out var uid)) myUserId = uid;
+        myDisplayName = user.FindFirst("DisplayName")?.Value;
+
+        await LoadAsync();
+        loaded = true;
+    }
+
+    private async Task LoadAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var teams = await db.Teams
+            .OrderBy(t => t.Conference).ThenBy(t => t.Division).ThenBy(t => t.Abbreviation)
+            .AsNoTracking()
+            .ToListAsync();
+        rows = teams.Select(t => new CapRow(t)).ToList();
+    }
+
+    private void StartEdit(int teamId, decimal current)
+    {
+        editingTeamId = teamId;
+        editingValue  = current;
+        statusMessage = null;
+    }
+
+    private void CancelEdit() => editingTeamId = null;
+
+    private async Task HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e, int teamId)
+    {
+        if (e.Key == "Enter") await SaveAsync(teamId);
+        else if (e.Key == "Escape") CancelEdit();
+    }
+
+    private async Task SaveAsync(int teamId)
+    {
+        actionPending = true;
+        try
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            var team = await db.Teams.FindAsync(teamId);
+            if (team == null) { statusMessage = "Team not found."; statusIsError = true; return; }
+
+            var oldValue = team.CarryoverCap;
+            team.CarryoverCap = editingValue;
+
+            db.Transactions.Add(new Transaction
+            {
+                Type                = TransactionType.CapAdjusted,
+                TeamId              = teamId,
+                Details             = $"Carryover cap adjusted: ${oldValue:F2}M → ${editingValue:F2}M",
+                OccurredAt          = DateTime.UtcNow,
+                PerformedByUserId   = myUserId,
+                PerformedByUserName = myDisplayName
+            });
+
+            await db.SaveChangesAsync();
+            editingTeamId = null;
+            statusMessage = $"{team.Abbreviation} carryover set to ${editingValue:F2}M.";
+            statusIsError = false;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            statusIsError = true;
+        }
+        finally
+        {
+            actionPending = false;
+        }
+    }
+}

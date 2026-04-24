@@ -306,6 +306,113 @@ namespace DeadMoney.Data.Migrations
                     b.ToTable("ExtensionOffers", "League");
                 });
 
+            modelBuilder.Entity("DeadMoney.Core.Entities.PendingTrade", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("ProposedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ProposedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProposedByUserName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RespondedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RespondedByUserName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewedByUserName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TeamAId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TeamBId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_PendingTrades_Status");
+
+                    b.HasIndex("TeamAId");
+
+                    b.HasIndex("TeamAId", "Status")
+                        .HasDatabaseName("IX_PendingTrades_TeamAId_Status");
+
+                    b.HasIndex("TeamBId");
+
+                    b.HasIndex("TeamBId", "Status")
+                        .HasDatabaseName("IX_PendingTrades_TeamBId_Status");
+
+                    b.ToTable("PendingTrades", "League");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.PendingTradeAsset", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("DraftPickId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PendingTradeId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PlayerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SendingTeamId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DraftPickId")
+                        .HasDatabaseName("IX_PendingTradeAssets_DraftPickId");
+
+                    b.HasIndex("PendingTradeId")
+                        .HasDatabaseName("IX_PendingTradeAssets_PendingTradeId");
+
+                    b.HasIndex("PlayerId")
+                        .HasDatabaseName("IX_PendingTradeAssets_PlayerId");
+
+                    b.ToTable("PendingTradeAssets", "League");
+                });
+
             modelBuilder.Entity("DeadMoney.Core.Entities.LeagueSetting", b =>
                 {
                     b.Property<int>("Id")
@@ -1264,6 +1371,50 @@ namespace DeadMoney.Data.Migrations
                     b.Navigation("Team");
                 });
 
+            modelBuilder.Entity("DeadMoney.Core.Entities.PendingTrade", b =>
+                {
+                    b.HasOne("DeadMoney.Core.Entities.Team", "TeamA")
+                        .WithMany()
+                        .HasForeignKey("TeamAId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DeadMoney.Core.Entities.Team", "TeamB")
+                        .WithMany()
+                        .HasForeignKey("TeamBId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TeamA");
+
+                    b.Navigation("TeamB");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.PendingTradeAsset", b =>
+                {
+                    b.HasOne("DeadMoney.Core.Entities.PendingTrade", "Trade")
+                        .WithMany("Assets")
+                        .HasForeignKey("PendingTradeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DeadMoney.Core.Entities.DraftPick", "DraftPick")
+                        .WithMany()
+                        .HasForeignKey("DraftPickId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DeadMoney.Core.Entities.Player", "Player")
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("DraftPick");
+
+                    b.Navigation("Player");
+
+                    b.Navigation("Trade");
+                });
+
             modelBuilder.Entity("DeadMoney.Core.Entities.DraftPick", b =>
                 {
                     b.HasOne("DeadMoney.Core.Entities.Team", "CurrentTeam")
@@ -1397,6 +1548,11 @@ namespace DeadMoney.Data.Migrations
             modelBuilder.Entity("DeadMoney.Core.Entities.User", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.PendingTrade", b =>
+                {
+                    b.Navigation("Assets");
                 });
 #pragma warning restore 612, 618
         }

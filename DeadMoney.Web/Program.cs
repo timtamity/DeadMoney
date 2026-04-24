@@ -70,6 +70,7 @@ builder.Services.AddSingleton<TransactionFeedService>();
 builder.Services.AddScoped<RosterService>();
 builder.Services.AddScoped<FaOfferService>();
 builder.Services.AddScoped<ExtensionService>();
+builder.Services.AddScoped<TradeProposalService>();
 
 // NEW: Typed HttpClient for the Import Service. 
 // This automatically handles the HttpClient injection into NflVerseImportService.

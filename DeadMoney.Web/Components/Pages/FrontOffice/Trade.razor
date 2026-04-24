@@ -3,8 +3,9 @@
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
-@inject RosterService RosterService
+@inject TradeProposalService TradeProposalSvc
 @inject LeagueSettingsService LeagueSettingsSvc
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Trade — Dead Money</PageTitle>
 
@@ -189,7 +190,7 @@ else
             </div>
         </div>
 
-        <!-- Trade summary + confirm -->
+        <!-- Trade summary + propose -->
         @if (selectedA.Any() || selectedB.Any() || selectedPicksA.Any() || selectedPicksB.Any())
         {
             <div class="bento-card" style="border-color: rgba(88,166,255,0.4);">
@@ -245,11 +246,16 @@ else
                     </div>
                 </div>
 
+                <div class="mb-3">
+                    <label class="t-label">Notes (optional)</label>
+                    <textarea class="form-control form-control-sm" rows="2" @bind="tradeNotes"
+                              placeholder="Context for the receiving team and Commissioner..."></textarea>
+                </div>
                 <div class="d-flex gap-2">
-                    <button class="dm-btn-outline" @onclick="ConfirmTradeAsync"
+                    <button class="dm-btn-outline" @onclick="ProposeTradeAsync"
                             disabled="@(isExecuting || (!selectedA.Any() && !selectedB.Any() && !selectedPicksA.Any() && !selectedPicksB.Any()))">
                         @if (isExecuting) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        <i class="bi bi-check-lg me-1"></i> Confirm Trade
+                        <i class="bi bi-send me-1"></i> Propose Trade
                     </button>
                     <button class="dm-btn-ghost" @onclick="ClearSelections">Clear</button>
                 </div>
@@ -286,6 +292,7 @@ else
     private int  teamAId;
     private int  teamBId;
     private int  currentYear;
+    private string tradeNotes     = "";
     private string successMessage = "";
 
     protected override async Task OnInitializedAsync()
@@ -388,30 +395,40 @@ else
         successMessage = "";
     }
 
-    private async Task ConfirmTradeAsync()
+    private async Task ProposeTradeAsync()
     {
         if (!selectedA.Any() && !selectedB.Any() && !selectedPicksA.Any() && !selectedPicksB.Any()) return;
         isExecuting = true;
         successMessage = "";
 
-        await RosterService.ExecuteTradeAsync(
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+        int? userId = int.TryParse(user.FindFirst("UserId")?.Value, out var uid) ? uid : null;
+        string? userName = user.FindFirst("DisplayName")?.Value;
+
+        var result = await TradeProposalSvc.ProposeAsync(
             teamAId, selectedA.ToList(), selectedPicksA.ToList(),
             teamBId, selectedB.ToList(), selectedPicksB.ToList(),
-            currentYear);
+            string.IsNullOrWhiteSpace(tradeNotes) ? null : tradeNotes,
+            userId, userName);
 
-        var aPlayerNames = selectedA.Select(id => rosterA.FirstOrDefault(r => r.Player.Id == id)?.Player.LastName ?? "").Where(n => n != "");
-        var bPlayerNames = selectedB.Select(id => rosterB.FirstOrDefault(r => r.Player.Id == id)?.Player.LastName ?? "").Where(n => n != "");
-        var aPickLabels  = selectedPicksA.Select(id => picksA.FirstOrDefault(p => p.Id == id)?.Label ?? "").Where(n => n != "");
-        var bPickLabels  = selectedPicksB.Select(id => picksB.FirstOrDefault(p => p.Id == id)?.Label ?? "").Where(n => n != "");
-
-        var bGets = bPlayerNames.Concat(aPickLabels);
-        var aGets = aPlayerNames.Concat(bPickLabels);
-
-        successMessage = $"Trade complete. {teamA?.Abbreviation} gets {(bGets.Any() ? string.Join(", ", bGets) : "nothing")}; {teamB?.Abbreviation} gets {(aGets.Any() ? string.Join(", ", aGets) : "nothing")}.";
+        if (result.Success)
+        {
+            var aPlayerNames = selectedA.Select(id => rosterA.FirstOrDefault(r => r.Player.Id == id)?.Player.LastName ?? "").Where(n => n != "");
+            var bPlayerNames = selectedB.Select(id => rosterB.FirstOrDefault(r => r.Player.Id == id)?.Player.LastName ?? "").Where(n => n != "");
+            var aPickLabels  = selectedPicksA.Select(id => picksA.FirstOrDefault(p => p.Id == id)?.Label ?? "").Where(n => n != "");
+            var bPickLabels  = selectedPicksB.Select(id => picksB.FirstOrDefault(p => p.Id == id)?.Label ?? "").Where(n => n != "");
+            var bGets = bPlayerNames.Concat(aPickLabels);
+            var aGets = aPlayerNames.Concat(bPickLabels);
+            successMessage = $"Trade proposed! {teamA?.Abbreviation} gets {(bGets.Any() ? string.Join(", ", bGets) : "nothing")}; {teamB?.Abbreviation} gets {(aGets.Any() ? string.Join(", ", aGets) : "nothing")}. Awaiting {teamB?.Abbreviation} acceptance.";
+        }
+        else
+        {
+            successMessage = result.Error ?? "Failed to propose trade.";
+        }
 
         ClearSelections();
-        await LoadSideA();
-        await LoadSideB();
+        tradeNotes = "";
         isExecuting = false;
     }
 

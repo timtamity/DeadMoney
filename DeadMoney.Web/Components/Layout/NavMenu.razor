@@ -59,6 +59,25 @@
                         <i class="bi bi-arrow-left-right"></i> <span>Trade</span>
                     </NavLink>
                 </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="proposals">
+                        <i class="bi bi-hourglass-split"></i> <span>My Proposals</span>
+                    </NavLink>
+                </div>
+            </AuthorizeView>
+
+            <AuthorizeView Roles="Admin, Commissioner">
+                <div class="nav-section-label commissioner-label">Commissioner</div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link commissioner-link" href="proposals">
+                        <i class="bi bi-inbox-fill"></i> <span>Proposals</span>
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link commissioner-link" href="commissioner/cap">
+                        <i class="bi bi-currency-dollar"></i> <span>Cap Adjustments</span>
+                    </NavLink>
+                </div>
             </AuthorizeView>
 
             <AuthorizeView Roles="Admin, Agent, Commissioner">

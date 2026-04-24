@@ -30,6 +30,7 @@
 }
 
 .admin-label { color: var(--dm-gold); }
+.commissioner-label { color: var(--dm-accent); }
 
 .nav-link {
     color: var(--dm-text-main);

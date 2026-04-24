@@ -150,6 +150,18 @@ public class FaOfferService
             .FirstOrDefaultAsync(o => o.TeamId == teamId && o.PlayerId == playerId && o.Status == FaOfferStatus.Active);
     }
 
+    public async Task<List<FaOffer>> GetActiveForTeamAsync(int teamId)
+    {
+        using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.FaOffers
+            .Include(o => o.Player).ThenInclude(p => p!.Position)
+            .Include(o => o.Team)
+            .Where(o => o.Status == FaOfferStatus.Active && o.TeamId == teamId)
+            .OrderByDescending(o => o.SubmittedAt)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
     public async Task<List<FaOffer>> GetAllActiveAsync()
     {
         using var db = await _dbFactory.CreateDbContextAsync();

@@ -20,6 +20,8 @@ public class DeadMoneyDbContext : DbContext
     public DbSet<DraftPick> DraftPicks => Set<DraftPick>();
     public DbSet<FaOffer> FaOffers => Set<FaOffer>();
     public DbSet<ExtensionOffer> ExtensionOffers => Set<ExtensionOffer>();
+    public DbSet<PendingTrade> PendingTrades => Set<PendingTrade>();
+    public DbSet<PendingTradeAsset> PendingTradeAssets => Set<PendingTradeAsset>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -182,6 +184,41 @@ public class DeadMoneyDbContext : DbContext
             entity.HasOne(o => o.Team)
                   .WithMany()
                   .HasForeignKey(o => o.TeamId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<PendingTrade>(entity =>
+        {
+            entity.ToTable("PendingTrades", "League");
+            entity.HasIndex(pt => pt.Status);
+            entity.HasIndex(pt => new { pt.TeamAId, pt.Status });
+            entity.HasIndex(pt => new { pt.TeamBId, pt.Status });
+            entity.HasOne(pt => pt.TeamA)
+                  .WithMany()
+                  .HasForeignKey(pt => pt.TeamAId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(pt => pt.TeamB)
+                  .WithMany()
+                  .HasForeignKey(pt => pt.TeamBId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<PendingTradeAsset>(entity =>
+        {
+            entity.ToTable("PendingTradeAssets", "League");
+            entity.HasOne(a => a.Trade)
+                  .WithMany(t => t.Assets)
+                  .HasForeignKey(a => a.PendingTradeId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(a => a.Player)
+                  .WithMany()
+                  .HasForeignKey(a => a.PlayerId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(a => a.DraftPick)
+                  .WithMany()
+                  .HasForeignKey(a => a.DraftPickId)
+                  .IsRequired(false)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
