@@ -1,7 +1,4 @@
 @page "/free-agents"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
-@using System.Security.Claims
 @attribute [Authorize]
 @implements IDisposable
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
@@ -83,7 +80,7 @@ else
                 {
                     var heat = heatMap.TryGetValue(p.Id, out var h) ? h : null;
                     var lastContract = p.Contracts.OrderByDescending(c => c.Id).FirstOrDefault();
-                    <tr style="cursor: pointer;" @onclick="@(() => GoToPlayer(p.Id))">
+                    <tr class="row-link" @onclick="@(() => GoToPlayer(p.Id))">
                         <td>
                             <span class="t-name">@p.FirstName @p.LastName</span>
                         </td>
@@ -175,7 +172,7 @@ else
             myTeamId = tid;
 
         using var db = await DbFactory.CreateDbContextAsync();
-        positions = await db.Positions.OrderBy(p => p.DisplayOrder).ToListAsync();
+        positions = await db.Positions.OrderBy(p => p.DisplayOrder).AsNoTracking().ToListAsync();
         await LoadPlayersAsync();
     }
 
@@ -206,6 +203,7 @@ else
             .Where(p => p.TeamId == null && !p.IsRetired)
             .Include(p => p.Position)
             .Include(p => p.Contracts).ThenInclude(c => c.ContractYears).ThenInclude(cy => cy.Team)
+            .AsNoTracking()
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(searchName))

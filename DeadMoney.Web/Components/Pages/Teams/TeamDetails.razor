@@ -1,5 +1,4 @@
 @page "/teams/{teamId:int}"
-@using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
@@ -90,7 +89,7 @@ else
                     @foreach (var p in roster)
                     {
                         var cy = p.Contracts.SelectMany(c => c.ContractYears).FirstOrDefault(x => x.Year == selectedYear);
-                        <tr style="cursor: pointer;" @onclick="@(() => GoToPlayer(p.Id))">
+                        <tr class="row-link" @onclick="@(() => GoToPlayer(p.Id))">
                             <td>
                                 <span class="t-name">@p.FirstName @p.LastName</span>
                                 @if (!string.IsNullOrEmpty(p.Number))
@@ -114,26 +113,28 @@ else
 }
 
 @code {
-    private const decimal LeagueCapLimit = 279_200_000m;
+    private decimal _salaryCap = 279_200_000m;
 
-    private decimal CapSpace  => LeagueCapLimit + (team?.CarryoverCap ?? 0m) - capHit;
-    private double  CapPct    => team != null && (LeagueCapLimit + team.CarryoverCap) > 0
-                                    ? Math.Min((double)capHit / (double)(LeagueCapLimit + team.CarryoverCap) * 100.0, 100.0)
+    private decimal CapSpace  => _salaryCap + (team?.CarryoverCap ?? 0m) - capHit;
+    private double  CapPct    => team != null && (_salaryCap + team.CarryoverCap) > 0
+                                    ? Math.Min((double)capHit / (double)(_salaryCap + team.CarryoverCap) * 100.0, 100.0)
                                     : 0.0;
     private string  CapBarClass => CapPct >= 100 ? "red" : CapPct >= 85 ? "yellow" : "green";
 
-    private DeadMoney.Core.Entities.Team? team;
+    private Team? team;
     private List<int> availableYears = new();
     private int selectedYear;
     private decimal capHit = 0m;
-    private List<DeadMoney.Core.Entities.Player> roster = new();
+    private List<Player> roster = new();
 
     [Parameter]
     public int teamId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        selectedYear = await LeagueSettingsSvc.GetCurrentYearAsync();
+        var setting = await LeagueSettingsSvc.GetCurrentAsync();
+        selectedYear = setting?.Year ?? DateTime.UtcNow.Year;
+        _salaryCap   = setting?.SalaryCap ?? 279_200_000m;
         await LoadAsync();
     }
 
@@ -157,6 +158,7 @@ else
             .Include(p => p.Position)
             .Include(p => p.Contracts).ThenInclude(c => c.ContractYears)
             .OrderBy(p => p.Position != null ? p.Position.DisplayOrder : 99).ThenBy(p => p.LastName)
+            .AsNoTracking()
             .ToListAsync();
 
         await RefreshCapHitAsync();
@@ -180,5 +182,4 @@ else
     }
 
     private void GoToPlayer(int playerId) => Navigation.NavigateTo($"/players/{playerId}");
-    private static string FormatMoney(decimal value) => value >= 1_000_000m ? $"${value / 1_000_000m:F1}M" : value >= 1_000m ? $"${value / 1_000m:F0}K" : value.ToString("C0");
 }

@@ -584,6 +584,27 @@ a:hover { color: var(--dm-gold); }
 .trade-section-label  { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; color: var(--dm-text-muted); text-transform: uppercase; margin: 0.75rem 0 0.35rem; }
 
 /* ============================================
+   UTILITY
+   ============================================ */
+
+/* Clickable table rows — use instead of inline style="cursor:pointer;" */
+.row-link { cursor: pointer; }
+
+/* Semantic colour helpers */
+.text-gold    { color: var(--dm-gold) !important; }
+.text-muted   { color: var(--dm-text-muted) !important; }
+.text-bright  { color: var(--dm-text-bright) !important; }
+.text-success { color: var(--dm-success) !important; }
+.text-danger  { color: var(--dm-danger) !important; }
+.text-warning { color: var(--dm-warning) !important; }
+.text-accent  { color: var(--dm-accent) !important; }
+
+/* Weight helpers */
+.fw-normal { font-weight: 400 !important; }
+.fw-600    { font-weight: 600 !important; }
+.fw-700    { font-weight: 700 !important; }
+
+/* ============================================
    SCROLLBAR (webkit)
    ============================================ */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }

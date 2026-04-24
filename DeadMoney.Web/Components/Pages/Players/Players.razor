@@ -1,6 +1,4 @@
 @page "/players"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
 @implements IDisposable
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
@@ -85,7 +83,7 @@ else
             <tbody>
                 @foreach (var p in players)
                 {
-                    <tr style="cursor: pointer;" @onclick="@(() => GoToPlayer(p.Id))">
+                    <tr class="row-link" @onclick="@(() => GoToPlayer(p.Id))">
                         <td>
                             <span class="t-name">@p.FirstName @p.LastName</span>
                             @if (!string.IsNullOrEmpty(p.Number))
@@ -134,9 +132,9 @@ else
 }
 
 @code {
-    private List<DeadMoney.Core.Entities.Player>? players;
-    private List<DeadMoney.Core.Entities.Position> positions = new();
-    private List<DeadMoney.Core.Entities.Team> teams = new();
+    private List<Player>? players;
+    private List<Position> positions = new();
+    private List<Team> teams = new();
     private Dictionary<int, decimal> _capHitByPlayer = new();
     private Timer? _debounceTimer;
 
@@ -155,8 +153,8 @@ else
     {
         currentYear = await LeagueSettingsSvc.GetCurrentYearAsync();
         using var db = await DbFactory.CreateDbContextAsync();
-        positions = await db.Positions.OrderBy(p => p.DisplayOrder).ToListAsync();
-        teams = await db.Teams.OrderBy(t => t.Abbreviation).ToListAsync();
+        positions = await db.Positions.OrderBy(p => p.DisplayOrder).AsNoTracking().ToListAsync();
+        teams     = await db.Teams.OrderBy(t => t.Abbreviation).AsNoTracking().ToListAsync();
         await LoadPlayersAsync();
     }
 
@@ -185,6 +183,7 @@ else
         var query = db.Players
             .Include(p => p.Team)
             .Include(p => p.Position)
+            .AsNoTracking()
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(searchName))
@@ -261,8 +260,4 @@ else
     private void GoToPlayer(int playerId) => Navigation.NavigateTo($"/players/{playerId}");
 
     public void Dispose() => _debounceTimer?.Dispose();
-
-    private static string FormatMoney(decimal v) =>
-        v >= 1_000_000m ? $"${v / 1_000_000m:F1}M" :
-        v >= 1_000m     ? $"${v / 1_000m:F0}K"     : v.ToString("C0");
 }

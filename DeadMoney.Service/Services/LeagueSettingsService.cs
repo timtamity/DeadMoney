@@ -25,6 +25,12 @@ public class LeagueSettingsService
         return setting?.Year ?? DateTime.UtcNow.Year;
     }
 
+    public async Task<decimal> GetCurrentCapAsync()
+    {
+        var setting = await GetCurrentAsync();
+        return setting?.SalaryCap ?? 279_200_000m;
+    }
+
     public async Task<List<LeagueSetting>> GetAllAsync()
     {
         using var db = await _dbFactory.CreateDbContextAsync();

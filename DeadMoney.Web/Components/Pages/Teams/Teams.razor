@@ -1,6 +1,4 @@
 @page "/teams"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation

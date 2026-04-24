@@ -78,6 +78,8 @@ public class DeadMoneyDbContext : DbContext
                 .WithMany(t => t.Roster)
                 .HasForeignKey(p => p.TeamId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(p => p.IsRetired);
         });
 
         // 3. Contract Mappings
@@ -95,6 +97,7 @@ public class DeadMoneyDbContext : DbContext
         builder.Entity<ContractYear>(entity =>
         {
             entity.ToTable("ContractYears", "League");
+            entity.HasIndex(cy => new { cy.TeamId, cy.Year });
         });
 
         builder.Entity<LeagueSetting>(entity =>
@@ -106,6 +109,7 @@ public class DeadMoneyDbContext : DbContext
         builder.Entity<Transaction>(entity =>
         {
             entity.ToTable("Transactions", "League");
+            entity.HasIndex(t => t.OccurredAt);
             entity.HasOne(t => t.Player)
                   .WithMany()
                   .HasForeignKey(t => t.PlayerId)
@@ -144,6 +148,8 @@ public class DeadMoneyDbContext : DbContext
         builder.Entity<FaOffer>(entity =>
         {
             entity.ToTable("FaOffers", "League");
+            entity.HasIndex(o => new { o.PlayerId, o.Status });
+            entity.HasIndex(o => new { o.TeamId,   o.PlayerId });
             entity.Property(o => o.TotalValueM).HasPrecision(18, 2);
             entity.Property(o => o.AnnualValueM).HasPrecision(18, 2);
             entity.Property(o => o.GuaranteedM).HasPrecision(18, 2);

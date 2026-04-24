@@ -1,6 +1,4 @@
 @page "/transactions"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
 @implements IDisposable
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
@@ -101,7 +99,7 @@ else
             <tbody>
                 @foreach (var t in transactions)
                 {
-                    <tr style="cursor: pointer;" @onclick="@(() => GoToTransaction(t.Id))">
+                    <tr class="row-link" @onclick="@(() => GoToTransaction(t.Id))">
                         <td>
                             @if (t.Player != null)
                             {
@@ -184,8 +182,8 @@ else
         FeedSvc.OnChange += OnFeedChanged;
 
         using var db = await DbFactory.CreateDbContextAsync();
-        teams     = await db.Teams.OrderBy(t => t.Abbreviation).ToListAsync();
-        positions = await db.Positions.OrderBy(p => p.DisplayOrder).ToListAsync();
+        teams     = await db.Teams.OrderBy(t => t.Abbreviation).AsNoTracking().ToListAsync();
+        positions = await db.Positions.OrderBy(p => p.DisplayOrder).AsNoTracking().ToListAsync();
         await LoadAsync();
     }
 
@@ -228,6 +226,7 @@ else
             .Include(t => t.Team)
             .Include(t => t.ToTeam)
             .Include(t => t.DraftPick)
+            .AsNoTracking()
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(searchName))

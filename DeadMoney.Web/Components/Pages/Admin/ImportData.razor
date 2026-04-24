@@ -1,6 +1,5 @@
 ﻿@page "/admin/import"
 @using DeadMoney.Service.Interfaces
-@using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Policy = "AdminOnly")]
 @inject INflVerseImportService ImportService
 

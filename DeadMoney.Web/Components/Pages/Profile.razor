@@ -1,9 +1,6 @@
 ﻿@page "/profile"
-@using Microsoft.AspNetCore.Authorization
-@using System.Security.Claims
 @using DeadMoney.Core.Entities
 @using DeadMoney.Data
-@using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory

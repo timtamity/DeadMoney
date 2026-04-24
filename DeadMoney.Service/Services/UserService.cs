@@ -23,10 +23,9 @@ namespace DeadMoney.Service.Services
         {
             if (context.Principal?.Identity == null) return;
 
-            // 1. Extract info from Discord
-            var discordId = context.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
+            var discordId       = context.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
             var discordUsername = context.Principal.Identity.Name ?? "Unknown User";
-            var discordAvatar = context.Principal.FindFirstValue("urn:discord:avatar:url");
+            var discordAvatar   = context.Principal.FindFirstValue("urn:discord:avatar:url");
 
             if (string.IsNullOrEmpty(discordId))
             {
@@ -36,10 +35,8 @@ namespace DeadMoney.Service.Services
 
             using var db = await _dbFactory.CreateDbContextAsync();
 
-            // 2. Find or Create User - Including Positions for Agent logic
             var user = await db.Users
-                .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.DiscordId == discordId);
 
             if (user == null)
@@ -47,61 +44,44 @@ namespace DeadMoney.Service.Services
                 _logger.LogInformation("Provisioning new user: {Username} ({DiscordId})", discordUsername, discordId);
                 user = new User
                 {
-                    DiscordId = discordId,
-                    Username = discordUsername,
+                    DiscordId   = discordId,
+                    Username    = discordUsername,
                     DisplayName = discordUsername,
-                    AvatarUrl = discordAvatar,
-                    TimeZoneId = "UTC",
-                    CreatedAt = DateTime.UtcNow,
-                    LastLogin = DateTime.UtcNow
+                    AvatarUrl   = discordAvatar,
+                    TimeZoneId  = "UTC",
+                    CreatedAt   = DateTime.UtcNow,
+                    LastLogin   = DateTime.UtcNow
                 };
                 db.Users.Add(user);
             }
             else
             {
-                // Update existing user tracking
                 user.LastLogin = DateTime.UtcNow;
-                user.Username = discordUsername;
+                user.Username  = discordUsername;
                 if (!string.IsNullOrEmpty(discordAvatar)) user.AvatarUrl = discordAvatar;
             }
 
             await db.SaveChangesAsync();
 
-            // 3. Bake the App-Specific Identity into the Cookie
             var appClaims = new List<Claim>
             {
-                new Claim("UserId", user.Id.ToString()),
-                new Claim("DisplayName", user.DisplayName ?? user.Username),
-                new Claim("TimeZoneId", user.TimeZoneId)
+                new("UserId",      user.Id.ToString()),
+                new("DisplayName", user.DisplayName ?? user.Username),
+                new("TimeZoneId",  user.TimeZoneId)
             };
 
-            // 4. Map Contextual Roles (Team & Position)
-            if (user.UserRoles != null)
+            foreach (var ur in user.UserRoles ?? [])
             {
-                foreach (var userRole in user.UserRoles)
-                {
-                    // Add the basic Role Name (e.g., "Agent", "GM")
-                    if (userRole.Role != null)
-                    {
-                        appClaims.Add(new Claim(ClaimTypes.Role, userRole.Role.Name));
-                    }
-
-                    // Add Team context if it exists
-                    if (userRole.TeamId.HasValue)
-                    {
-                        appClaims.Add(new Claim("TeamId", userRole.TeamId.Value.ToString()));
-                    }
-
-                    // Add Position context if it exists (Replaces the nested loop)
-                    if (userRole.PositionId.HasValue && userRole.Position != null)
-                    {
-                        appClaims.Add(new Claim("AgentPosition", userRole.Position.Code));
-                    }
-                }
+                if (ur.Role != null)
+                    appClaims.Add(new Claim(ClaimTypes.Role, ur.Role.Name));
+                if (ur.TeamId.HasValue)
+                    appClaims.Add(new Claim("TeamId", ur.TeamId.Value.ToString()));
+                if (ur.PositionId.HasValue && ur.Position != null)
+                    appClaims.Add(new Claim("AgentPosition", ur.Position.Code));
             }
 
-            var appIdentity = new ClaimsIdentity(appClaims, context.Principal.Identity.AuthenticationType);
-            context.Principal.AddIdentity(appIdentity);
+            context.Principal.AddIdentity(
+                new ClaimsIdentity(appClaims, context.Principal.Identity.AuthenticationType));
         }
 
         public int? GetAssignedTeamId(ClaimsPrincipal user)

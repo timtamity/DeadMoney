@@ -1,8 +1,6 @@
 ﻿@page "/admin/users"
 @using DeadMoney.Core.Entities
 @using DeadMoney.Data
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
 @attribute [Authorize(Policy = "AdminOnly")]
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 

@@ -1,7 +1,5 @@
 @page "/players/{playerId:int}"
-@using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components
-@using System.Security.Claims
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation

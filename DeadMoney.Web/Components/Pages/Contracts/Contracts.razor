@@ -1,6 +1,4 @@
 @page "/contracts"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
 @implements IDisposable
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
@@ -74,7 +72,7 @@ else
             <tbody>
                 @foreach (var c in contracts)
                 {
-                    <tr style="cursor: pointer;" @onclick="@(() => GoToContract(c.Id))">
+                    <tr class="row-link" @onclick="@(() => GoToContract(c.Id))">
                         <td>
                             <span class="t-name">@c.Player?.FirstName @c.Player?.LastName</span>
                             @if (c.IsModifiedBySim)
@@ -144,7 +142,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         using var db = await DbFactory.CreateDbContextAsync();
-        teams = await db.Teams.OrderBy(t => t.Abbreviation).ToListAsync();
+        teams = await db.Teams.OrderBy(t => t.Abbreviation).AsNoTracking().ToListAsync();
         await LoadContractsAsync();
     }
 
@@ -174,6 +172,7 @@ else
             .Where(c => c.IsActive)
             .Include(c => c.Player).ThenInclude(p => p.Team)
             .Include(c => c.ContractYears).ThenInclude(cy => cy.Team)
+            .AsNoTracking()
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(searchName))

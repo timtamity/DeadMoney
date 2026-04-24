@@ -99,16 +99,17 @@ public static class DbInitializer
 
         if (user == null)
         {
+            // Username/DisplayName will be overwritten on first Discord login.
             user = new User
             {
-                DiscordId = discordId,
-                Username = "tim_of_thee",
-                DisplayName = "tim_of_thee",
-                ThemePreference = "Dark",
+                DiscordId   = discordId,
+                Username    = discordId,
+                DisplayName = "Admin",
+                ThemePreference       = "Dark",
                 UseTeamColorsAsAccent = true,
-                TimeZoneId = "UTC",
-                CreatedAt = DateTime.UtcNow,
-                LastLogin = DateTime.UtcNow
+                TimeZoneId  = "UTC",
+                CreatedAt   = DateTime.UtcNow,
+                LastLogin   = DateTime.UtcNow
             };
             db.Users.Add(user);
             await db.SaveChangesAsync();

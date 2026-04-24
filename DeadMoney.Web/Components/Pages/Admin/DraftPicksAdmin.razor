@@ -1,6 +1,4 @@
 @page "/admin/draft-picks"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
 @attribute [Authorize(Roles = "Admin")]
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
 @inject TransactionFeedService FeedSvc

@@ -115,7 +115,7 @@ public class NflVerseImportService(
 
     public async Task SyncContractsAsync()
     {
-        var tempCsvPath = Path.Combine(Path.GetTempPath(), "contracts_flattened.csv");
+        var tempCsvPath = Path.Combine(Path.GetTempPath(), $"contracts_flattened_{Guid.NewGuid():N}.csv");
         try
         {
             using (var conn = new DuckDBConnection("DataSource=:memory:"))
@@ -255,11 +255,19 @@ public class NflVerseImportService(
         return csv.GetRecords<dynamic>().ToList();
     }
 
-    private string MapPosition(string raw) => raw.ToUpper() switch
+    // Maps nflverse raw position codes to our canonical Position.Code values.
+    private static string MapPosition(string raw) => raw.ToUpper() switch
     {
-        "SAF" or "FS" or "SS" => "S",
-        "OG" or "LG" or "RG" => "G",
-        "OT" or "LT" or "RT" => "T",
-        _ => raw.ToUpper()
+        // Offense
+        "HB"                     => "RB",
+        "OG" or "LG" or "RG"    => "G",
+        "OT" or "LT" or "RT"    => "OT",
+        // Defense
+        "DE"                     => "EDGE",
+        "NT"                     => "DT",
+        "ILB" or "MLB" or "OLB" => "LB",
+        "FS" or "SS" or "SAF"   => "S",
+        "DB"                     => "CB",
+        _                        => raw.ToUpper()
     };
 }

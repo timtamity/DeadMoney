@@ -122,9 +122,9 @@ public class RosterService
             contract.IsModifiedBySim = true;
         }
 
-        var teamAbbr  = player.Team?.Abbreviation;
-        var playerName = $"{player.FirstName} {player.LastName}".Trim();
-        player.TeamId = null;
+        var teamAbbr   = player.Team?.Abbreviation;
+        var playerName = player.FullName;
+        player.TeamId  = null;
 
         db.Transactions.Add(new Transaction
         {
@@ -184,8 +184,8 @@ public class RosterService
         player.TeamId = teamId;
         db.Contracts.Add(contract);
 
-        var team = await db.Teams.FindAsync(teamId);
-        var playerName = $"{player.FirstName} {player.LastName}".Trim();
+        var team       = await db.Teams.FindAsync(teamId);
+        var playerName = player.FullName;
         var details    = $"{input.Years}yr / ${input.TotalValueM:F1}M";
 
         db.Transactions.Add(new Transaction
@@ -249,8 +249,8 @@ public class RosterService
 
         db.Contracts.Add(contract);
 
-        var team = await db.Teams.FindAsync(teamId);
-        var playerName = $"{player.FirstName} {player.LastName}".Trim();
+        var team       = await db.Teams.FindAsync(teamId);
+        var playerName = player.FullName;
         var details    = $"{input.Years}yr / ${input.TotalValueM:F1}M";
 
         db.Transactions.Add(new Transaction
@@ -296,7 +296,7 @@ public class RosterService
             if (player == null || player.TeamId != teamAId) continue;
             MovePlayer(player, teamBId, year);
             db.Transactions.Add(new Transaction { Type = TransactionType.Traded, PlayerId = player.Id, TeamId = teamAId, ToTeamId = teamBId, OccurredAt = DateTime.UtcNow });
-            notifications.Add(new TransactionDto(0, TransactionType.Traded, $"{player.FirstName} {player.LastName}".Trim(), player.Id, null, teamA?.Abbreviation, teamAId, teamB?.Abbreviation, null, DateTime.UtcNow));
+            notifications.Add(new TransactionDto(0, TransactionType.Traded, player.FullName, player.Id, null, teamA?.Abbreviation, teamAId, teamB?.Abbreviation, null, DateTime.UtcNow));
         }
 
         foreach (var playerId in teamBPlayerIds)
@@ -305,7 +305,7 @@ public class RosterService
             if (player == null || player.TeamId != teamBId) continue;
             MovePlayer(player, teamAId, year);
             db.Transactions.Add(new Transaction { Type = TransactionType.Traded, PlayerId = player.Id, TeamId = teamBId, ToTeamId = teamAId, OccurredAt = DateTime.UtcNow });
-            notifications.Add(new TransactionDto(0, TransactionType.Traded, $"{player.FirstName} {player.LastName}".Trim(), player.Id, null, teamB?.Abbreviation, teamBId, teamA?.Abbreviation, null, DateTime.UtcNow));
+            notifications.Add(new TransactionDto(0, TransactionType.Traded, player.FullName, player.Id, null, teamB?.Abbreviation, teamBId, teamA?.Abbreviation, null, DateTime.UtcNow));
         }
 
         foreach (var pickId in teamAPickIds)

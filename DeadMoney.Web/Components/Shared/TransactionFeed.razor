@@ -24,7 +24,7 @@
                         <div class="txn-compact-name">@t.SubjectName</div>
                         <div class="txn-compact-meta">@TxnLabel(t.Type) @(t.TeamAbbr != null ? $"· {t.TeamAbbr}" : "")</div>
                     </div>
-                    <div class="txn-compact-time">@Relative(t.OccurredAt)</div>
+                    <div class="txn-compact-time">@RelativeTime(t.OccurredAt)</div>
                 </div>
             }
         }
@@ -73,7 +73,7 @@ else
                                 <span class="txn-details">@t.Details</span>
                             }
                         </div>
-                        <div class="txn-time">@Relative(t.OccurredAt)</div>
+                        <div class="txn-time">@RelativeTime(t.OccurredAt)</div>
                     </div>
                 }
             </div>
@@ -133,13 +133,4 @@ else
         _                             => "·"
     };
 
-    private static string Relative(DateTime dt)
-    {
-        var diff = DateTime.UtcNow - dt;
-        if (diff.TotalSeconds < 60)  return "just now";
-        if (diff.TotalMinutes < 60)  return $"{(int)diff.TotalMinutes}m ago";
-        if (diff.TotalHours   < 24)  return $"{(int)diff.TotalHours}h ago";
-        if (diff.TotalDays    < 7)   return $"{(int)diff.TotalDays}d ago";
-        return dt.ToString("MMM d");
-    }
 }

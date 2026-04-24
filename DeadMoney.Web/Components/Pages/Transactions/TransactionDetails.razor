@@ -1,5 +1,4 @@
 @page "/transactions/{transactionId:int}"
-@using Microsoft.EntityFrameworkCore
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject IDbContextFactory<DeadMoney.Data.DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation

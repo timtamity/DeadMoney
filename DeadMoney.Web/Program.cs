@@ -57,10 +57,10 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy =>
-        policy.Requirements.Add(new CommissionerRequirement()));
+        policy.Requirements.Add(new AdminRequirement()));
 });
 
-builder.Services.AddSingleton<IAuthorizationHandler, CommissionerHandler>();
+builder.Services.AddSingleton<IAuthorizationHandler, AdminHandler>();
 
 // --- 3. CUSTOM SERVICES ---
 builder.Services.AddScoped<IUserService, UserService>();

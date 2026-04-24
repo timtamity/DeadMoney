@@ -16,4 +16,23 @@ public static class UiHelpers
         "K"  or "P"  or "LS"                   => "pos-badge pos-st",
         _                                       => "pos-badge"
     };
+
+    public static string FormatMoney(decimal value)
+    {
+        var abs  = Math.Abs(value);
+        var sign = value < 0 ? "-" : "";
+        if (abs >= 1_000_000m) return $"{sign}${abs / 1_000_000m:F1}M";
+        if (abs >= 1_000m)     return $"{sign}${abs / 1_000m:F0}K";
+        return value.ToString("C0");
+    }
+
+    public static string RelativeTime(DateTime utc)
+    {
+        var diff = DateTime.UtcNow - utc;
+        if (diff.TotalSeconds < 60) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours   < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays    < 7)  return $"{(int)diff.TotalDays}d ago";
+        return utc.ToString("MMM d");
+    }
 }

@@ -111,6 +111,9 @@ namespace DeadMoney.Data.Migrations
 
                     b.HasIndex("TeamId");
 
+                    b.HasIndex("TeamId", "Year")
+                        .HasDatabaseName("IX_ContractYears_TeamId_Year");
+
                     b.ToTable("ContractYears", "League");
                 });
 
@@ -197,7 +200,11 @@ namespace DeadMoney.Data.Migrations
 
                     b.HasIndex("PlayerId");
 
+                    b.HasIndex("PlayerId", "Status");
+
                     b.HasIndex("TeamId");
+
+                    b.HasIndex("TeamId", "PlayerId");
 
                     b.ToTable("FaOffers", "League");
                 });
@@ -317,6 +324,8 @@ namespace DeadMoney.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IsRetired");
 
                     b.HasIndex("PositionId");
 
@@ -983,6 +992,8 @@ namespace DeadMoney.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DraftPickId");
+
+                    b.HasIndex("OccurredAt");
 
                     b.HasIndex("PlayerId");
 

@@ -2,11 +2,11 @@
 
 namespace DeadMoney.Web.Authorization;
 
-public class CommissionerRequirement : IAuthorizationRequirement { }
+public class AdminRequirement : IAuthorizationRequirement { }
 
-public class CommissionerHandler : AuthorizationHandler<CommissionerRequirement>
+public class AdminHandler : AuthorizationHandler<AdminRequirement>
 {
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, CommissionerRequirement requirement)
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, AdminRequirement requirement)
     {
         if (context.User.IsInRole("Admin"))
             context.Succeed(requirement);
