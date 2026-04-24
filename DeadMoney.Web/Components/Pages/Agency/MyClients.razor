@@ -1,0 +1,378 @@
+@page "/my-clients"
+@attribute [Authorize(Roles = "Admin, Agent, Commissioner")]
+@inject AuthenticationStateProvider AuthStateProvider
+@inject FaOfferService FaOfferSvc
+@inject ExtensionService ExtensionSvc
+@inject LeagueSettingsService LeagueSettingsSvc
+@inject IUserService UserSvc
+
+<PageTitle>My Clients — Dead Money</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>My Clients</h1>
+        <div class="subtitle">
+            @if (isCommissioner)
+            {
+                <span>All positions &mdash; Commissioner view</span>
+            }
+            else if (agentPositions.Count > 0)
+            {
+                <span>@string.Join(", ", agentPositions) agent</span>
+            }
+        </div>
+    </div>
+</div>
+
+@if (!loaded)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading...
+    </div>
+}
+else
+{
+    @* ── FA OFFERS ── *@
+    <div class="bento-card mb-4">
+        <div class="bento-header">
+            <span class="bento-title">FA Offer Queue</span>
+            <span class="t-meta">@faOffers.Count pending</span>
+        </div>
+
+        @if (faOffers.Count == 0)
+        {
+            <div class="empty-state py-3">
+                <i class="bi bi-inbox"></i>
+                <p>No active FA offers to review.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="dm-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Pos</th>
+                            <th class="d-none d-sm-table-cell">Team</th>
+                            <th>Terms</th>
+                            <th>Submitted</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var offer in faOffers)
+                        {
+                            <tr>
+                                <td class="t-name">@offer.Player?.FirstName @offer.Player?.LastName</td>
+                                <td><span class="@PosBadgeClass(offer.Player?.Position?.Code)">@(offer.Player?.Position?.Code ?? "—")</span></td>
+                                <td class="d-none d-sm-table-cell t-sub">@(offer.Team?.Abbreviation ?? "—")</td>
+                                <td>
+                                    <span class="t-bright">@offer.Years yr / $@offer.TotalValueM.ToString("F1")M</span>
+                                    <span class="t-meta d-block">$@offer.AnnualValueM.ToString("F1")M/yr &middot; $@offer.GuaranteedM.ToString("F1")M gtd</span>
+                                </td>
+                                <td class="t-meta">@RelativeTime(offer.SubmittedAt)</td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button class="dm-btn dm-btn-sm dm-btn-success"
+                                                disabled="@(actionPending)"
+                                                @onclick="@(() => AcceptFaOfferAsync(offer.Id))">
+                                            Accept
+                                        </button>
+                                        <button class="dm-btn-ghost dm-btn-sm t-danger"
+                                                disabled="@(actionPending)"
+                                                @onclick="@(() => RejectFaOfferAsync(offer.Id))">
+                                            Reject
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    @* ── EXTENSION OFFERS ── *@
+    <div class="bento-card mb-4">
+        <div class="bento-header">
+            <span class="bento-title">Extension Offer Queue</span>
+            <span class="t-meta">@extensionOffers.Count pending</span>
+        </div>
+
+        @if (extensionOffers.Count == 0)
+        {
+            <div class="empty-state py-3">
+                <i class="bi bi-inbox"></i>
+                <p>No extension offers to review.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="dm-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Pos</th>
+                            <th class="d-none d-sm-table-cell">Team</th>
+                            <th>Offer / Counter</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var offer in extensionOffers)
+                        {
+                            var activeYears = offer.CounterYears ?? offer.Years;
+                            var activeTotalM = offer.CounterTotalValueM ?? offer.TotalValueM;
+                            var activeGtdM = offer.CounterGuaranteedM ?? offer.GuaranteedM;
+
+                            <tr>
+                                <td class="t-name">@offer.Player?.FirstName @offer.Player?.LastName</td>
+                                <td><span class="@PosBadgeClass(offer.Player?.Position?.Code)">@(offer.Player?.Position?.Code ?? "—")</span></td>
+                                <td class="d-none d-sm-table-cell t-sub">@(offer.Team?.Abbreviation ?? "—")</td>
+                                <td>
+                                    @if (offer.Status == ExtensionOfferStatus.Countered)
+                                    {
+                                        <span class="t-bright">@activeYears yr / $@activeTotalM.ToString("F1")M</span>
+                                        <span class="t-meta d-block">Counter &middot; $@activeGtdM.ToString("F1")M gtd</span>
+                                        <span class="t-meta d-block">Orig: @offer.Years yr / $@offer.TotalValueM.ToString("F1")M</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="t-bright">@offer.Years yr / $@offer.TotalValueM.ToString("F1")M</span>
+                                        <span class="t-meta d-block">$@offer.AnnualValueM.ToString("F1")M/yr &middot; $@offer.GuaranteedM.ToString("F1")M gtd</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (offer.Status == ExtensionOfferStatus.Countered)
+                                    {
+                                        <span class="badge bg-warning text-dark">Countered</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Pending</span>
+                                    }
+                                </td>
+                                <td class="t-meta">@RelativeTime(offer.SubmittedAt)</td>
+                                <td class="text-end">
+                                    @if (counterOfferId == offer.Id)
+                                    {
+                                        <div class="counter-form mt-2 p-3 bento-card">
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="t-label">Years</label>
+                                                    <input type="number" class="form-control form-control-sm" min="1" max="10"
+                                                           @bind="counterYears" />
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="t-label">Total Value ($M)</label>
+                                                    <input type="number" class="form-control form-control-sm" step="0.1"
+                                                           @bind="counterTotalM" />
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="t-label">Guaranteed ($M)</label>
+                                                    <input type="number" class="form-control form-control-sm" step="0.1"
+                                                           @bind="counterGtdM" />
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="t-label">Signing Bonus ($M)</label>
+                                                    <input type="number" class="form-control form-control-sm" step="0.1"
+                                                           @bind="counterSbM" />
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="t-label">Notes</label>
+                                                    <textarea class="form-control form-control-sm" rows="2"
+                                                              @bind="counterNotes"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="dm-btn dm-btn-sm"
+                                                        disabled="@actionPending"
+                                                        @onclick="@(() => SubmitCounterAsync(offer.Id))">
+                                                    Send Counter
+                                                </button>
+                                                <button class="dm-btn-ghost dm-btn-sm"
+                                                        @onclick="CancelCounter">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                            <button class="dm-btn dm-btn-sm dm-btn-success"
+                                                    disabled="@actionPending"
+                                                    @onclick="@(() => AgreeExtensionAsync(offer.Id))">
+                                                Agree
+                                            </button>
+                                            <button class="dm-btn-ghost dm-btn-sm"
+                                                    disabled="@actionPending"
+                                                    @onclick="@(() => OpenCounter(offer))">
+                                                Counter
+                                            </button>
+                                            <button class="dm-btn-ghost dm-btn-sm t-danger"
+                                                    disabled="@actionPending"
+                                                    @onclick="@(() => DeclineExtensionAsync(offer.Id))">
+                                                Decline
+                                            </button>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(statusIsError ? "alert-danger" : "alert-success") mt-3">
+            @statusMessage
+        </div>
+    }
+}
+
+@code {
+    private bool loaded;
+    private bool actionPending;
+    private bool isCommissioner;
+    private List<string> agentPositions = new();
+
+    private List<FaOffer> faOffers = new();
+    private List<ExtensionOffer> extensionOffers = new();
+
+    private int currentYear;
+    private int? myUserId;
+    private string? myDisplayName;
+
+    private string? statusMessage;
+    private bool statusIsError;
+
+    // Counter form state
+    private int? counterOfferId;
+    private int counterYears = 1;
+    private decimal counterTotalM;
+    private decimal counterGtdM;
+    private decimal counterSbM;
+    private string? counterNotes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+
+        isCommissioner = user.IsInRole("Commissioner") || user.IsInRole("Admin");
+        agentPositions = UserSvc.GetAgentPositions(user).ToList();
+
+        if (int.TryParse(user.FindFirst("UserId")?.Value, out var uid))
+            myUserId = uid;
+        myDisplayName = user.FindFirst("DisplayName")?.Value;
+
+        currentYear = await LeagueSettingsSvc.GetCurrentYearAsync();
+        await LoadDataAsync();
+        loaded = true;
+    }
+
+    private async Task LoadDataAsync()
+    {
+        if (isCommissioner)
+        {
+            faOffers = await FaOfferSvc.GetAllActiveAsync();
+            extensionOffers = await ExtensionSvc.GetAllPendingAsync();
+        }
+        else if (agentPositions.Count > 0)
+        {
+            faOffers = await FaOfferSvc.GetActiveForPositionsAsync(agentPositions);
+            extensionOffers = await ExtensionSvc.GetPendingForPositionsAsync(agentPositions);
+        }
+    }
+
+    private async Task AcceptFaOfferAsync(int offerId)
+    {
+        actionPending = true;
+        var result = await FaOfferSvc.AcceptOfferAsync(offerId, currentYear, myUserId, myDisplayName);
+        if (result.Success)
+            SetStatus("Offer accepted — player signed.", false);
+        else
+            SetStatus(result.Error ?? "Failed to accept offer.", true);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task RejectFaOfferAsync(int offerId)
+    {
+        actionPending = true;
+        await FaOfferSvc.RejectOfferAsync(offerId, myUserId, myDisplayName);
+        SetStatus("Offer rejected.", false);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task AgreeExtensionAsync(int offerId)
+    {
+        actionPending = true;
+        var result = await ExtensionSvc.AgreeAsync(offerId, currentYear, myUserId, myDisplayName);
+        if (result.Success)
+            SetStatus("Extension agreed — contract signed.", false);
+        else
+            SetStatus(result.Error ?? "Failed to agree.", true);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private void OpenCounter(ExtensionOffer offer)
+    {
+        counterOfferId = offer.Id;
+        counterYears   = offer.CounterYears ?? offer.Years;
+        counterTotalM  = offer.CounterTotalValueM ?? offer.TotalValueM;
+        counterGtdM    = offer.CounterGuaranteedM ?? offer.GuaranteedM;
+        counterSbM     = offer.CounterSigningBonusM ?? offer.SigningBonusM;
+        counterNotes   = null;
+    }
+
+    private void CancelCounter()
+    {
+        counterOfferId = null;
+    }
+
+    private async Task SubmitCounterAsync(int offerId)
+    {
+        actionPending = true;
+        var result = await ExtensionSvc.CounterAsync(
+            offerId, counterYears, counterTotalM, counterGtdM, counterSbM, counterNotes,
+            myUserId, myDisplayName);
+        if (result.Success)
+            SetStatus("Counter offer sent.", false);
+        else
+            SetStatus(result.Error ?? "Failed to counter.", true);
+        counterOfferId = null;
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private async Task DeclineExtensionAsync(int offerId)
+    {
+        actionPending = true;
+        var result = await ExtensionSvc.DeclineAsync(offerId, myUserId, myDisplayName);
+        if (result.Success)
+            SetStatus("Extension declined.", false);
+        else
+            SetStatus(result.Error ?? "Failed to decline.", true);
+        await LoadDataAsync();
+        actionPending = false;
+    }
+
+    private void SetStatus(string msg, bool isError)
+    {
+        statusMessage = msg;
+        statusIsError = isError;
+    }
+}

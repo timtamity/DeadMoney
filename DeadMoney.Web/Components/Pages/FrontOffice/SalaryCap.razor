@@ -1,0 +1,187 @@
+@page "/salary-cap"
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+@inject LeagueSettingsService LeagueSettingsSvc
+@inject NavigationManager Navigation
+
+<PageTitle>Salary Cap — Dead Money</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Salary Cap</h1>
+        @if (loaded)
+        {
+            <div class="subtitle">@currentYear &middot; Cap: $@(salaryCap / 1_000_000m).0M</div>
+        }
+    </div>
+    @if (loaded)
+    {
+        <div class="d-flex align-items-center gap-2">
+            <label class="t-label m-0">Sort:</label>
+            <select class="form-select w-auto" @bind="sortMode" @bind:after="ApplySort">
+                <option value="space">Cap Space</option>
+                <option value="hit">Cap Hit</option>
+                <option value="alpha">Team Name</option>
+            </select>
+        </div>
+    }
+</div>
+
+@if (!loaded)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading cap data...
+    </div>
+}
+else
+{
+    <div class="table-responsive bento-card">
+        <table class="dm-table">
+            <thead>
+                <tr>
+                    <th>Team</th>
+                    <th class="d-none d-sm-table-cell">Div</th>
+                    <th class="text-end">Cap Hit</th>
+                    <th class="d-none d-md-table-cell text-end">Dead Money</th>
+                    <th class="d-none d-md-table-cell text-end">Carryover</th>
+                    <th class="text-end">Cap Space</th>
+                    <th class="d-none d-lg-table-cell">Usage</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in rows)
+                {
+                    var pct = (salaryCap + row.CarryoverCap) > 0
+                        ? Math.Min((double)row.CapHit / (double)(salaryCap + row.CarryoverCap) * 100.0, 100.0)
+                        : 0.0;
+                    var barClass = pct >= 100 ? "red" : pct >= 85 ? "yellow" : "green";
+
+                    <tr class="row-link" @onclick="@(() => Navigation.NavigateTo($"/teams/{row.TeamId}"))">
+                        <td>
+                            <span class="t-name">@row.Abbreviation</span>
+                            <span class="t-meta d-block">@row.City @row.Nickname</span>
+                        </td>
+                        <td class="d-none d-sm-table-cell t-meta">@row.Conference — @row.Division</td>
+                        <td class="text-end t-money">@FormatMoney(row.CapHit)</td>
+                        <td class="d-none d-md-table-cell text-end t-meta">@FormatMoney(row.DeadMoney)</td>
+                        <td class="d-none d-md-table-cell text-end @(row.CarryoverCap > 0 ? "t-success" : "t-meta")">
+                            @(row.CarryoverCap > 0 ? FormatMoney(row.CarryoverCap) : "—")
+                        </td>
+                        <td class="text-end @(row.CapSpace < 0 ? "t-danger" : "t-success")">
+                            @FormatMoney(row.CapSpace)
+                        </td>
+                        <td class="d-none d-lg-table-cell" style="min-width: 120px;">
+                            <div class="cap-bar-wrap">
+                                <div class="cap-bar-fill @barClass" style="width: @(pct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                            </div>
+                            <div class="t-meta mt-1">@pct.ToString("F0")%</div>
+                        </td>
+                        <td class="text-end">
+                            <button class="dm-btn-ghost dm-btn-sm" @onclick:stopPropagation="true"
+                                    @onclick="@(() => Navigation.NavigateTo($"/teams/{row.TeamId}"))">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="stats-row mt-4">
+        <div class="stat-card">
+            <div class="stat-label">Avg Cap Hit</div>
+            <div class="stat-value gold">@FormatMoney(rows.Count > 0 ? rows.Average(r => r.CapHit) : 0)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Most Space</div>
+            <div class="stat-value green">
+                @if (rows.Count > 0)
+                {
+                    var top = rows.OrderByDescending(r => r.CapSpace).First();
+                    <span>@top.Abbreviation (@FormatMoney(top.CapSpace))</span>
+                }
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Over Cap</div>
+            <div class="stat-value @(rows.Count(r => r.CapSpace < 0) > 0 ? "red" : "green")">
+                @rows.Count(r => r.CapSpace < 0) teams
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Dead Money</div>
+            <div class="stat-value">@FormatMoney(rows.Sum(r => r.DeadMoney))</div>
+        </div>
+    </div>
+}
+
+@code {
+    private record CapRow(int TeamId, string Abbreviation, string City, string Nickname,
+        string Conference, string Division, decimal CapHit, decimal DeadMoney,
+        decimal CarryoverCap, decimal CapSpace);
+
+    private bool loaded;
+    private int currentYear;
+    private decimal salaryCap;
+    private string sortMode = "space";
+    private List<CapRow> rows = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var setting = await LeagueSettingsSvc.GetCurrentAsync();
+        currentYear = setting?.Year ?? DateTime.UtcNow.Year;
+        salaryCap   = setting?.SalaryCap ?? 279_200_000m;
+        await LoadAsync();
+        loaded = true;
+    }
+
+    private async Task LoadAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        var teams = await db.Teams.AsNoTracking().ToListAsync();
+
+        var capHits = await db.ContractYears
+            .Where(cy => cy.Year == currentYear && cy.TeamId != null)
+            .GroupBy(cy => cy.TeamId)
+            .Select(g => new
+            {
+                TeamId = g.Key!.Value,
+                Total  = g.Sum(cy => cy.CapNumber)
+            })
+            .ToListAsync();
+
+        // Dead money = cap numbers for void years in the current year
+        var deadMoneyData = await db.ContractYears
+            .Where(cy => cy.Year == currentYear && cy.TeamId != null && cy.IsVoidYear)
+            .GroupBy(cy => cy.TeamId)
+            .Select(g => new { TeamId = g.Key!.Value, Total = g.Sum(cy => cy.CapNumber) })
+            .ToListAsync();
+
+        var hitMap  = capHits.ToDictionary(x => x.TeamId, x => x.Total);
+        var deadMap = deadMoneyData.ToDictionary(x => x.TeamId, x => x.Total);
+
+        rows = teams.Select(t =>
+        {
+            var hit   = hitMap.TryGetValue(t.Id, out var h) ? h : 0m;
+            var dead  = deadMap.TryGetValue(t.Id, out var d) ? d : 0m;
+            var space = salaryCap + t.CarryoverCap - hit;
+            return new CapRow(t.Id, t.Abbreviation, t.City, t.Nickname,
+                t.Conference, t.Division, hit, dead, t.CarryoverCap, space);
+        }).ToList();
+
+        ApplySort();
+    }
+
+    private void ApplySort()
+    {
+        rows = sortMode switch
+        {
+            "hit"   => rows.OrderByDescending(r => r.CapHit).ToList(),
+            "alpha" => rows.OrderBy(r => r.Abbreviation).ToList(),
+            _       => rows.OrderByDescending(r => r.CapSpace).ToList()
+        };
+    }
+}

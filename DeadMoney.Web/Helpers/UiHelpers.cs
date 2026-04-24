@@ -21,13 +21,20 @@ public static class UiHelpers
 
     public static string TxnClass(TransactionType t) => t switch
     {
-        TransactionType.Cut           => "txn-cut",
-        TransactionType.Signed        => "txn-signed",
-        TransactionType.Extended      => "txn-extended",
-        TransactionType.Traded        => "txn-traded",
-        TransactionType.PickGranted   => "txn-signed",
-        TransactionType.PickForfeited => "txn-cut",
-        _                             => ""
+        TransactionType.Cut                => "txn-cut",
+        TransactionType.Signed             => "txn-signed",
+        TransactionType.Extended           => "txn-extended",
+        TransactionType.Traded             => "txn-traded",
+        TransactionType.PickGranted        => "txn-signed",
+        TransactionType.PickForfeited      => "txn-cut",
+        TransactionType.ContractModified   => "txn-extended",
+        TransactionType.CapAdjusted        => "txn-traded",
+        TransactionType.ExtensionOffered   => "txn-extended",
+        TransactionType.ExtensionAgreed    => "txn-signed",
+        TransactionType.ExtensionCountered => "txn-traded",
+        TransactionType.ExtensionDeclined  => "txn-cut",
+        TransactionType.FaOfferRejected    => "txn-cut",
+        _                                  => ""
     };
 
     public static string FormatMoney(decimal value)

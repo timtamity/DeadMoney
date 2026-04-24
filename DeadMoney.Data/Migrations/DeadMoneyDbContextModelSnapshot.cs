@@ -209,6 +209,103 @@ namespace DeadMoney.Data.Migrations
                     b.ToTable("FaOffers", "League");
                 });
 
+            modelBuilder.Entity("DeadMoney.Core.Entities.ExtensionOffer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AnnualValueM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("CounteredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("CounterGuaranteedM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CounterNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal?>("CounterSigningBonusM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CounterTotalValueM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("CounterYears")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("GuaranteedM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("OfferedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OfferedByUserName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("PlayerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewedByUserName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("SigningBonusM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TeamId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalValueM")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Years")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId");
+
+                    b.HasIndex("PlayerId", "Status")
+                        .HasDatabaseName("IX_ExtensionOffers_PlayerId_Status");
+
+                    b.HasIndex("TeamId");
+
+                    b.HasIndex("TeamId", "PlayerId")
+                        .HasDatabaseName("IX_ExtensionOffers_TeamId_PlayerId");
+
+                    b.ToTable("ExtensionOffers", "League");
+                });
+
             modelBuilder.Entity("DeadMoney.Core.Entities.LeagueSetting", b =>
                 {
                     b.Property<int>("Id")
@@ -986,6 +1083,13 @@ namespace DeadMoney.Data.Migrations
                     b.Property<int?>("ToTeamId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("PerformedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PerformedByUserName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
@@ -1134,6 +1238,25 @@ namespace DeadMoney.Data.Migrations
                         .WithMany()
                         .HasForeignKey("TeamId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Player");
+
+                    b.Navigation("Team");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.ExtensionOffer", b =>
+                {
+                    b.HasOne("DeadMoney.Core.Entities.Player", "Player")
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DeadMoney.Core.Entities.Team", "Team")
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Player");

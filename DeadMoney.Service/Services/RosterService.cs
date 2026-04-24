@@ -18,7 +18,8 @@ public class RosterService
         _feed      = feed;
     }
 
-    public async Task CutPlayerAsync(int playerId, int teamId, int year, bool isPostJune1)
+    public async Task CutPlayerAsync(int playerId, int teamId, int year, bool isPostJune1,
+        int? performedByUserId = null, string? performedByUserName = null)
     {
         using var db = await _dbFactory.CreateDbContextAsync();
 
@@ -128,18 +129,21 @@ public class RosterService
 
         db.Transactions.Add(new Transaction
         {
-            Type       = TransactionType.Cut,
-            PlayerId   = player.Id,
-            TeamId     = teamId,
-            Details    = isPostJune1 ? "Post-June 1 cut" : "Standard cut",
-            OccurredAt = DateTime.UtcNow
+            Type                  = TransactionType.Cut,
+            PlayerId              = player.Id,
+            TeamId                = teamId,
+            Details               = isPostJune1 ? "Post-June 1 cut" : "Standard cut",
+            OccurredAt            = DateTime.UtcNow,
+            PerformedByUserId     = performedByUserId,
+            PerformedByUserName   = performedByUserName
         });
 
         await db.SaveChangesAsync();
         _feed.Notify(new TransactionDto(0, TransactionType.Cut, playerName, player.Id, null, teamAbbr, teamId, null, isPostJune1 ? "Post-June 1 cut" : "Standard cut", DateTime.UtcNow));
     }
 
-    public async Task SignFreeAgentAsync(int playerId, int teamId, int year, ContractInput input)
+    public async Task SignFreeAgentAsync(int playerId, int teamId, int year, ContractInput input,
+        int? performedByUserId = null, string? performedByUserName = null)
     {
         using var db = await _dbFactory.CreateDbContextAsync();
 
@@ -190,18 +194,21 @@ public class RosterService
 
         db.Transactions.Add(new Transaction
         {
-            Type       = TransactionType.Signed,
-            PlayerId   = player.Id,
-            TeamId     = teamId,
-            Details    = details,
-            OccurredAt = DateTime.UtcNow
+            Type                  = TransactionType.Signed,
+            PlayerId              = player.Id,
+            TeamId                = teamId,
+            Details               = details,
+            OccurredAt            = DateTime.UtcNow,
+            PerformedByUserId     = performedByUserId,
+            PerformedByUserName   = performedByUserName
         });
 
         await db.SaveChangesAsync();
         _feed.Notify(new TransactionDto(0, TransactionType.Signed, playerName, player.Id, null, team?.Abbreviation, teamId, null, details, DateTime.UtcNow));
     }
 
-    public async Task ExtendPlayerAsync(int playerId, int teamId, int year, ContractInput input)
+    public async Task ExtendPlayerAsync(int playerId, int teamId, int year, ContractInput input,
+        int? performedByUserId = null, string? performedByUserName = null)
     {
         using var db = await _dbFactory.CreateDbContextAsync();
 
@@ -255,11 +262,13 @@ public class RosterService
 
         db.Transactions.Add(new Transaction
         {
-            Type       = TransactionType.Extended,
-            PlayerId   = player.Id,
-            TeamId     = teamId,
-            Details    = details,
-            OccurredAt = DateTime.UtcNow
+            Type                  = TransactionType.Extended,
+            PlayerId              = player.Id,
+            TeamId                = teamId,
+            Details               = details,
+            OccurredAt            = DateTime.UtcNow,
+            PerformedByUserId     = performedByUserId,
+            PerformedByUserName   = performedByUserName
         });
 
         await db.SaveChangesAsync();
@@ -269,7 +278,8 @@ public class RosterService
     public async Task ExecuteTradeAsync(
         int teamAId, IEnumerable<int> teamAPlayerIds, IEnumerable<int> teamAPickIds,
         int teamBId, IEnumerable<int> teamBPlayerIds, IEnumerable<int> teamBPickIds,
-        int year)
+        int year,
+        int? performedByUserId = null, string? performedByUserName = null)
     {
         using var db = await _dbFactory.CreateDbContextAsync();
 
@@ -295,7 +305,7 @@ public class RosterService
             var player = players.FirstOrDefault(p => p.Id == playerId);
             if (player == null || player.TeamId != teamAId) continue;
             MovePlayer(player, teamBId, year);
-            db.Transactions.Add(new Transaction { Type = TransactionType.Traded, PlayerId = player.Id, TeamId = teamAId, ToTeamId = teamBId, OccurredAt = DateTime.UtcNow });
+            db.Transactions.Add(new Transaction { Type = TransactionType.Traded, PlayerId = player.Id, TeamId = teamAId, ToTeamId = teamBId, OccurredAt = DateTime.UtcNow, PerformedByUserId = performedByUserId, PerformedByUserName = performedByUserName });
             notifications.Add(new TransactionDto(0, TransactionType.Traded, player.FullName, player.Id, null, teamA?.Abbreviation, teamAId, teamB?.Abbreviation, null, DateTime.UtcNow));
         }
 
@@ -304,7 +314,7 @@ public class RosterService
             var player = players.FirstOrDefault(p => p.Id == playerId);
             if (player == null || player.TeamId != teamBId) continue;
             MovePlayer(player, teamAId, year);
-            db.Transactions.Add(new Transaction { Type = TransactionType.Traded, PlayerId = player.Id, TeamId = teamBId, ToTeamId = teamAId, OccurredAt = DateTime.UtcNow });
+            db.Transactions.Add(new Transaction { Type = TransactionType.Traded, PlayerId = player.Id, TeamId = teamBId, ToTeamId = teamAId, OccurredAt = DateTime.UtcNow, PerformedByUserId = performedByUserId, PerformedByUserName = performedByUserName });
             notifications.Add(new TransactionDto(0, TransactionType.Traded, player.FullName, player.Id, null, teamB?.Abbreviation, teamBId, teamA?.Abbreviation, null, DateTime.UtcNow));
         }
 
@@ -313,7 +323,7 @@ public class RosterService
             var pick = picks.FirstOrDefault(dp => dp.Id == pickId);
             if (pick == null || pick.CurrentTeamId != teamAId) continue;
             pick.CurrentTeamId = teamBId;
-            db.Transactions.Add(new Transaction { Type = TransactionType.Traded, DraftPickId = pick.Id, TeamId = teamAId, ToTeamId = teamBId, Details = pick.Label, OccurredAt = DateTime.UtcNow });
+            db.Transactions.Add(new Transaction { Type = TransactionType.Traded, DraftPickId = pick.Id, TeamId = teamAId, ToTeamId = teamBId, Details = pick.Label, OccurredAt = DateTime.UtcNow, PerformedByUserId = performedByUserId, PerformedByUserName = performedByUserName });
             notifications.Add(new TransactionDto(0, TransactionType.Traded, pick.Label, null, pick.Id, teamA?.Abbreviation, teamAId, teamB?.Abbreviation, pick.Label, DateTime.UtcNow));
         }
 
@@ -322,7 +332,7 @@ public class RosterService
             var pick = picks.FirstOrDefault(dp => dp.Id == pickId);
             if (pick == null || pick.CurrentTeamId != teamBId) continue;
             pick.CurrentTeamId = teamAId;
-            db.Transactions.Add(new Transaction { Type = TransactionType.Traded, DraftPickId = pick.Id, TeamId = teamBId, ToTeamId = teamAId, Details = pick.Label, OccurredAt = DateTime.UtcNow });
+            db.Transactions.Add(new Transaction { Type = TransactionType.Traded, DraftPickId = pick.Id, TeamId = teamBId, ToTeamId = teamAId, Details = pick.Label, OccurredAt = DateTime.UtcNow, PerformedByUserId = performedByUserId, PerformedByUserName = performedByUserName });
             notifications.Add(new TransactionDto(0, TransactionType.Traded, pick.Label, null, pick.Id, teamB?.Abbreviation, teamBId, teamA?.Abbreviation, pick.Label, DateTime.UtcNow));
         }
 

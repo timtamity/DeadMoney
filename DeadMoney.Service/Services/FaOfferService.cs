@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeadMoney.Service.Services;
 
+public record FaAcceptResult(bool Success, string? Error);
+
 public record FaHeatDto(int PlayerId, int OfferCount, decimal MinApyM, decimal MaxApyM, decimal AvgApyM)
 {
     public string HeatClass => OfferCount switch
@@ -44,10 +46,12 @@ public record FaHeatDto(int PlayerId, int OfferCount, decimal MinApyM, decimal M
 public class FaOfferService
 {
     private readonly IDbContextFactory<DeadMoneyDbContext> _dbFactory;
+    private readonly RosterService _roster;
 
-    public FaOfferService(IDbContextFactory<DeadMoneyDbContext> dbFactory)
+    public FaOfferService(IDbContextFactory<DeadMoneyDbContext> dbFactory, RosterService roster)
     {
         _dbFactory = dbFactory;
+        _roster    = roster;
     }
 
     public async Task<FaOffer> SubmitOrUpdateAsync(int teamId, int playerId, int years, decimal totalValueM, decimal guaranteedM)
@@ -144,5 +148,93 @@ public class FaOfferService
         using var db = await _dbFactory.CreateDbContextAsync();
         return await db.FaOffers
             .FirstOrDefaultAsync(o => o.TeamId == teamId && o.PlayerId == playerId && o.Status == FaOfferStatus.Active);
+    }
+
+    public async Task<List<FaOffer>> GetAllActiveAsync()
+    {
+        using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.FaOffers
+            .Include(o => o.Player).ThenInclude(p => p!.Position)
+            .Include(o => o.Team)
+            .Where(o => o.Status == FaOfferStatus.Active)
+            .OrderByDescending(o => o.SubmittedAt)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<List<FaOffer>> GetActiveForPositionsAsync(IEnumerable<string> positionCodes)
+    {
+        using var db = await _dbFactory.CreateDbContextAsync();
+        var codes = positionCodes.ToList();
+        return await db.FaOffers
+            .Include(o => o.Player).ThenInclude(p => p!.Position)
+            .Include(o => o.Team)
+            .Where(o => o.Status == FaOfferStatus.Active
+                        && o.Player != null && codes.Contains(o.Player.Position!.Code))
+            .OrderByDescending(o => o.SubmittedAt)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<FaAcceptResult> AcceptOfferAsync(int offerId, int year,
+        int? performedByUserId = null, string? performedByUserName = null)
+    {
+        using var db = await _dbFactory.CreateDbContextAsync();
+
+        var offer = await db.FaOffers
+            .Include(o => o.Player)
+            .FirstOrDefaultAsync(o => o.Id == offerId && o.Status == FaOfferStatus.Active);
+
+        if (offer == null)
+            return new FaAcceptResult(false, "Offer not found or no longer active.");
+
+        if (offer.Player?.TeamId != null)
+            return new FaAcceptResult(false, "Player is no longer a free agent.");
+
+        // Accept this offer
+        offer.Status = FaOfferStatus.Accepted;
+
+        // Reject all other active offers for this player
+        var others = await db.FaOffers
+            .Where(o => o.PlayerId == offer.PlayerId && o.Status == FaOfferStatus.Active && o.Id != offerId)
+            .ToListAsync();
+        foreach (var other in others)
+            other.Status = FaOfferStatus.Rejected;
+
+        await db.SaveChangesAsync();
+
+        // Sign the player via RosterService (creates the contract + Signed transaction)
+        var input = new ContractInput(offer.Years, offer.TotalValueM, offer.GuaranteedM, 0m);
+        await _roster.SignFreeAgentAsync(offer.PlayerId, offer.TeamId, year, input, performedByUserId, performedByUserName);
+
+        return new FaAcceptResult(true, null);
+    }
+
+    public async Task RejectOfferAsync(int offerId,
+        int? performedByUserId = null, string? performedByUserName = null)
+    {
+        using var db = await _dbFactory.CreateDbContextAsync();
+
+        var offer = await db.FaOffers
+            .Include(o => o.Player)
+            .Include(o => o.Team)
+            .FirstOrDefaultAsync(o => o.Id == offerId && o.Status == FaOfferStatus.Active);
+
+        if (offer == null) return;
+
+        offer.Status = FaOfferStatus.Rejected;
+
+        db.Transactions.Add(new Transaction
+        {
+            Type                = TransactionType.FaOfferRejected,
+            PlayerId            = offer.PlayerId,
+            TeamId              = offer.TeamId,
+            Details             = $"FA offer rejected: {offer.Years}yr / ${offer.TotalValueM:F1}M",
+            OccurredAt          = DateTime.UtcNow,
+            PerformedByUserId   = performedByUserId,
+            PerformedByUserName = performedByUserName
+        });
+
+        await db.SaveChangesAsync();
     }
 }

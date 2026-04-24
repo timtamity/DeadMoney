@@ -16,4 +16,6 @@ public class Transaction
     public Team? ToTeam { get; set; }
     public string? Details { get; set; }
     public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
+    public int? PerformedByUserId { get; set; }
+    public string? PerformedByUserName { get; set; }
 }

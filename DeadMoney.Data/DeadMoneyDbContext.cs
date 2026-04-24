@@ -19,6 +19,7 @@ public class DeadMoneyDbContext : DbContext
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<DraftPick> DraftPicks => Set<DraftPick>();
     public DbSet<FaOffer> FaOffers => Set<FaOffer>();
+    public DbSet<ExtensionOffer> ExtensionOffers => Set<ExtensionOffer>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -160,6 +161,28 @@ public class DeadMoneyDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(o => o.TeamId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ExtensionOffer>(entity =>
+        {
+            entity.ToTable("ExtensionOffers", "League");
+            entity.HasIndex(o => new { o.PlayerId, o.Status });
+            entity.HasIndex(o => new { o.TeamId,   o.PlayerId });
+            entity.Property(o => o.TotalValueM).HasPrecision(18, 2);
+            entity.Property(o => o.AnnualValueM).HasPrecision(18, 2);
+            entity.Property(o => o.GuaranteedM).HasPrecision(18, 2);
+            entity.Property(o => o.SigningBonusM).HasPrecision(18, 2);
+            entity.Property(o => o.CounterTotalValueM).HasPrecision(18, 2);
+            entity.Property(o => o.CounterGuaranteedM).HasPrecision(18, 2);
+            entity.Property(o => o.CounterSigningBonusM).HasPrecision(18, 2);
+            entity.HasOne(o => o.Player)
+                  .WithMany()
+                  .HasForeignKey(o => o.PlayerId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(o => o.Team)
+                  .WithMany()
+                  .HasForeignKey(o => o.TeamId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // 4. Static Seeding
