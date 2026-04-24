@@ -1,0 +1,433 @@
+@page "/roster"
+@attribute [Authorize(Roles = "Admin, GM, Assistant GM, Commissioner")]
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject RosterService RosterSvc
+@inject ExtensionService ExtensionSvc
+@inject CapEngineService CapEngine
+@inject LeagueSettingsService LeagueSettingsSvc
+@inject NavigationManager Navigation
+
+<PageTitle>My Roster — Dead Money</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>
+            @if (selectedTeam != null)
+            {
+                <span>@selectedTeam.Abbreviation</span>
+                <span style="font-weight: 400; font-size: 1.1rem;"> @selectedTeam.City @selectedTeam.Nickname</span>
+            }
+            else
+            {
+                <span>My Roster</span>
+            }
+        </h1>
+    </div>
+    @if (isCommissionerOrAdmin && allTeams.Count > 0)
+    {
+        <div class="d-flex align-items-center gap-2">
+            <label class="t-label m-0">Team:</label>
+            <select class="form-select w-auto" @bind="selectedTeamId" @bind:after="OnTeamChanged">
+                <option value="0">— Select —</option>
+                @foreach (var t in allTeams)
+                {
+                    <option value="@t.Id">@t.Abbreviation — @t.City</option>
+                }
+            </select>
+        </div>
+    }
+</div>
+
+@if (!loaded)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading roster...
+    </div>
+}
+else if (selectedTeamId == 0)
+{
+    <div class="empty-state">
+        <i class="bi bi-flag"></i>
+        <p>Select a team to view their roster.</p>
+    </div>
+}
+else
+{
+    @* Cap Summary *@
+    <div class="stats-row mb-4">
+        <div class="stat-card">
+            <div class="stat-label">@currentYear Cap Hit</div>
+            <div class="stat-value gold">@FormatMoney(capHit)</div>
+            <div class="cap-bar-wrap mt-2">
+                <div class="cap-bar-fill @CapBarClass" style="width: @(CapPct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+            </div>
+            <div style="font-size:0.7rem;color:var(--dm-text-muted);margin-top:3px;">@CapPct.ToString("F0")% used</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Cap Space</div>
+            <div class="stat-value @(CapSpace < 0 ? "red" : "green")">@FormatMoney(CapSpace)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Carryover</div>
+            <div class="stat-value green">@FormatMoney(selectedTeam?.CarryoverCap ?? 0m)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Roster Size</div>
+            <div class="stat-value">@roster.Count</div>
+        </div>
+    </div>
+
+    @if (!roster.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <p>No players on roster.</p>
+        </div>
+    }
+    else
+    {
+        <div class="bento-card">
+            <div class="table-responsive">
+                <table class="dm-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Pos</th>
+                            <th class="text-end">Cap Hit</th>
+                            <th class="d-none d-sm-table-cell text-end">Yrs Left</th>
+                            <th class="d-none d-md-table-cell text-end">Guaranteed</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in roster)
+                        {
+                            var pid = row.Player.Id;
+                            <tr>
+                                <td>
+                                    <a class="t-name" href="/players/@pid" @onclick:stopPropagation="true">
+                                        @row.Player.FirstName @row.Player.LastName
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="@PosBadgeClass(row.Player.Position?.Code)">
+                                        @(row.Player.Position?.Code ?? "—")
+                                    </span>
+                                </td>
+                                <td class="text-end t-money">@(row.CapHit > 0 ? FormatMoney(row.CapHit) : "—")</td>
+                                <td class="d-none d-sm-table-cell text-end t-sub">
+                                    @(row.YearsLeft > 0 ? $"{row.YearsLeft}" : @"Exp")
+                                </td>
+                                <td class="d-none d-md-table-cell text-end t-sub">
+                                    @(row.GuaranteedThisYear > 0 ? FormatMoney(row.GuaranteedThisYear) : "—")
+                                </td>
+                                <td class="text-end">
+                                    @if (cutPlayerId != pid && extendPlayerId != pid)
+                                    {
+                                        <div class="d-flex gap-2 justify-content-end">
+                                            @if (row.YearsLeft > 0)
+                                            {
+                                                <button class="dm-btn-ghost dm-btn-sm"
+                                                        disabled="@actionPending"
+                                                        @onclick="@(() => OpenExtend(row))">
+                                                    Extend
+                                                </button>
+                                            }
+                                            <button class="dm-btn-ghost dm-btn-sm t-danger"
+                                                    disabled="@actionPending"
+                                                    @onclick="@(() => OpenCut(row))">
+                                                Cut
+                                            </button>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+
+                            @* Cut confirmation panel *@
+                            @if (cutPlayerId == pid)
+                            {
+                                <tr class="void-row">
+                                    <td colspan="6">
+                                        <div class="p-3">
+                                            <div class="t-bright mb-2">Cut @row.Player.FirstName @row.Player.LastName?</div>
+                                            @if (cutSimResult != null)
+                                            {
+                                                <div class="d-flex gap-3 flex-wrap mb-3">
+                                                    <span class="t-meta">Dead money: <span class="t-danger">@FormatMoney(cutSimResult.DeadMoneyCurrent)</span></span>
+                                                    @if (cutSimResult.DeadMoneyFuture > 0)
+                                                    {
+                                                        <span class="t-meta">Future dead: <span class="t-danger">@FormatMoney(cutSimResult.DeadMoneyFuture)</span></span>
+                                                    }
+                                                    <span class="t-meta">Cap savings: <span class="t-success">@FormatMoney(cutSimResult.CapSavings)</span></span>
+                                                </div>
+                                            }
+                                            <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
+                                                <label class="d-flex align-items-center gap-2 t-label">
+                                                    <input type="checkbox" @bind="isPostJune1" />
+                                                    Post-June 1
+                                                </label>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="dm-btn dm-btn-sm"
+                                                        style="background:var(--dm-danger);border-color:var(--dm-danger);"
+                                                        disabled="@actionPending"
+                                                        @onclick="ConfirmCutAsync">
+                                                    @if (actionPending) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                                    Confirm Cut
+                                                </button>
+                                                <button class="dm-btn-ghost dm-btn-sm" @onclick="CancelAction">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+
+                            @* Extend form panel *@
+                            @if (extendPlayerId == pid)
+                            {
+                                <tr class="void-row">
+                                    <td colspan="6">
+                                        <div class="p-3">
+                                            <div class="t-bright mb-3">Offer Extension — @row.Player.FirstName @row.Player.LastName</div>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6 col-md-3">
+                                                    <label class="t-label">Years</label>
+                                                    <input type="number" class="form-control form-control-sm"
+                                                           min="1" max="10" @bind="extYears" />
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <label class="t-label">Total Value ($M)</label>
+                                                    <input type="number" class="form-control form-control-sm"
+                                                           step="0.1" min="0" @bind="extTotalM"
+                                                           @bind:after="RecalcApy" />
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <label class="t-label">Guaranteed ($M)</label>
+                                                    <input type="number" class="form-control form-control-sm"
+                                                           step="0.1" min="0" @bind="extGtdM" />
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <label class="t-label">Signing Bonus ($M)</label>
+                                                    <input type="number" class="form-control form-control-sm"
+                                                           step="0.1" min="0" @bind="extSbM" />
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="t-label">Notes (optional)</label>
+                                                    <textarea class="form-control form-control-sm" rows="2"
+                                                              @bind="extNotes"></textarea>
+                                                </div>
+                                            </div>
+                                            @if (extYears > 0 && extTotalM > 0)
+                                            {
+                                                <div class="t-meta mb-3">
+                                                    APY: $@((extTotalM / extYears).ToString("F1"))M/yr
+                                                </div>
+                                            }
+                                            <div class="d-flex gap-2">
+                                                <button class="dm-btn dm-btn-sm"
+                                                        disabled="@(actionPending || extYears <= 0 || extTotalM <= 0)"
+                                                        @onclick="ConfirmExtendAsync">
+                                                    @if (actionPending) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                                    Submit Offer
+                                                </button>
+                                                <button class="dm-btn-ghost dm-btn-sm" @onclick="CancelAction">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(statusIsError ? "alert-danger" : "alert-success") mt-3">
+            @statusMessage
+        </div>
+    }
+}
+
+@code {
+    private record RosterRow(Player Player, decimal CapHit, int YearsLeft, decimal GuaranteedThisYear, Contract? Contract);
+
+    private bool loaded;
+    private bool actionPending;
+    private bool isCommissionerOrAdmin;
+
+    private List<Team> allTeams = new();
+    private Team? selectedTeam;
+    private int selectedTeamId;
+
+    private List<RosterRow> roster = new();
+    private int currentYear;
+    private decimal salaryCap;
+    private decimal capHit;
+
+    private decimal CapSpace  => salaryCap + (selectedTeam?.CarryoverCap ?? 0m) - capHit;
+    private double  CapPct    => (salaryCap + (selectedTeam?.CarryoverCap ?? 0m)) > 0
+                                    ? Math.Min((double)capHit / (double)(salaryCap + (selectedTeam?.CarryoverCap ?? 0m)) * 100.0, 100.0)
+                                    : 0.0;
+    private string  CapBarClass => CapPct >= 100 ? "red" : CapPct >= 85 ? "yellow" : "green";
+
+    // Action state
+    private int? cutPlayerId;
+    private int? extendPlayerId;
+    private bool isPostJune1;
+    private TransactionResult? cutSimResult;
+
+    private int extYears = 1;
+    private decimal extTotalM;
+    private decimal extGtdM;
+    private decimal extSbM;
+    private string? extNotes;
+
+    private string? statusMessage;
+    private bool statusIsError;
+
+    private int? myUserId;
+    private string? myDisplayName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+
+        isCommissionerOrAdmin = user.IsInRole("Admin") || user.IsInRole("Commissioner");
+        if (int.TryParse(user.FindFirst("UserId")?.Value, out var uid)) myUserId = uid;
+        myDisplayName = user.FindFirst("DisplayName")?.Value;
+
+        var setting = await LeagueSettingsSvc.GetCurrentAsync();
+        currentYear = setting?.Year ?? DateTime.UtcNow.Year;
+        salaryCap   = setting?.SalaryCap ?? 279_200_000m;
+
+        if (isCommissionerOrAdmin)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            allTeams = await db.Teams.OrderBy(t => t.Abbreviation).AsNoTracking().ToListAsync();
+        }
+        else
+        {
+            if (int.TryParse(user.FindFirst("TeamId")?.Value, out var tid))
+            {
+                selectedTeamId = tid;
+                await LoadRosterAsync();
+            }
+        }
+
+        loaded = true;
+    }
+
+    private async Task OnTeamChanged()
+    {
+        CancelAction();
+        statusMessage = null;
+        await LoadRosterAsync();
+    }
+
+    private async Task LoadRosterAsync()
+    {
+        if (selectedTeamId == 0) { selectedTeam = null; roster = new(); capHit = 0; return; }
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        selectedTeam = await db.Teams.FindAsync(selectedTeamId);
+
+        var players = await db.Players
+            .Where(p => p.TeamId == selectedTeamId)
+            .Include(p => p.Position)
+            .Include(p => p.Contracts).ThenInclude(c => c.ContractYears)
+            .AsNoTracking()
+            .ToListAsync();
+
+        roster = players.Select(p =>
+        {
+            var contract      = p.Contracts.FirstOrDefault(c => c.IsActive);
+            var cy            = contract?.ContractYears.FirstOrDefault(y => y.Year == currentYear);
+            var hit           = cy?.CapNumber ?? 0m;
+            var yearsLeft     = contract?.ContractYears.Count(y => y.Year >= currentYear && !y.IsVoidYear) ?? 0;
+            var gtd           = cy?.GuaranteedAmount ?? 0m;
+            return new RosterRow(p, hit, yearsLeft, gtd, contract);
+        })
+        .OrderBy(r => r.Player.Position?.DisplayOrder ?? 99)
+        .ThenByDescending(r => r.CapHit)
+        .ToList();
+
+        capHit = roster.Sum(r => r.CapHit);
+    }
+
+    private void OpenCut(RosterRow row)
+    {
+        CancelAction();
+        cutPlayerId   = row.Player.Id;
+        isPostJune1   = false;
+        cutSimResult  = row.Contract != null
+            ? CapEngine.SimulateCut(row.Contract, currentYear, isPostJune1)
+            : null;
+    }
+
+    private void OpenExtend(RosterRow row)
+    {
+        CancelAction();
+        extendPlayerId = row.Player.Id;
+        extYears       = 1;
+        extTotalM      = 0;
+        extGtdM        = 0;
+        extSbM         = 0;
+        extNotes       = null;
+    }
+
+    private void CancelAction()
+    {
+        cutPlayerId    = null;
+        extendPlayerId = null;
+        cutSimResult   = null;
+    }
+
+    private void RecalcApy() { } // triggers re-render for APY display
+
+    private async Task ConfirmCutAsync()
+    {
+        if (cutPlayerId == null) return;
+        actionPending = true;
+        statusMessage = null;
+
+        var row = roster.FirstOrDefault(r => r.Player.Id == cutPlayerId);
+        await RosterSvc.CutPlayerAsync(cutPlayerId.Value, selectedTeamId, currentYear, isPostJune1, myUserId, myDisplayName);
+
+        SetStatus($"{row?.Player.FirstName} {row?.Player.LastName} has been cut.", false);
+        CancelAction();
+        await LoadRosterAsync();
+        actionPending = false;
+    }
+
+    private async Task ConfirmExtendAsync()
+    {
+        if (extendPlayerId == null) return;
+        actionPending = true;
+        statusMessage = null;
+
+        var apy = extYears > 0 ? extTotalM / extYears : 0m;
+        var result = await ExtensionSvc.SubmitAsync(
+            extendPlayerId.Value, selectedTeamId, extYears, extTotalM, apy,
+            extGtdM, extSbM, extNotes, myUserId, myDisplayName);
+
+        if (result.Success)
+            SetStatus("Extension offer submitted — pending Agent/Commissioner review.", false);
+        else
+            SetStatus(result.Error ?? "Failed to submit offer.", true);
+
+        CancelAction();
+        actionPending = false;
+    }
+
+    private void SetStatus(string msg, bool isError)
+    {
+        statusMessage = msg;
+        statusIsError = isError;
+    }
+}
