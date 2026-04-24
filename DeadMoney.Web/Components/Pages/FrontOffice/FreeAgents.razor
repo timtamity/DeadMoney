@@ -108,7 +108,7 @@ else
                                 var myOffer = myOffers.TryGetValue(p.Id, out var mo) ? mo : null;
                                 @if (myOffer != null)
                                 {
-                                    <span class="t-tiny" style="color:var(--dm-gold);">Offered</span>
+                                    <span class="t-tiny t-gold">Offered</span>
                                 }
                             }
                             <button class="dm-btn-ghost dm-btn-sm ms-1" @onclick:stopPropagation="true"
@@ -135,7 +135,7 @@ else
             <button @onclick="@(async () => await SetPage(totalPages))" disabled="@(currentPage == totalPages)">»</button>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span style="font-size: 0.8rem; color: var(--dm-text-muted);">Per page:</span>
+            <span class="t-label">Per page:</span>
             <select class="form-select form-select-sm w-auto" @bind="pageSize" @bind:after="OnPageSizeChangedAsync">
                 <option value="25">25</option>
                 <option value="50">50</option>

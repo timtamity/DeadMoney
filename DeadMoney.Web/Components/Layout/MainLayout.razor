@@ -26,7 +26,7 @@
                     <Authorized>
                         <AuthorizeView Roles="Admin" Context="adminCtx">
                             <Authorized>
-                                <span class="commish-indicator d-none d-sm-inline" style="color: var(--dm-danger);">
+                                <span class="commish-indicator d-none d-sm-inline text-danger">
                                     <i class="bi bi-shield-fill"></i> ADMIN
                                 </span>
                             </Authorized>
@@ -41,7 +41,7 @@
                         <span class="welcome-text d-none d-sm-inline me-1">
                             @(context.User.FindFirst("DisplayName")?.Value ?? context.User.Identity?.Name)
                         </span>
-                        <form action="logout" method="post" style="display:inline">
+                        <form action="logout" method="post" class="d-inline">
                             <AntiforgeryToken />
                             <button type="submit" class="dm-btn-outline dm-btn-sm">
                                 <i class="bi bi-box-arrow-right"></i>

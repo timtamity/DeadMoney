@@ -22,12 +22,12 @@ else
     <div class="page-header">
         <div>
             <h1>
-                <a href="/players/@contract.PlayerId" style="color: var(--dm-text-bright);">
+                <a href="/players/@contract.PlayerId">
                     @contract.Player?.FirstName @contract.Player?.LastName
                 </a>
             </h1>
             <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
-                <span style="color: var(--dm-text-muted); font-size: 0.875rem;">
+                <span class="t-sub">
                     @(contract.ContractYears.FirstOrDefault()?.Team?.Abbreviation ?? contract.Player?.Team?.Abbreviation ?? "FA")
                 </span>
                 @if (!contract.IsActive)
@@ -61,7 +61,7 @@ else
         </div>
         <div class="stat-card">
             <div class="stat-label">Avg Per Year</div>
-            <div class="stat-value" style="font-size: 1.1rem;">
+            <div class="stat-value stat-sm">
                 @{
                     var realYears = contract.ContractYears.Count(y => !y.IsVoidYear);
                     var avg = realYears > 0 ? contract.TotalValue / realYears : 0;
@@ -90,29 +90,29 @@ else
                 <tr>
                     <th>Year</th>
                     <th>Team</th>
-                    <th style="text-align:right;">Base</th>
-                    <th style="text-align:right;" class="d-none d-sm-table-cell">SB Pro</th>
-                    <th style="text-align:right;" class="d-none d-md-table-cell">Roster Bonus</th>
-                    <th style="text-align:right;" class="d-none d-lg-table-cell">Option Pro</th>
-                    <th style="text-align:right;" class="d-none d-lg-table-cell">Guaranteed</th>
-                    <th style="text-align:right;">Cap Hit</th>
-                    <th style="text-align:center;" class="d-none d-sm-table-cell">Void</th>
+                    <th class="text-end">Base</th>
+                    <th class="text-end d-none d-sm-table-cell">SB Pro</th>
+                    <th class="text-end d-none d-md-table-cell">Roster Bonus</th>
+                    <th class="text-end d-none d-lg-table-cell">Option Pro</th>
+                    <th class="text-end d-none d-lg-table-cell">Guaranteed</th>
+                    <th class="text-end">Cap Hit</th>
+                    <th class="text-center d-none d-sm-table-cell">Void</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var y in contract.ContractYears.OrderBy(cy => cy.Year))
                 {
-                    <tr style="@(y.IsVoidYear ? "opacity: 0.5;" : "")">
-                        <td style="font-weight: 700; color: var(--dm-text-bright);">@y.Year</td>
-                        <td style="color: var(--dm-text-muted); font-size: 0.85rem;">@(y.Team?.Abbreviation ?? "—")</td>
-                        <td style="text-align:right;">@FormatMoney(y.BaseSalary)</td>
-                        <td style="text-align:right;" class="d-none d-sm-table-cell">@FormatMoney(y.SigningBonusProration)</td>
-                        <td style="text-align:right;" class="d-none d-md-table-cell">@FormatMoney(y.RosterBonus)</td>
-                        <td style="text-align:right;" class="d-none d-lg-table-cell">@FormatMoney(y.OptionBonusProration)</td>
-                        <td style="text-align:right;" class="d-none d-lg-table-cell">@FormatMoney(y.GuaranteedAmount)</td>
-                        <td style="text-align:right; font-weight: 700; color: var(--dm-gold);">@FormatMoney(y.CapNumber)</td>
-                        <td style="text-align:center;" class="d-none d-sm-table-cell">
-                            @if (y.IsVoidYear) { <span style="color: var(--dm-text-muted); font-size: 0.8rem;">Void</span> }
+                    <tr class="@(y.IsVoidYear ? "void-row" : "")">
+                        <td class="t-bright">@y.Year</td>
+                        <td class="t-meta">@(y.Team?.Abbreviation ?? "—")</td>
+                        <td class="text-end">@FormatMoney(y.BaseSalary)</td>
+                        <td class="text-end d-none d-sm-table-cell">@FormatMoney(y.SigningBonusProration)</td>
+                        <td class="text-end d-none d-md-table-cell">@FormatMoney(y.RosterBonus)</td>
+                        <td class="text-end d-none d-lg-table-cell">@FormatMoney(y.OptionBonusProration)</td>
+                        <td class="text-end d-none d-lg-table-cell">@FormatMoney(y.GuaranteedAmount)</td>
+                        <td class="text-end t-money">@FormatMoney(y.CapNumber)</td>
+                        <td class="text-center d-none d-sm-table-cell">
+                            @if (y.IsVoidYear) { <span class="t-label">Void</span> }
                         </td>
                     </tr>
                 }

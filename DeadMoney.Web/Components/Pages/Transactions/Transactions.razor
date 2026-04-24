@@ -107,7 +107,7 @@ else
                             }
                             else
                             {
-                                <span class="t-name" style="color: var(--dm-gold);">@(t.DraftPick?.Label ?? t.Details ?? "Pick")</span>
+                                <span class="t-name t-gold">@(t.DraftPick?.Label ?? t.Details ?? "Pick")</span>
                             }
                         </td>
                         <td>
@@ -117,7 +117,7 @@ else
                             }
                             else
                             {
-                                <span class="pos-badge" style="background:rgba(201,163,65,0.15);color:var(--dm-gold);">PICK</span>
+                                <span class="pos-badge pos-pick">PICK</span>
                             }
                         </td>
                         <td>
@@ -126,7 +126,7 @@ else
                         <td class="t-sub">
                             @if (t.ToTeam != null)
                             {
-                                @t.Team?.Abbreviation <span style="color: var(--dm-text-muted);">→</span> @t.ToTeam.Abbreviation
+                                @t.Team?.Abbreviation <span class="t-sub">→</span> @t.ToTeam.Abbreviation
                             }
                             else
                             {

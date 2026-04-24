@@ -39,6 +39,8 @@ h1, h2, h3, h4, h5, h6 {
 
 a { color: var(--dm-accent); text-decoration: none; }
 a:hover { color: var(--dm-gold); }
+h1 a, .t-name a, .stat-value.gold a { color: inherit; }
+.stat-value.gold a:hover { opacity: 0.8; }
 
 /* --- Buttons --- */
 .dm-btn-primary {
@@ -254,9 +256,11 @@ a:hover { color: var(--dm-gold); }
 }
 .stat-card .stat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--dm-text-muted); }
 .stat-card .stat-value { font-size: 1.4rem; font-weight: 800; color: var(--dm-text-bright); line-height: 1.2; }
-.stat-card .stat-value.gold  { color: var(--dm-gold); }
-.stat-card .stat-value.green { color: var(--dm-success); }
-.stat-card .stat-value.red   { color: var(--dm-danger); }
+.stat-card .stat-value.gold    { color: var(--dm-gold); }
+.stat-card .stat-value.green   { color: var(--dm-success); }
+.stat-card .stat-value.red     { color: var(--dm-danger); }
+.stat-card .stat-value.stat-sm { font-size: 1.1rem; }
+.stat-card .stat-value.stat-xs { font-size: 1rem; }
 .stat-card .stat-sub { font-size: 0.78rem; color: var(--dm-text-muted); }
 
 /* --- Cap Bar --- */
@@ -288,7 +292,9 @@ a:hover { color: var(--dm-gold); }
 .pos-badge.pos-dl { background: rgba(248, 81, 73, 0.15);  color: #f85149; border-color: rgba(248, 81, 73, 0.3); }
 .pos-badge.pos-lb { background: rgba(210, 153, 34, 0.15); color: #d29922; border-color: rgba(210, 153, 34, 0.3); }
 .pos-badge.pos-db { background: rgba(88, 166, 255, 0.12); color: var(--dm-accent); border-color: rgba(88, 166, 255, 0.25); }
-.pos-badge.pos-st { background: rgba(120, 135, 150, 0.12); color: #7a8899; border-color: rgba(120, 135, 150, 0.25); }
+.pos-badge.pos-st   { background: rgba(120, 135, 150, 0.12); color: #7a8899; border-color: rgba(120, 135, 150, 0.25); }
+.pos-badge.pos-pick   { background: rgba(201, 163, 65, 0.15); color: var(--dm-gold);   border-color: rgba(201, 163, 65, 0.3); }
+.pos-badge.pos-danger { background: rgba(248, 81,  73, 0.10); color: var(--dm-danger); border-color: rgba(248, 81, 73, 0.3); }
 
 .conf-badge {
     display: inline-block; padding: 2px 7px; border-radius: var(--dm-radius-xs);
@@ -424,7 +430,13 @@ a:hover { color: var(--dm-gold); }
 .t-tiny   { color: var(--dm-text-muted); font-size: 0.78rem; }
 .t-jersey { color: var(--dm-text-muted); font-size: 0.78rem; margin-left: 6px; }
 .t-money  { color: var(--dm-gold); font-weight: 700; }
-.t-warn   { color: var(--dm-warning); }
+.t-bright   { color: var(--dm-text-bright); font-weight: 700; }
+.t-label    { color: var(--dm-text-muted); font-size: 0.8rem; }
+.t-meta     { color: var(--dm-text-muted); font-size: 0.85rem; }
+.t-warn     { color: var(--dm-warning); }
+.t-gold     { color: var(--dm-gold); }
+.t-success  { color: var(--dm-success); }
+.t-danger   { color: var(--dm-danger); }
 
 /* --- Section subheading (h2 inside page content) --- */
 .section-title      { font-size: 1.1rem; font-weight: 700; color: var(--dm-text-bright); margin-bottom: 1rem; }
@@ -590,6 +602,9 @@ a:hover { color: var(--dm-gold); }
 /* Clickable table rows — use instead of inline style="cursor:pointer;" */
 .row-link { cursor: pointer; }
 
+/* Voided/forfeited rows (contract void years, forfeited picks) */
+.void-row { opacity: 0.5; }
+
 /* Semantic colour helpers */
 .text-gold    { color: var(--dm-gold) !important; }
 .text-muted   { color: var(--dm-text-muted) !important; }
@@ -611,3 +626,9 @@ a:hover { color: var(--dm-gold); }
 ::-webkit-scrollbar-track { background: var(--dm-bg-main); }
 ::-webkit-scrollbar-thumb { background: var(--dm-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--dm-text-muted); }
+
+/* ============================================
+   ADMIN / UTILITY
+   ============================================ */
+.log-container { max-height: 600px; overflow-y: auto; background: #0f111a; padding: 1rem; border-radius: 8px; }
+.log-entry     { font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; }

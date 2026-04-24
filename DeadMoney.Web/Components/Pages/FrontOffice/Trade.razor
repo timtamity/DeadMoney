@@ -71,7 +71,7 @@ else
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h2 class="section-title mb-0">
                             @teamA?.Abbreviation
-                            <span style="font-weight: 400; font-size: 0.875rem; color: var(--dm-text-muted);">sends</span>
+                            <span class="section-title-meta">sends</span>
                         </h2>
                         <span class="t-tiny">@(selectedA.Count + selectedPicksA.Count) selected</span>
                     </div>
@@ -98,7 +98,7 @@ else
                                         <span class="@PosBadgeClass(row.Player.Position?.Code)">@(row.Player.Position?.Code ?? "—")</span>
                                         <span class="trade-player-name">@row.Player.FirstName @row.Player.LastName</span>
                                         <span class="trade-player-cap t-sub">@(row.CapHit > 0 ? FormatMoney(row.CapHit) : "—")</span>
-                                        <span class="t-sub" style="font-size:0.75rem;">@(row.YearsLeft > 0 ? $"{row.YearsLeft}yr" : "Exp")</span>
+                                        <span class="t-tiny">@(row.YearsLeft > 0 ? $"{row.YearsLeft}yr" : "Exp")</span>
                                     </label>
                                 }
                             </div>
@@ -117,7 +117,7 @@ else
                                         <span class="trade-pick-label">@pick.Label</span>
                                         @if (pick.OriginalTeamId != pick.CurrentTeamId)
                                         {
-                                            <span class="t-sub" style="font-size:0.75rem;">via @(pick.OriginalTeam?.Abbreviation)</span>
+                                            <span class="t-tiny">via @(pick.OriginalTeam?.Abbreviation)</span>
                                         }
                                     </label>
                                 }
@@ -132,7 +132,7 @@ else
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h2 class="section-title mb-0">
                             @teamB?.Abbreviation
-                            <span style="font-weight: 400; font-size: 0.875rem; color: var(--dm-text-muted);">sends</span>
+                            <span class="section-title-meta">sends</span>
                         </h2>
                         <span class="t-tiny">@(selectedB.Count + selectedPicksB.Count) selected</span>
                     </div>
@@ -159,7 +159,7 @@ else
                                         <span class="@PosBadgeClass(row.Player.Position?.Code)">@(row.Player.Position?.Code ?? "—")</span>
                                         <span class="trade-player-name">@row.Player.FirstName @row.Player.LastName</span>
                                         <span class="trade-player-cap t-sub">@(row.CapHit > 0 ? FormatMoney(row.CapHit) : "—")</span>
-                                        <span class="t-sub" style="font-size:0.75rem;">@(row.YearsLeft > 0 ? $"{row.YearsLeft}yr" : "Exp")</span>
+                                        <span class="t-tiny">@(row.YearsLeft > 0 ? $"{row.YearsLeft}yr" : "Exp")</span>
                                     </label>
                                 }
                             </div>
@@ -178,7 +178,7 @@ else
                                         <span class="trade-pick-label">@pick.Label</span>
                                         @if (pick.OriginalTeamId != pick.CurrentTeamId)
                                         {
-                                            <span class="t-sub" style="font-size:0.75rem;">via @(pick.OriginalTeam?.Abbreviation)</span>
+                                            <span class="t-tiny">via @(pick.OriginalTeam?.Abbreviation)</span>
                                         }
                                     </label>
                                 }
@@ -214,7 +214,7 @@ else
                         {
                             var pick = picksA.FirstOrDefault(p => p.Id == id);
                             <div class="trade-summary-player">
-                                <span class="pos-badge" style="background:rgba(201,163,65,0.15);color:var(--dm-gold);">PICK</span>
+                                <span class="pos-badge pos-pick">PICK</span>
                                 @pick?.Label
                             </div>
                         }
@@ -238,7 +238,7 @@ else
                         {
                             var pick = picksB.FirstOrDefault(p => p.Id == id);
                             <div class="trade-summary-player">
-                                <span class="pos-badge" style="background:rgba(201,163,65,0.15);color:var(--dm-gold);">PICK</span>
+                                <span class="pos-badge pos-pick">PICK</span>
                                 @pick?.Label
                             </div>
                         }

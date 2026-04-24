@@ -62,10 +62,10 @@ else
                 <tr>
                     <th class="sortable" @onclick="@(async () => await SortAndLoad("Player"))">Player @GetSortIndicator("Player")</th>
                     <th class="sortable" @onclick="@(async () => await SortAndLoad("Team"))">Team @GetSortIndicator("Team")</th>
-                    <th class="sortable" style="text-align:right;" @onclick="@(async () => await SortAndLoad("Value"))">Total Value @GetSortIndicator("Value")</th>
-                    <th style="text-align:right;" class="d-none d-md-table-cell">Guaranteed</th>
-                    <th style="text-align:right;" class="d-none d-lg-table-cell">Signing Bonus</th>
-                    <th style="text-align:center;" class="d-none d-sm-table-cell">Yrs</th>
+                    <th class="sortable text-end" @onclick="@(async () => await SortAndLoad("Value"))">Total Value @GetSortIndicator("Value")</th>
+                    <th class="text-end d-none d-md-table-cell">Guaranteed</th>
+                    <th class="text-end d-none d-lg-table-cell">Signing Bonus</th>
+                    <th class="text-center d-none d-sm-table-cell">Yrs</th>
                     <th></th>
                 </tr>
             </thead>
@@ -113,7 +113,7 @@ else
             <button @onclick="@(async () => await SetPage(totalPages))" disabled="@(currentPage == totalPages)">»</button>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span style="font-size: 0.8rem; color: var(--dm-text-muted);">Per page:</span>
+            <span class="t-label">Per page:</span>
             <select class="form-select form-select-sm w-auto" @bind="pageSize" @bind:after="OnPageSizeChangedAsync">
                 <option value="10">10</option>
                 <option value="25">25</option>

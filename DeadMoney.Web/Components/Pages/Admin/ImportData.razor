@@ -76,14 +76,14 @@
         <div class="col-md-7">
             <div class="bento-card h-100">
                 <h5 class="text-bright mb-3">System Log</h5>
-                <div class="log-container" style="max-height: 600px; overflow-y: auto; background: #0f111a; padding: 1rem; border-radius: 8px;">
+                <div class="log-container">
                     @if (!_logs.Any())
                     {
                         <div class="text-muted small italic">No sync operations performed yet...</div>
                     }
                     @foreach (var log in _logs)
                     {
-                        <div class="log-entry @(log.IsError ? "text-danger" : (log.IsDebug ? "text-warning" : "text-success")) mb-1" style="font-family: 'Courier New', Courier, monospace; font-size: 0.85rem;">
+                        <div class="log-entry @(log.IsError ? "text-danger" : (log.IsDebug ? "text-warning" : "text-success")) mb-1">
                             <span class="text-muted">[@log.Timestamp.ToString("HH:mm:ss")]</span> @log.Message
                         </div>
                     }

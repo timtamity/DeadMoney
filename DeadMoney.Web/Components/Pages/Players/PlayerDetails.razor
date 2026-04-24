@@ -35,14 +35,14 @@ else
                 <span class="@PosBadgeClass(player.Position?.Code)">@(player.Position?.Code ?? "—")</span>
                 @if (player.Team != null)
                 {
-                    <span style="color: var(--dm-text-muted); font-size: 0.875rem;">
+                    <span class="t-sub">
                         <i class="bi bi-flag-fill me-1"></i>
-                        <a href="/teams/@player.Team.Id" style="color: var(--dm-text-muted);">@player.Team.Abbreviation — @player.Team.City @player.Team.Name</a>
+                        <a href="/teams/@player.Team.Id" class="t-sub">@player.Team.Abbreviation — @player.Team.City @player.Team.Name</a>
                     </span>
                 }
                 else
                 {
-                    <span style="color: var(--dm-warning); font-size: 0.875rem;"><i class="bi bi-person-plus me-1"></i>Free Agent</span>
+                    <span class="t-warn t-sub"><i class="bi bi-person-plus me-1"></i>Free Agent</span>
                 }
             </div>
         </div>
@@ -54,7 +54,7 @@ else
         {
             <div class="stat-card">
                 <div class="stat-label">College</div>
-                <div class="stat-value" style="font-size: 1rem;">@player.College</div>
+                <div class="stat-value stat-xs">@player.College</div>
             </div>
         }
         @if (player.Age.HasValue)
@@ -68,7 +68,7 @@ else
         {
             <div class="stat-card">
                 <div class="stat-label">Draft</div>
-                <div class="stat-value" style="font-size: 1rem;">
+                <div class="stat-value stat-xs">
                     @player.DraftYear Rd @(player.DraftRound ?? 0) Pk @(player.DraftPick ?? 0)
                 </div>
             </div>
@@ -77,7 +77,7 @@ else
         {
             <div class="stat-card">
                 <div class="stat-label">Experience</div>
-                <div class="stat-value" style="font-size: 1rem;">@player.YearsExp yrs</div>
+                <div class="stat-value stat-xs">@player.YearsExp yrs</div>
             </div>
         }
     </div>
@@ -96,7 +96,7 @@ else
 
             @if (heat == null || heat.OfferCount == 0)
             {
-                <p class="t-sub" style="margin: 0;">No offers on file yet.</p>
+                <p class="t-sub m-0">No offers on file yet.</p>
             }
             else
             {
@@ -145,7 +145,7 @@ else
                                 </span>
                             }
                         </div>
-                        <button class="dm-btn-ghost dm-btn-sm" style="color:var(--dm-danger);"
+                        <button class="dm-btn-ghost dm-btn-sm t-danger"
                                 @onclick="WithdrawOfferAsync">
                             <i class="bi bi-x-circle me-1"></i>Withdraw
                         </button>
@@ -199,7 +199,7 @@ else
                     </div>
                     @if (!string.IsNullOrEmpty(offerMsg))
                     {
-                        <div class="t-sub mt-2" style="color: var(--dm-success);">@offerMsg</div>
+                        <div class="t-sub mt-2 t-success">@offerMsg</div>
                     }
                 }
 
@@ -212,9 +212,9 @@ else
                                 <tr>
                                     <th>Team</th>
                                     <th>Years</th>
-                                    <th style="text-align:right;">Total</th>
-                                    <th style="text-align:right;">APY</th>
-                                    <th style="text-align:right;">Gtd</th>
+                                    <th class="text-end">Total</th>
+                                    <th class="text-end">APY</th>
+                                    <th class="text-end">Gtd</th>
                                     <th class="text-end">Submitted</th>
                                 </tr>
                             </thead>
@@ -222,9 +222,9 @@ else
                                 @foreach (var o in allOffers)
                                 {
                                     <tr>
-                                        <td style="font-weight:600;color:var(--dm-text-bright);">@(o.Team?.Abbreviation ?? "—")</td>
+                                        <td class="t-name">@(o.Team?.Abbreviation ?? "—")</td>
                                         <td class="t-sub">@o.Years yr</td>
-                                        <td class="text-end" style="color:var(--dm-gold);font-weight:600;">$@o.TotalValueM.ToString("F1")M</td>
+                                        <td class="text-end t-money">$@o.TotalValueM.ToString("F1")M</td>
                                         <td class="text-end t-sub">$@o.AnnualValueM.ToString("F1")M/yr</td>
                                         <td class="text-end t-sub">$@o.GuaranteedM.ToString("F1")M</td>
                                         <td class="text-end t-sub">@RelativeTime(o.SubmittedAt)</td>
@@ -236,7 +236,7 @@ else
                 }
                 else if (isAdminOrCommish)
                 {
-                    <p class="t-sub mt-2" style="margin:0;">No offers submitted yet.</p>
+                    <p class="t-sub m-0">No offers submitted yet.</p>
                 }
             }
         </div>
@@ -282,15 +282,15 @@ else
                 <div class="stats-row">
                     <div class="stat-card">
                         <div class="stat-label">Total Value</div>
-                        <div class="stat-value gold" style="font-size: 1.1rem;">@FormatMoney(c.TotalValue)</div>
+                        <div class="stat-value gold stat-sm">@FormatMoney(c.TotalValue)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Guaranteed</div>
-                        <div class="stat-value" style="font-size: 1.1rem;">@FormatMoney(c.TotalGuaranteed)</div>
+                        <div class="stat-value stat-sm">@FormatMoney(c.TotalGuaranteed)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Signing Bonus</div>
-                        <div class="stat-value" style="font-size: 1.1rem;">@FormatMoney(c.SigningBonus)</div>
+                        <div class="stat-value stat-sm">@FormatMoney(c.SigningBonus)</div>
                     </div>
                 </div>
 
@@ -302,23 +302,23 @@ else
                                 <tr>
                                     <th>Year</th>
                                     <th>Team</th>
-                                    <th style="text-align:right;">Base</th>
-                                    <th style="text-align:right;">Cap Hit</th>
-                                    <th style="text-align:right;" class="d-none d-sm-table-cell">Guaranteed</th>
-                                    <th style="text-align:center;" class="d-none d-sm-table-cell">Void</th>
+                                    <th class="text-end">Base</th>
+                                    <th class="text-end">Cap Hit</th>
+                                    <th class="text-end d-none d-sm-table-cell">Guaranteed</th>
+                                    <th class="text-center d-none d-sm-table-cell">Void</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var y in c.ContractYears.OrderBy(cy => cy.Year))
                                 {
-                                    <tr style="@(y.IsVoidYear ? "opacity: 0.5;" : "")">
-                                        <td style="font-weight: 600; color: var(--dm-text-bright);">@y.Year</td>
-                                        <td style="color: var(--dm-text-muted); font-size: 0.85rem;">@(y.Team?.Abbreviation ?? "—")</td>
-                                        <td style="text-align:right;">@FormatMoney(y.BaseSalary)</td>
-                                        <td style="text-align:right; font-weight: 700; color: var(--dm-gold);">@FormatMoney(y.CapNumber)</td>
-                                        <td style="text-align:right;" class="d-none d-sm-table-cell">@FormatMoney(y.GuaranteedAmount)</td>
-                                        <td style="text-align:center;" class="d-none d-sm-table-cell">
-                                            @if (y.IsVoidYear) { <span style="color: var(--dm-text-muted);">Void</span> }
+                                    <tr class="@(y.IsVoidYear ? "void-row" : "")">
+                                        <td class="t-name">@y.Year</td>
+                                        <td class="t-meta">@(y.Team?.Abbreviation ?? "—")</td>
+                                        <td class="text-end">@FormatMoney(y.BaseSalary)</td>
+                                        <td class="text-end t-money">@FormatMoney(y.CapNumber)</td>
+                                        <td class="text-end d-none d-sm-table-cell">@FormatMoney(y.GuaranteedAmount)</td>
+                                        <td class="text-center d-none d-sm-table-cell">
+                                            @if (y.IsVoidYear) { <span class="t-label">Void</span> }
                                         </td>
                                     </tr>
                                 }

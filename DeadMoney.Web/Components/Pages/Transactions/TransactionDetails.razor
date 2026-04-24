@@ -28,13 +28,13 @@ else
                 </span>
                 @if (transaction.Player != null)
                 {
-                    <a href="/players/@transaction.PlayerId" style="color: var(--dm-text-bright);">
+                    <a href="/players/@transaction.PlayerId">
                         @transaction.Player.FirstName @transaction.Player.LastName
                     </a>
                 }
                 else
                 {
-                    <span style="color: var(--dm-gold);">@(transaction.DraftPick?.Label ?? transaction.Details ?? "Pick")</span>
+                    <span class="t-gold">@(transaction.DraftPick?.Label ?? transaction.Details ?? "Pick")</span>
                 }
             </h1>
             <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
@@ -44,7 +44,7 @@ else
                 }
                 else if (transaction.DraftPick != null)
                 {
-                    <span class="pos-badge" style="background:rgba(201,163,65,0.15);color:var(--dm-gold);">PICK</span>
+                    <span class="pos-badge pos-pick">PICK</span>
                 }
                 <span class="t-tiny">@transaction.OccurredAt.ToString("dddd, MMMM d, yyyy · HH:mm UTC")</span>
             </div>
@@ -60,16 +60,16 @@ else
     <div class="stats-row mb-4">
         <div class="stat-card">
             <div class="stat-label">Transaction Type</div>
-            <div class="stat-value" style="font-size: 1.1rem;">
+            <div class="stat-value stat-sm">
                 <span class="txn-badge @TxnClass(transaction.Type)">@transaction.Type.ToString().ToUpper()</span>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-label">@(transaction.Type == TransactionType.Traded ? "From Team" : "Team")</div>
-            <div class="stat-value gold" style="font-size: 1.1rem;">
+            <div class="stat-value gold stat-sm">
                 @if (transaction.Team != null)
                 {
-                    <a href="/teams/@transaction.TeamId" style="color: var(--dm-gold);">@transaction.Team.Abbreviation</a>
+                    <a href="/teams/@transaction.TeamId">@transaction.Team.Abbreviation</a>
                 }
                 else { <span>—</span> }
             </div>
@@ -82,8 +82,8 @@ else
         {
             <div class="stat-card">
                 <div class="stat-label">To Team</div>
-                <div class="stat-value gold" style="font-size: 1.1rem;">
-                    <a href="/teams/@transaction.ToTeamId" style="color: var(--dm-gold);">@transaction.ToTeam.Abbreviation</a>
+                <div class="stat-value gold stat-sm">
+                    <a href="/teams/@transaction.ToTeamId">@transaction.ToTeam.Abbreviation</a>
                 </div>
                 <div class="stat-sub">@transaction.ToTeam.City @transaction.ToTeam.Name</div>
             </div>
@@ -92,7 +92,7 @@ else
         {
             <div class="stat-card">
                 <div class="stat-label">Details</div>
-                <div class="stat-value" style="font-size: 1.1rem;">@transaction.Details</div>
+                <div class="stat-value stat-sm">@transaction.Details</div>
             </div>
         }
     </div>
@@ -104,7 +104,7 @@ else
             <div class="row g-3">
                 <div class="col-12 col-sm-6 col-md-4">
                     <div class="t-tiny mb-1">Name</div>
-                    <div style="font-weight: 600; color: var(--dm-text-bright);">
+                    <div class="t-name">
                         <a href="/players/@transaction.PlayerId">
                             @transaction.Player.FirstName @transaction.Player.LastName
                         </a>
@@ -140,22 +140,22 @@ else
             <div class="row g-3">
                 <div class="col-6 col-sm-3">
                     <div class="t-tiny mb-1">Year</div>
-                    <div style="font-weight: 600; color: var(--dm-text-bright);">@transaction.DraftPick.Year</div>
+                    <div class="t-name">@transaction.DraftPick.Year</div>
                 </div>
                 <div class="col-6 col-sm-3">
                     <div class="t-tiny mb-1">Round</div>
-                    <div style="font-weight: 600; color: var(--dm-text-bright);">@transaction.DraftPick.Round</div>
+                    <div class="t-name">@transaction.DraftPick.Round</div>
                 </div>
                 @if (transaction.DraftPick.PickNumber.HasValue)
                 {
                     <div class="col-6 col-sm-3">
                         <div class="t-tiny mb-1">Pick #</div>
-                        <div style="font-weight: 600; color: var(--dm-text-bright);">@transaction.DraftPick.PickNumber</div>
+                        <div class="t-name">@transaction.DraftPick.PickNumber</div>
                     </div>
                 }
                 <div class="col-6 col-sm-3">
                     <div class="t-tiny mb-1">Original Team</div>
-                    <div style="font-weight: 600; color: var(--dm-gold);">@(transaction.DraftPick.OriginalTeam?.Abbreviation ?? "—")</div>
+                    <div class="t-money">@(transaction.DraftPick.OriginalTeam?.Abbreviation ?? "—")</div>
                 </div>
             </div>
         </div>

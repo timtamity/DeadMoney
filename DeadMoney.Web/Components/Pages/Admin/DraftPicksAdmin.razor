@@ -125,7 +125,7 @@ else
                             var isEditing = actionPick?.Id == pick.Id;
                             <tr>
                                 <td>
-                                    <span class="pos-badge" style="background:rgba(201,163,65,0.15);color:var(--dm-gold);">
+                                    <span class="pos-badge pos-pick">
                                         R@(pick.Round)@(pick.PickNumber.HasValue ? $" #{pick.PickNumber}" : "")
                                     </span>
                                 </td>
@@ -143,10 +143,10 @@ else
                                     }
                                     else
                                     {
-                                        <span style="font-weight:600;color:var(--dm-text-bright);">@(pick.CurrentTeam?.Abbreviation ?? "—")</span>
+                                        <span class="t-name">@(pick.CurrentTeam?.Abbreviation ?? "—")</span>
                                         @if (pick.OriginalTeamId != pick.CurrentTeamId)
                                         {
-                                            <span class="t-sub ms-2" style="font-size:0.75rem;">via @(pick.OriginalTeam?.Abbreviation)</span>
+                                            <span class="t-tiny ms-2">via @(pick.OriginalTeam?.Abbreviation)</span>
                                         }
                                     }
                                 </td>
@@ -184,7 +184,7 @@ else
                                             <button class="dm-btn-ghost dm-btn-sm" @onclick="@(() => OpenReassign(pick))">
                                                 <i class="bi bi-arrow-left-right"></i> Reassign
                                             </button>
-                                            <button class="dm-btn-ghost dm-btn-sm" style="color:var(--dm-danger);"
+                                            <button class="dm-btn-ghost dm-btn-sm t-danger"
                                                     @onclick="@(() => OpenVoid(pick))">
                                                 <i class="bi bi-x-circle"></i> Forfeit
                                             </button>
@@ -204,7 +204,7 @@ else
     {
         <details class="bento-card">
             <summary style="cursor:pointer;font-weight:600;color:var(--dm-text-muted);padding:0.5rem 0;">
-                <i class="bi bi-x-circle me-2" style="color:var(--dm-danger);"></i>
+                <i class="bi bi-x-circle me-2 t-danger"></i>
                 Forfeited Picks (@voidedPicks.Count)
             </summary>
             <div class="table-responsive mt-3">
@@ -220,9 +220,9 @@ else
                     <tbody>
                         @foreach (var pick in voidedPicks)
                         {
-                            <tr style="opacity:0.6;">
+                            <tr class="void-row">
                                 <td>
-                                    <span class="pos-badge" style="background:rgba(248,81,73,0.1);color:var(--dm-danger);">
+                                    <span class="pos-badge pos-danger">
                                         R@(pick.Round)@(pick.PickNumber.HasValue ? $" #{pick.PickNumber}" : "")
                                     </span>
                                 </td>
