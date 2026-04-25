@@ -14,6 +14,10 @@ public class DraftPick
     public bool IsVoided { get; set; }
     public string? Notes { get; set; }
 
+    public int? DraftProspectId { get; set; }
+    public virtual DraftProspect? DraftProspect { get; set; }
+    public DateTime? SelectedAt { get; set; }
+
     public string Label => PickNumber.HasValue
         ? $"{Year} Round {Round} (#{PickNumber})"
         : $"{Year} {RoundSuffix(Round)} Round";

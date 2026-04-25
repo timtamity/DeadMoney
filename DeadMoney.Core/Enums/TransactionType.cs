@@ -14,5 +14,6 @@ public enum TransactionType
     ExtensionAgreed   = 9,
     ExtensionCountered = 10,
     ExtensionDeclined = 11,
-    FaOfferRejected   = 12
+    FaOfferRejected   = 12,
+    DraftPickMade     = 13
 }

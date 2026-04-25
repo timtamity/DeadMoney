@@ -1,0 +1,326 @@
+@page "/draft"
+@implements IDisposable
+@inject DraftStateService DraftState
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+
+<PageTitle>Draft Room — Dead Money</PageTitle>
+
+@if (!DraftState.IsInitialized)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading draft...
+    </div>
+}
+else if (DraftState.SessionId == null || DraftState.Status == DraftSessionStatus.NotStarted)
+{
+    <div class="bento-card text-center py-5 mt-2">
+        <i class="bi bi-mic-fill" style="font-size:3rem;color:var(--dm-gold);"></i>
+        <h3 class="mt-3">No Draft in Progress</h3>
+        <p style="color:var(--dm-text-muted);">
+            @(DraftState.SessionId != null ? "The draft hasn't started yet." : "No draft session has been created.")
+        </p>
+        @if (isCommissioner)
+        {
+            <a href="/draft/setup" class="dm-btn-primary mt-2">
+                <i class="bi bi-gear-fill"></i> Draft Setup
+            </a>
+        }
+    </div>
+}
+else
+{
+    <!-- Clock bar -->
+    <div class="draft-clock-bar @(DraftState.Status == DraftSessionStatus.Paused ? "paused" : "")">
+        <div class="on-clock-info">
+            @if (DraftState.Status == DraftSessionStatus.Complete)
+            {
+                <span class="t-bright fw-bold" style="font-size:1.1rem;">
+                    <i class="bi bi-trophy-fill" style="color:var(--dm-gold);"></i> @DraftState.Year Draft Complete
+                </span>
+            }
+            else if (DraftState.CurrentPickId == null)
+            {
+                <span class="t-meta">Waiting for draft to start…</span>
+            }
+            else
+            {
+                <div class="d-flex flex-column">
+                    <span class="on-clock-label">ON THE CLOCK</span>
+                    <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                        <span class="on-clock-team" style="color:@(DraftState.OnClockColor ?? "var(--dm-gold)")">
+                            @DraftState.OnClockAbbr
+                        </span>
+                        <span class="t-meta d-none d-sm-inline">@DraftState.OnClockCityName</span>
+                        <span class="t-meta">Rd @DraftState.CurrentRound · #@DraftState.CurrentPickNumber</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (DraftState.Status != DraftSessionStatus.Complete && DraftState.CurrentPickId != null)
+        {
+            <div class="draft-clock @ClockClass">@FormatClock(DraftState.SecondsRemaining)</div>
+        }
+
+        @if (isCommissioner)
+        {
+            <div class="draft-commissioner-controls">
+                @if (DraftState.Status == DraftSessionStatus.NotStarted)
+                {
+                    <button class="dm-btn-primary dm-btn-sm" @onclick="() => DraftState.StartAsync()">
+                        <i class="bi bi-play-fill"></i> Start
+                    </button>
+                }
+                else if (DraftState.Status == DraftSessionStatus.Active)
+                {
+                    <button class="dm-btn-outline dm-btn-sm" @onclick="() => DraftState.PauseAsync()">
+                        <i class="bi bi-pause-fill"></i> Pause
+                    </button>
+                    <button class="dm-btn-ghost dm-btn-sm" @onclick="DraftState.ResetClock" title="Reset clock">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                }
+                else if (DraftState.Status == DraftSessionStatus.Paused)
+                {
+                    <span class="t-meta me-1" style="font-size:0.75rem;">PAUSED</span>
+                    <button class="dm-btn-primary dm-btn-sm" @onclick="() => DraftState.ResumeAsync()">
+                        <i class="bi bi-play-fill"></i> Resume
+                    </button>
+                    <button class="dm-btn-ghost dm-btn-sm" @onclick="DraftState.ResetClock" title="Reset clock">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Board + Prospects -->
+    <div class="draft-shell mt-3">
+
+        <!-- Pick board -->
+        <div class="draft-board">
+            @foreach (var rg in DraftState.Board.GroupBy(p => p.Round))
+            {
+                <div class="draft-round-header">Round @rg.Key</div>
+                @foreach (var pick in rg)
+                {
+                    <div class="draft-pick-row @(pick.IsCurrent ? "on-clock" : pick.IsUsed ? "used" : "")">
+                        <span class="pick-num">#@pick.PickNumber</span>
+                        <span class="pick-team" style="@(pick.IsCurrent && pick.TeamColor != null ? $"color:{pick.TeamColor}" : "")">
+                            @pick.TeamAbbr
+                        </span>
+                        @if (pick.IsUsed && pick.ProspectName != null)
+                        {
+                            <span class="pick-player">
+                                @pick.ProspectName
+                                @if (pick.ProspectPosCode != null)
+                                {
+                                    <span class="t-meta ms-1">@pick.ProspectPosCode</span>
+                                }
+                            </span>
+                        }
+                        else if (pick.IsCurrent)
+                        {
+                            <span class="pick-onclock"><i class="bi bi-hourglass-split"></i></span>
+                        }
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- Prospect pool -->
+        <div class="draft-pool">
+            @if (DraftState.Status == DraftSessionStatus.Complete)
+            {
+                <div class="empty-state mt-4">
+                    <i class="bi bi-trophy-fill" style="color:var(--dm-gold);font-size:2.5rem;"></i>
+                    <p class="mt-3">Draft complete!</p>
+                    <a href="/draft/setup" class="dm-btn-ghost dm-btn-sm">View Session</a>
+                </div>
+            }
+            else if (DraftState.CurrentPickId == null)
+            {
+                <div class="empty-state"><p class="t-meta">Draft hasn't started.</p></div>
+            }
+            else
+            {
+                @if (pendingProspect != null)
+                {
+                    <div class="draft-confirm-bar mb-3">
+                        <span>
+                            Select <strong>@pendingProspect.FirstName @pendingProspect.LastName</strong>
+                            (@(pendingProspect.Position?.Code ?? "?")) for
+                            <strong style="color:@(DraftState.OnClockColor ?? "var(--dm-gold)")">@DraftState.OnClockAbbr</strong>?
+                        </span>
+                        <div class="d-flex gap-2">
+                            <button class="dm-btn-primary dm-btn-sm" @onclick="ConfirmPick">Confirm</button>
+                            <button class="dm-btn-ghost dm-btn-sm" @onclick="@(() => pendingProspect = null)">Cancel</button>
+                        </div>
+                    </div>
+                }
+
+                <div class="d-flex gap-2 mb-3 flex-wrap">
+                    <input class="form-control" style="max-width:240px;"
+                           placeholder="Search prospects…"
+                           @bind-value="searchTerm"
+                           @bind-value:event="oninput" />
+                    <select class="form-select w-auto" @bind="posFilter">
+                        <option value="">All Positions</option>
+                        @foreach (var pos in prospectPositions)
+                        {
+                            <option value="@pos">@pos</option>
+                        }
+                    </select>
+                </div>
+
+                @if (!FilteredProspects.Any())
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-person-x"></i>
+                        <p>No available prospects match your filter.</p>
+                        @if (isCommissioner)
+                        {
+                            <a href="/draft/setup" class="dm-btn-ghost dm-btn-sm mt-2">Manage Prospects</a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="dm-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Pos</th>
+                                    <th class="d-none d-md-table-cell">College</th>
+                                    <th class="d-none d-lg-table-cell">Ht / Wt</th>
+                                    @if (canPick) { <th></th> }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in FilteredProspects)
+                                {
+                                    <tr class="@(pendingProspect?.Id == p.Id ? "dm-row-selected" : "")">
+                                        <td><span class="t-name">@p.LastName, @p.FirstName</span></td>
+                                        <td><span class="@PosBadgeClass(p.Position?.Code)">@(p.Position?.Code ?? "?")</span></td>
+                                        <td class="t-meta d-none d-md-table-cell">@(p.College ?? "—")</td>
+                                        <td class="t-meta d-none d-lg-table-cell">
+                                            @(p.Height ?? "—") / @(p.Weight.HasValue ? $"{p.Weight} lbs" : "—")
+                                        </td>
+                                        @if (canPick)
+                                        {
+                                            <td class="text-end">
+                                                <button class="dm-btn-ghost dm-btn-sm" @onclick="@(() => pendingProspect = p)">
+                                                    Pick
+                                                </button>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @if (!canPick && DraftState.Status == DraftSessionStatus.Active)
+                {
+                    <div class="t-meta text-center mt-3" style="font-size:0.82rem;">
+                        Waiting for <strong>@DraftState.OnClockAbbr</strong> to pick…
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool isCommissioner;
+    private int  myTeamId;
+
+    private bool canPick => DraftState.CurrentPickId != null &&
+                            DraftState.Status != DraftSessionStatus.Complete &&
+                            (isCommissioner || (myTeamId > 0 && DraftState.OnClockTeamId == myTeamId));
+
+    private List<DraftProspect> prospects        = new();
+    private List<string>        prospectPositions = new();
+    private string              searchTerm        = "";
+    private string              posFilter         = "";
+    private DraftProspect?      pendingProspect;
+    private int?                _lastPickId       = -1;
+
+    private IEnumerable<DraftProspect> FilteredProspects => prospects
+        .Where(p => !p.IsDrafted)
+        .Where(p => string.IsNullOrEmpty(searchTerm) ||
+                    p.LastName.Contains(searchTerm,  StringComparison.OrdinalIgnoreCase) ||
+                    p.FirstName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        .Where(p => string.IsNullOrEmpty(posFilter) || p.Position?.Code == posFilter);
+
+    private string ClockClass =>
+        DraftState.SecondsRemaining == 0 ? "expired"   :
+        DraftState.SecondsRemaining < 30 ? "critical"  :
+        DraftState.SecondsRemaining < 60 ? "warning"   : "";
+
+    private static string FormatClock(int s) => $"{s / 60}:{s % 60:D2}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            isCommissioner = user.IsInRole("Admin") || user.IsInRole("Commissioner");
+            int.TryParse(user.FindFirst("TeamId")?.Value, out myTeamId);
+        }
+
+        DraftState.OnChange += OnDraftStateChanged;
+        await DraftState.EnsureInitializedAsync();
+        await LoadProspectsAsync();
+        _lastPickId = DraftState.CurrentPickId;
+    }
+
+    private async void OnDraftStateChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (DraftState.CurrentPickId != _lastPickId)
+            {
+                _lastPickId     = DraftState.CurrentPickId;
+                pendingProspect = null;
+                await LoadProspectsAsync();
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadProspectsAsync()
+    {
+        if (DraftState.Year == 0) return;
+        using var db = await DbFactory.CreateDbContextAsync();
+        prospects = await db.DraftProspects
+            .Where(p => p.Year == DraftState.Year)
+            .Include(p => p.Position)
+            .OrderBy(p => p.LastName).ThenBy(p => p.FirstName)
+            .AsNoTracking()
+            .ToListAsync();
+        prospectPositions = prospects
+            .Where(p => p.Position?.Code != null)
+            .Select(p => p.Position!.Code)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+    }
+
+    private async Task ConfirmPick()
+    {
+        if (pendingProspect == null || !canPick) return;
+        var p = pendingProspect;
+        pendingProspect = null;
+        var auth    = await AuthStateProvider.GetAuthenticationStateAsync();
+        var byName  = auth.User.FindFirst("DisplayName")?.Value ?? auth.User.Identity?.Name ?? "Commissioner";
+        await DraftState.SubmitPickAsync(p.Id, byName);
+    }
+
+    public void Dispose() => DraftState.OnChange -= OnDraftStateChanged;
+}

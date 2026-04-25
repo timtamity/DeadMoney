@@ -1,0 +1,430 @@
+@page "/draft/setup"
+@attribute [Authorize(Roles = "Admin, Commissioner")]
+@inject DraftStateService DraftState
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Draft Setup — Dead Money</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Draft Setup</h1>
+        <div class="subtitle">Configure and manage the live draft</div>
+    </div>
+    <a href="/draft" class="dm-btn-ghost">
+        <i class="bi bi-mic-fill"></i> Draft Room
+    </a>
+</div>
+
+@if (!loaded)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div> Loading...
+    </div>
+}
+else
+{
+    <!-- ── Session Management ─────────────────────────────────── -->
+    <h2 class="section-title">Session</h2>
+    <div class="bento-card mb-4">
+        @if (sessions.Any())
+        {
+            <div class="table-responsive mb-3">
+                <table class="dm-table">
+                    <thead><tr><th>Year</th><th>Status</th><th>Current Pick</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var s in sessions)
+                        {
+                            <tr class="@(DraftState.SessionId == s.Id ? "dm-row-selected" : "")">
+                                <td class="t-bright fw-bold">@s.Year</td>
+                                <td><span class="@StatusClass(s.Status)">@s.Status</span></td>
+                                <td class="t-meta">@(s.CurrentPick != null ? $"Rd {s.CurrentPick.Round} · #{s.CurrentPick.PickNumber}" : "—")</td>
+                                <td class="text-end">
+                                    @if (DraftState.SessionId != s.Id)
+                                    {
+                                        <button class="dm-btn-ghost dm-btn-sm" @onclick="@(() => SwitchSession(s.Id))">Load</button>
+                                    }
+                                    else
+                                    {
+                                        <span class="t-meta" style="font-size:0.75rem;">active</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="t-label m-0">New session for year:</label>
+            <input type="number" class="form-control w-auto" style="width:100px !important;"
+                   @bind="newSessionYear" min="2020" max="2040" />
+            <button class="dm-btn-primary dm-btn-sm" @onclick="CreateSession" disabled="@(newSessionYear == 0)">
+                <i class="bi bi-plus-lg"></i> Create
+            </button>
+        </div>
+        @if (!string.IsNullOrEmpty(sessionMsg))
+        {
+            <div class="t-meta mt-2" style="color:var(--dm-success);">@sessionMsg</div>
+        }
+    </div>
+
+    @if (DraftState.SessionId != null)
+    {
+        <!-- ── Draft Controls ──────────────────────────────────────── -->
+        <h2 class="section-title">Controls</h2>
+        <div class="bento-card mb-4">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                @if (DraftState.Status == DraftSessionStatus.NotStarted)
+                {
+                    <button class="dm-btn-primary" @onclick="StartDraft">
+                        <i class="bi bi-play-fill"></i> Start Draft
+                    </button>
+                }
+                else if (DraftState.Status == DraftSessionStatus.Active)
+                {
+                    <button class="dm-btn-outline" @onclick="() => DraftState.PauseAsync()">
+                        <i class="bi bi-pause-fill"></i> Pause
+                    </button>
+                }
+                else if (DraftState.Status == DraftSessionStatus.Paused)
+                {
+                    <button class="dm-btn-primary" @onclick="() => DraftState.ResumeAsync()">
+                        <i class="bi bi-play-fill"></i> Resume
+                    </button>
+                }
+
+                @if (DraftState.Status != DraftSessionStatus.Complete &&
+                     DraftState.Status != DraftSessionStatus.NotStarted)
+                {
+                    <button class="dm-btn-ghost" @onclick="CompleteDraft"
+                            style="color:var(--dm-danger);border-color:var(--dm-danger);">
+                        <i class="bi bi-check2-all"></i> Mark Complete
+                    </button>
+                }
+
+                <span class="t-meta ms-2">Status: <strong>@DraftState.Status</strong></span>
+            </div>
+        </div>
+
+        <!-- ── Round Clocks ───────────────────────────────────────── -->
+        <h2 class="section-title">Round Clocks</h2>
+        <div class="bento-card mb-4">
+            <div class="table-responsive mb-3">
+                <table class="dm-table">
+                    <thead>
+                        <tr><th>Round</th><th>Seconds</th><th class="t-meta">mm:ss</th></tr>
+                    </thead>
+                    <tbody>
+                        @for (int r = 1; r <= 7; r++)
+                        {
+                            var round = r;
+                            <tr>
+                                <td class="t-bright">@round</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm w-auto"
+                                           style="width:90px !important;"
+                                           min="30" max="3600"
+                                           value="@clockEdits[round]"
+                                           @onchange="@(e => UpdateClockEdit(round, e))" />
+                                </td>
+                                <td class="t-meta">@FormatSeconds(clockEdits[round])</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <button class="dm-btn-primary dm-btn-sm" @onclick="SaveClocks">
+                <i class="bi bi-floppy-fill"></i> Save Clock Settings
+            </button>
+            @if (!string.IsNullOrEmpty(clockMsg))
+            {
+                <span class="t-meta ms-3" style="color:var(--dm-success);">@clockMsg</span>
+            }
+        </div>
+
+        <!-- ── Prospects ──────────────────────────────────────────── -->
+        <h2 class="section-title">Prospects — @DraftState.Year Class</h2>
+        <div class="bento-card mb-4">
+
+            <!-- Add form -->
+            <div class="mb-3" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;align-items:end;">
+                <div>
+                    <label class="t-label">First Name *</label>
+                    <input class="form-control form-control-sm" @bind="newP.FirstName" placeholder="Josh" />
+                </div>
+                <div>
+                    <label class="t-label">Last Name *</label>
+                    <input class="form-control form-control-sm" @bind="newP.LastName" placeholder="Allen" />
+                </div>
+                <div>
+                    <label class="t-label">Position *</label>
+                    <select class="form-select form-select-sm" @bind="newP.PositionId">
+                        <option value="0">— pos —</option>
+                        @foreach (var pos in positions)
+                        {
+                            <option value="@pos.Id">@pos.Code</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="t-label">College</label>
+                    <input class="form-control form-control-sm" @bind="newP.College" placeholder="Alabama" />
+                </div>
+                <div>
+                    <label class="t-label">Height</label>
+                    <input class="form-control form-control-sm" @bind="newP.Height" placeholder="6-4" />
+                </div>
+                <div>
+                    <label class="t-label">Weight</label>
+                    <input type="number" class="form-control form-control-sm" @bind="newP.Weight" placeholder="220" />
+                </div>
+                <div>
+                    <label class="t-label">Age</label>
+                    <input type="number" class="form-control form-control-sm" @bind="newP.Age" placeholder="22" />
+                </div>
+                <div>
+                    <button class="dm-btn-primary dm-btn-sm w-100" @onclick="AddProspect"
+                            disabled="@(string.IsNullOrWhiteSpace(newP.FirstName) || string.IsNullOrWhiteSpace(newP.LastName) || newP.PositionId == 0)">
+                        <i class="bi bi-plus-lg"></i> Add
+                    </button>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(prospectMsg))
+            {
+                <div class="t-meta mb-2" style="color:var(--dm-success);">@prospectMsg</div>
+            }
+
+            <!-- Prospect list -->
+            @if (!prospects.Any())
+            {
+                <div class="empty-state py-3">
+                    <i class="bi bi-person-x"></i>
+                    <p>No prospects loaded for @DraftState.Year. Add them above or import via Admin → Import Data.</p>
+                </div>
+            }
+            else
+            {
+                <div class="t-meta mb-2">@prospects.Count total · @prospects.Count(p => p.IsDrafted) drafted</div>
+                <div class="table-responsive">
+                    <table class="dm-table">
+                        <thead>
+                            <tr><th>Name</th><th>Pos</th><th>College</th><th>Ht / Wt</th><th>Status</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in prospects)
+                            {
+                                <tr>
+                                    <td class="t-name">@p.LastName, @p.FirstName</td>
+                                    <td><span class="@PosBadgeClass(p.Position?.Code)">@(p.Position?.Code ?? "?")</span></td>
+                                    <td class="t-meta">@(p.College ?? "—")</td>
+                                    <td class="t-meta">@(p.Height ?? "—") / @(p.Weight.HasValue ? $"{p.Weight} lbs" : "—")</td>
+                                    <td>
+                                        @if (p.IsDrafted)
+                                        {
+                                            <span class="t-success">Drafted</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="t-meta">Available</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (!p.IsDrafted)
+                                        {
+                                            <button class="dm-btn-ghost dm-btn-sm"
+                                                    style="color:var(--dm-danger);"
+                                                    @onclick="@(() => DeleteProspect(p.Id))">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+}
+
+@code {
+    private bool loaded;
+
+    // Sessions
+    private List<DraftSession> sessions       = new();
+    private int                newSessionYear = DateTime.UtcNow.Year;
+    private string             sessionMsg     = "";
+
+    // Clocks
+    private Dictionary<int, int> clockEdits = Enumerable.Range(1, 7).ToDictionary(r => r, _ => 300);
+    private string               clockMsg   = "";
+
+    // Prospects
+    private List<DraftProspect> prospects   = new();
+    private List<Position>      positions   = new();
+    private ProspectForm        newP        = new();
+    private string              prospectMsg = "";
+
+    private class ProspectForm
+    {
+        public string FirstName  { get; set; } = "";
+        public string LastName   { get; set; } = "";
+        public int    PositionId { get; set; }
+        public string? College   { get; set; }
+        public string? Height    { get; set; }
+        public int?   Weight     { get; set; }
+        public int?   Age        { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await DraftState.EnsureInitializedAsync();
+        await LoadAsync();
+        loaded = true;
+    }
+
+    private async Task LoadAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        sessions = await db.DraftSessions
+            .Include(s => s.CurrentPick)
+            .OrderByDescending(s => s.Year)
+            .AsNoTracking()
+            .ToListAsync();
+
+        positions = await db.Positions
+            .OrderBy(p => p.DisplayOrder)
+            .AsNoTracking()
+            .ToListAsync();
+
+        await LoadProspectsAndClocks(db);
+    }
+
+    private async Task LoadProspectsAndClocks(DeadMoneyDbContext db)
+    {
+        if (DraftState.SessionId == null || DraftState.Year == 0) return;
+
+        prospects = await db.DraftProspects
+            .Where(p => p.Year == DraftState.Year)
+            .Include(p => p.Position)
+            .OrderBy(p => p.LastName).ThenBy(p => p.FirstName)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var clocks = await db.DraftRoundClocks
+            .Where(rc => rc.DraftSessionId == DraftState.SessionId)
+            .AsNoTracking()
+            .ToListAsync();
+
+        clockEdits = Enumerable.Range(1, 7)
+            .ToDictionary(r => r, r => clocks.FirstOrDefault(c => c.Round == r)?.SecondsPerPick ?? 300);
+    }
+
+    private async Task CreateSession()
+    {
+        if (newSessionYear == 0) return;
+        using var db = await DbFactory.CreateDbContextAsync();
+        var session = new DraftSession { Year = newSessionYear, Status = DraftSessionStatus.NotStarted };
+        db.DraftSessions.Add(session);
+        await db.SaveChangesAsync();
+        await DraftState.LoadSessionAsync(session.Id);
+        await LoadAsync();
+        sessionMsg = $"{newSessionYear} session created.";
+    }
+
+    private async Task SwitchSession(int sessionId)
+    {
+        await DraftState.LoadSessionAsync(sessionId);
+        using var db = await DbFactory.CreateDbContextAsync();
+        await LoadProspectsAndClocks(db);
+        sessionMsg = "Session loaded.";
+        StateHasChanged();
+    }
+
+    private async Task StartDraft()
+    {
+        await DraftState.StartAsync();
+        Navigation.NavigateTo("/draft");
+    }
+
+    private async Task CompleteDraft()
+    {
+        if (DraftState.SessionId == null) return;
+        using var db = await DbFactory.CreateDbContextAsync();
+        var session = await db.DraftSessions.FindAsync(DraftState.SessionId);
+        if (session != null) { session.Status = DraftSessionStatus.Complete; await db.SaveChangesAsync(); }
+        await DraftState.LoadSessionAsync(DraftState.SessionId.Value);
+        await LoadAsync();
+    }
+
+    private void UpdateClockEdit(int round, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v) && v >= 30)
+            clockEdits[round] = v;
+    }
+
+    private async Task SaveClocks()
+    {
+        if (DraftState.SessionId == null) return;
+        using var db = await DbFactory.CreateDbContextAsync();
+        var existing = await db.DraftRoundClocks
+            .Where(rc => rc.DraftSessionId == DraftState.SessionId)
+            .ToListAsync();
+        db.DraftRoundClocks.RemoveRange(existing);
+        for (int r = 1; r <= 7; r++)
+        {
+            db.DraftRoundClocks.Add(new DraftRoundClock
+            {
+                DraftSessionId = DraftState.SessionId.Value,
+                Round          = r,
+                SecondsPerPick = clockEdits[r]
+            });
+        }
+        await db.SaveChangesAsync();
+        await DraftState.LoadSessionAsync(DraftState.SessionId.Value);
+        clockMsg = "Saved.";
+    }
+
+    private async Task AddProspect()
+    {
+        if (string.IsNullOrWhiteSpace(newP.FirstName) || string.IsNullOrWhiteSpace(newP.LastName) || newP.PositionId == 0) return;
+        using var db = await DbFactory.CreateDbContextAsync();
+        db.DraftProspects.Add(new DraftProspect
+        {
+            FirstName  = newP.FirstName.Trim(),
+            LastName   = newP.LastName.Trim(),
+            PositionId = newP.PositionId,
+            Year       = DraftState.Year,
+            College    = string.IsNullOrWhiteSpace(newP.College) ? null : newP.College.Trim(),
+            Height     = string.IsNullOrWhiteSpace(newP.Height) ? null : newP.Height.Trim(),
+            Weight     = newP.Weight,
+            Age        = newP.Age
+        });
+        await db.SaveChangesAsync();
+        newP = new();
+        await LoadProspectsAndClocks(db);
+        prospectMsg = "Prospect added.";
+    }
+
+    private async Task DeleteProspect(int id)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var p = await db.DraftProspects.FindAsync(id);
+        if (p != null) { db.DraftProspects.Remove(p); await db.SaveChangesAsync(); }
+        await LoadProspectsAndClocks(db);
+    }
+
+    private static string FormatSeconds(int s) => $"{s / 60}:{s % 60:D2}";
+
+    private static string StatusClass(DraftSessionStatus s) => s switch
+    {
+        DraftSessionStatus.Active    => "t-success",
+        DraftSessionStatus.Paused    => "t-gold",
+        DraftSessionStatus.Complete  => "t-meta",
+        _                            => "t-meta"
+    };
+}

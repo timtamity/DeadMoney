@@ -23,6 +23,9 @@ public class DeadMoneyDbContext : DbContext
     public DbSet<PendingTrade> PendingTrades => Set<PendingTrade>();
     public DbSet<PendingTradeAsset> PendingTradeAssets => Set<PendingTradeAsset>();
     public DbSet<DepthChartEntry> DepthChartEntries => Set<DepthChartEntry>();
+    public DbSet<DraftSession>   DraftSessions    => Set<DraftSession>();
+    public DbSet<DraftRoundClock> DraftRoundClocks => Set<DraftRoundClock>();
+    public DbSet<DraftProspect>  DraftProspects   => Set<DraftProspect>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -219,6 +222,45 @@ public class DeadMoneyDbContext : DbContext
             entity.HasOne(a => a.DraftPick)
                   .WithMany()
                   .HasForeignKey(a => a.DraftPickId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<DraftProspect>(entity =>
+        {
+            entity.ToTable("DraftProspects", "League");
+            entity.HasOne(dp => dp.Position)
+                  .WithMany()
+                  .HasForeignKey(dp => dp.PositionId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<DraftSession>(entity =>
+        {
+            entity.ToTable("DraftSessions", "League");
+            entity.HasOne(s => s.CurrentPick)
+                  .WithMany()
+                  .HasForeignKey(s => s.CurrentPickId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(s => s.RoundClocks)
+                  .WithOne(rc => rc.DraftSession)
+                  .HasForeignKey(rc => rc.DraftSessionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<DraftRoundClock>(entity =>
+        {
+            entity.ToTable("DraftRoundClocks", "League");
+            entity.HasIndex(rc => new { rc.DraftSessionId, rc.Round }).IsUnique();
+        });
+
+        // DraftPick gets FK to DraftProspect
+        builder.Entity<DraftPick>(entity =>
+        {
+            entity.HasOne(dp => dp.DraftProspect)
+                  .WithMany()
+                  .HasForeignKey(dp => dp.DraftProspectId)
                   .IsRequired(false)
                   .OnDelete(DeleteBehavior.Restrict);
         });

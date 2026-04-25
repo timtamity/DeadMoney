@@ -128,6 +128,9 @@ namespace DeadMoney.Data.Migrations
                     b.Property<int>("CurrentTeamId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("DraftProspectId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsUsed")
                         .HasColumnType("bit");
 
@@ -146,12 +149,17 @@ namespace DeadMoney.Data.Migrations
                     b.Property<int>("Round")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("SelectedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CurrentTeamId");
+
+                    b.HasIndex("DraftProspectId");
 
                     b.HasIndex("OriginalTeamId");
 
@@ -1305,6 +1313,106 @@ namespace DeadMoney.Data.Migrations
                     b.ToTable("UserRoles", "Auth");
                 });
 
+            modelBuilder.Entity("DeadMoney.Core.Entities.DraftProspect", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("Age")
+                        .HasColumnType("int");
+
+                    b.Property<string>("College")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Height")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsDrafted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("PositionId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Weight")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PositionId");
+
+                    b.HasIndex("Year");
+
+                    b.ToTable("DraftProspects", "League");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.DraftSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CurrentPickId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CurrentPickId");
+
+                    b.ToTable("DraftSessions", "League");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.DraftRoundClock", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DraftSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Round")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SecondsPerPick")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DraftSessionId", "Round")
+                        .IsUnique()
+                        .HasDatabaseName("IX_DraftRoundClocks_DraftSessionId_Round");
+
+                    b.ToTable("DraftRoundClocks", "League");
+                });
+
             modelBuilder.Entity("DeadMoney.Core.Entities.DepthChartEntry", b =>
                 {
                     b.Property<int>("Id")
@@ -1546,6 +1654,50 @@ namespace DeadMoney.Data.Migrations
                     b.Navigation("Team");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.DraftProspect", b =>
+                {
+                    b.HasOne("DeadMoney.Core.Entities.Position", "Position")
+                        .WithMany()
+                        .HasForeignKey("PositionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Position");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.DraftPick", b =>
+                {
+                    b.HasOne("DeadMoney.Core.Entities.DraftProspect", "DraftProspect")
+                        .WithMany()
+                        .HasForeignKey("DraftProspectId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("DraftProspect");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.DraftSession", b =>
+                {
+                    b.HasOne("DeadMoney.Core.Entities.DraftPick", "CurrentPick")
+                        .WithMany()
+                        .HasForeignKey("CurrentPickId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CurrentPick");
+
+                    b.Navigation("RoundClocks");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.DraftRoundClock", b =>
+                {
+                    b.HasOne("DeadMoney.Core.Entities.DraftSession", "DraftSession")
+                        .WithMany("RoundClocks")
+                        .HasForeignKey("DraftSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DraftSession");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.DepthChartEntry", b =>

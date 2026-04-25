@@ -67,6 +67,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<CapEngineService>();
 builder.Services.AddScoped<LeagueSettingsService>();
 builder.Services.AddSingleton<TransactionFeedService>();
+builder.Services.AddSingleton<DraftStateService>();
 builder.Services.AddScoped<RosterService>();
 builder.Services.AddScoped<FaOfferService>();
 builder.Services.AddScoped<ExtensionService>();
