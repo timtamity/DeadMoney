@@ -1,6 +1,7 @@
 @page "/contracts/{contractId:int}"
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Contract — Dead Money</PageTitle>
 
@@ -40,31 +41,72 @@ else
                 }
             </div>
         </div>
-        <button class="dm-btn-outline dm-btn-sm" @onclick="@(() => GoToPlayer(contract.PlayerId))">
-            <i class="bi bi-person"></i> View Player
-        </button>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            @if (isCommissioner && !editMode)
+            {
+                <button class="dm-btn-outline dm-btn-sm" @onclick="StartEdit">
+                    <i class="bi bi-pencil me-1"></i>Edit Contract
+                </button>
+            }
+            <button class="dm-btn-outline dm-btn-sm" @onclick="@(() => GoToPlayer(contract.PlayerId))">
+                <i class="bi bi-person"></i> View Player
+            </button>
+        </div>
     </div>
 
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(statusIsError ? "alert-danger" : "alert-success") mb-4">@statusMessage</div>
+    }
+
+    @* ── HEADER STATS ── *@
     <div class="stats-row mb-4">
         <div class="stat-card">
             <div class="stat-label">Total Value</div>
-            <div class="stat-value gold">@FormatMoney(contract.TotalValue)</div>
-            <div class="stat-sub">@contract.ContractYears.Count(y => !y.IsVoidYear) years</div>
+            @if (editMode)
+            {
+                <input type="number" class="form-control form-control-sm mt-1" step="100000"
+                       @bind="editTotalValue" style="max-width:140px;" />
+            }
+            else
+            {
+                <div class="stat-value gold">@FormatMoney(contract.TotalValue)</div>
+                <div class="stat-sub">@contract.ContractYears.Count(y => !y.IsVoidYear) years</div>
+            }
         </div>
         <div class="stat-card">
             <div class="stat-label">Total Guaranteed</div>
-            <div class="stat-value">@FormatMoney(contract.TotalGuaranteed)</div>
+            @if (editMode)
+            {
+                <input type="number" class="form-control form-control-sm mt-1" step="100000"
+                       @bind="editTotalGuaranteed" style="max-width:140px;" />
+            }
+            else
+            {
+                <div class="stat-value">@FormatMoney(contract.TotalGuaranteed)</div>
+            }
         </div>
         <div class="stat-card">
             <div class="stat-label">Signing Bonus</div>
-            <div class="stat-value">@FormatMoney(contract.SigningBonus)</div>
+            @if (editMode)
+            {
+                <input type="number" class="form-control form-control-sm mt-1" step="100000"
+                       @bind="editSigningBonus" style="max-width:140px;" />
+            }
+            else
+            {
+                <div class="stat-value">@FormatMoney(contract.SigningBonus)</div>
+            }
         </div>
         <div class="stat-card">
             <div class="stat-label">Avg Per Year</div>
             <div class="stat-value stat-sm">
                 @{
-                    var realYears = contract.ContractYears.Count(y => !y.IsVoidYear);
-                    var avg = realYears > 0 ? contract.TotalValue / realYears : 0;
+                    var tv     = editMode ? editTotalValue : contract.TotalValue;
+                    var realYr = editMode
+                        ? editYears.Count(y => !y.IsVoidYear)
+                        : contract.ContractYears.Count(y => !y.IsVoidYear);
+                    var avg    = realYr > 0 ? tv / realYr : 0;
                 }
                 @FormatMoney(avg)
             </div>
@@ -79,10 +121,32 @@ else
         </div>
     }
 
-    <h2 class="section-title">
-        Year-by-Year Breakdown
-        <span class="section-title-meta">(@contract.ContractYears.Count rows incl. void years)</span>
-    </h2>
+    @* ── YEAR TABLE ── *@
+    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+        <h2 class="section-title mb-0">
+            Year-by-Year Breakdown
+            <span class="section-title-meta">(@contract.ContractYears.Count rows incl. void years)</span>
+        </h2>
+        @if (editMode)
+        {
+            <div class="d-flex gap-2">
+                <button class="dm-btn dm-btn-sm dm-btn-success" disabled="@saving" @onclick="SaveAsync">
+                    @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    Save Changes
+                </button>
+                <button class="dm-btn-ghost dm-btn-sm" disabled="@saving" @onclick="CancelEdit">Cancel</button>
+            </div>
+        }
+    </div>
+
+    @if (editMode)
+    {
+        <div class="bento-card mb-3">
+            <div class="t-label mb-2">Notes</div>
+            <input type="text" class="form-control form-control-sm" placeholder="Reason for modification..."
+                   @bind="editNotes" style="max-width:500px;" />
+        </div>
+    }
 
     <div class="table-responsive">
         <table class="dm-table">
@@ -100,21 +164,52 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var y in contract.ContractYears.OrderBy(cy => cy.Year))
+                @if (editMode)
                 {
-                    <tr class="@(y.IsVoidYear ? "void-row" : "")">
-                        <td class="t-bright">@y.Year</td>
-                        <td class="t-meta">@(y.Team?.Abbreviation ?? "—")</td>
-                        <td class="text-end">@FormatMoney(y.BaseSalary)</td>
-                        <td class="text-end d-none d-sm-table-cell">@FormatMoney(y.SigningBonusProration)</td>
-                        <td class="text-end d-none d-md-table-cell">@FormatMoney(y.RosterBonus)</td>
-                        <td class="text-end d-none d-lg-table-cell">@FormatMoney(y.OptionBonusProration)</td>
-                        <td class="text-end d-none d-lg-table-cell">@FormatMoney(y.GuaranteedAmount)</td>
-                        <td class="text-end t-money">@FormatMoney(y.CapNumber)</td>
-                        <td class="text-center d-none d-sm-table-cell">
-                            @if (y.IsVoidYear) { <span class="t-label">Void</span> }
-                        </td>
-                    </tr>
+                    @foreach (var ey in editYears.OrderBy(y => y.Year))
+                    {
+                        <tr class="@(ey.IsVoidYear ? "void-row" : "")">
+                            <td class="t-bright">@ey.Year</td>
+                            <td class="t-meta">@(contract.ContractYears.FirstOrDefault(y => y.Id == ey.Id)?.Team?.Abbreviation ?? "—")</td>
+                            <td class="text-end">
+                                <input type="number" class="form-control form-control-sm text-end"
+                                       style="min-width:90px;" step="10000" @bind="ey.BaseSalary" />
+                            </td>
+                            <td class="text-end d-none d-sm-table-cell">@FormatMoney(contract.ContractYears.First(y => y.Id == ey.Id).SigningBonusProration)</td>
+                            <td class="text-end d-none d-md-table-cell">@FormatMoney(contract.ContractYears.First(y => y.Id == ey.Id).RosterBonus)</td>
+                            <td class="text-end d-none d-lg-table-cell">@FormatMoney(contract.ContractYears.First(y => y.Id == ey.Id).OptionBonusProration)</td>
+                            <td class="text-end d-none d-lg-table-cell">
+                                <input type="number" class="form-control form-control-sm text-end"
+                                       style="min-width:90px;" step="10000" @bind="ey.GuaranteedAmount" />
+                            </td>
+                            <td class="text-end">
+                                <input type="number" class="form-control form-control-sm text-end"
+                                       style="min-width:90px;" step="10000" @bind="ey.CapNumber" />
+                            </td>
+                            <td class="text-center d-none d-sm-table-cell">
+                                <input type="checkbox" @bind="ey.IsVoidYear" />
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    @foreach (var y in contract.ContractYears.OrderBy(cy => cy.Year))
+                    {
+                        <tr class="@(y.IsVoidYear ? "void-row" : "")">
+                            <td class="t-bright">@y.Year</td>
+                            <td class="t-meta">@(y.Team?.Abbreviation ?? "—")</td>
+                            <td class="text-end">@FormatMoney(y.BaseSalary)</td>
+                            <td class="text-end d-none d-sm-table-cell">@FormatMoney(y.SigningBonusProration)</td>
+                            <td class="text-end d-none d-md-table-cell">@FormatMoney(y.RosterBonus)</td>
+                            <td class="text-end d-none d-lg-table-cell">@FormatMoney(y.OptionBonusProration)</td>
+                            <td class="text-end d-none d-lg-table-cell">@FormatMoney(y.GuaranteedAmount)</td>
+                            <td class="text-end t-money">@FormatMoney(y.CapNumber)</td>
+                            <td class="text-center d-none d-sm-table-cell">
+                                @if (y.IsVoidYear) { <span class="t-label">Void</span> }
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
@@ -122,12 +217,46 @@ else
 }
 
 @code {
-    private Contract? contract;
+    [Parameter] public int contractId { get; set; }
 
-    [Parameter]
-    public int contractId { get; set; }
+    private Contract? contract;
+    private bool isCommissioner;
+    private int? myUserId;
+    private string? myDisplayName;
+
+    private bool editMode;
+    private bool saving;
+    private string? statusMessage;
+    private bool statusIsError;
+
+    private decimal editTotalValue;
+    private decimal editTotalGuaranteed;
+    private decimal editSigningBonus;
+    private string? editNotes;
+    private List<YearEditModel> editYears = new();
+
+    private class YearEditModel
+    {
+        public int     Id              { get; set; }
+        public int     Year            { get; set; }
+        public decimal BaseSalary      { get; set; }
+        public decimal CapNumber       { get; set; }
+        public decimal GuaranteedAmount { get; set; }
+        public bool    IsVoidYear      { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+        isCommissioner = user.IsInRole("Admin") || user.IsInRole("Commissioner");
+        if (int.TryParse(user.FindFirst("UserId")?.Value, out var uid)) myUserId = uid;
+        myDisplayName = user.FindFirst("DisplayName")?.Value;
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
     {
         using var db = await DbFactory.CreateDbContextAsync();
         contract = await db.Contracts
@@ -135,6 +264,92 @@ else
             .Include(c => c.ContractYears).ThenInclude(cy => cy.Team)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == contractId);
+    }
+
+    private void StartEdit()
+    {
+        if (contract == null) return;
+        editTotalValue     = contract.TotalValue;
+        editTotalGuaranteed = contract.TotalGuaranteed;
+        editSigningBonus   = contract.SigningBonus;
+        editNotes          = null;
+        editYears = contract.ContractYears.Select(y => new YearEditModel
+        {
+            Id               = y.Id,
+            Year             = y.Year,
+            BaseSalary       = y.BaseSalary,
+            CapNumber        = y.CapNumber,
+            GuaranteedAmount = y.GuaranteedAmount,
+            IsVoidYear       = y.IsVoidYear
+        }).ToList();
+        editMode = true;
+        statusMessage = null;
+    }
+
+    private void CancelEdit()
+    {
+        editMode = false;
+        editYears = new();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (contract == null) return;
+        saving = true;
+        try
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+
+            var dbContract = await db.Contracts
+                .Include(c => c.ContractYears)
+                .FirstOrDefaultAsync(c => c.Id == contractId);
+
+            if (dbContract == null) { statusMessage = "Contract not found."; statusIsError = true; return; }
+
+            dbContract.TotalValue      = editTotalValue;
+            dbContract.TotalGuaranteed = editTotalGuaranteed;
+            dbContract.SigningBonus    = editSigningBonus;
+            dbContract.IsModifiedBySim = true;
+
+            foreach (var ey in editYears)
+            {
+                var dbYear = dbContract.ContractYears.FirstOrDefault(y => y.Id == ey.Id);
+                if (dbYear == null) continue;
+                dbYear.BaseSalary       = ey.BaseSalary;
+                dbYear.CapNumber        = ey.CapNumber;
+                dbYear.GuaranteedAmount = ey.GuaranteedAmount;
+                dbYear.IsVoidYear       = ey.IsVoidYear;
+            }
+
+            db.Transactions.Add(new Transaction
+            {
+                Type                = TransactionType.ContractModified,
+                PlayerId            = dbContract.PlayerId,
+                Details             = string.IsNullOrWhiteSpace(editNotes)
+                    ? $"Contract manually edited by Commissioner (total: {FormatMoney(editTotalValue)})"
+                    : editNotes,
+                OccurredAt          = DateTime.UtcNow,
+                PerformedByUserId   = myUserId,
+                PerformedByUserName = myDisplayName
+            });
+
+            await db.SaveChangesAsync();
+
+            await LoadAsync();
+            editMode = false;
+            editYears = new();
+            statusMessage = "Contract updated.";
+            statusIsError = false;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            statusIsError = true;
+        }
+        finally
+        {
+            saving = false;
+        }
     }
 
     private void GoToPlayer(int playerId) => Navigation.NavigateTo($"/players/{playerId}");

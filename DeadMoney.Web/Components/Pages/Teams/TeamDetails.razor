@@ -112,7 +112,7 @@ else
 }
 
 @code {
-    private decimal _salaryCap = 279_200_000m;
+    private decimal _salaryCap;
 
     private decimal CapSpace  => _salaryCap + (team?.CarryoverCap ?? 0m) - capHit;
     private double  CapPct    => team != null && (_salaryCap + team.CarryoverCap) > 0
@@ -131,8 +131,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var setting = await LeagueSettingsSvc.GetCurrentAsync();
-        selectedYear = setting?.Year ?? DateTime.UtcNow.Year;
+        var setting  = await LeagueSettingsSvc.GetCurrentAsync();
+        selectedYear = setting?.Year      ?? DateTime.UtcNow.Year;
         _salaryCap   = setting?.SalaryCap ?? 279_200_000m;
         await LoadAsync();
     }
