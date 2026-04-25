@@ -1,0 +1,147 @@
+@implements IDisposable
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+@inject NavigationManager Navigation
+
+@if (TeamId > 0)
+{
+    <a href="/teams/@TeamId" class="team-chip">@TeamAbbr</a>
+}
+
+<div class="header-btn-wrap">
+    <button class="header-btn" title="Proposals" @onclick='@(() => Navigation.NavigateTo("/proposals"))'>
+        <i class="bi bi-hourglass-split"></i>
+        @if (pendingCount > 0)
+        {
+            <span class="header-badge">@(pendingCount > 99 ? "99+" : pendingCount.ToString())</span>
+        }
+    </button>
+</div>
+
+@if (TeamId > 0)
+{
+    <div class="header-btn-wrap">
+        <button class="header-btn @(notifOpen ? "active" : "")" title="Notifications" @onclick="ToggleNotif">
+            <i class="bi bi-bell@(recentTxns.Any() ? "-fill" : "")"></i>
+            @if (recentCount > 0)
+            {
+                <span class="header-badge">@(recentCount > 99 ? "99+" : recentCount.ToString())</span>
+            }
+        </button>
+        @if (notifOpen)
+        {
+            <div class="notif-backdrop" @onclick="CloseNotif"></div>
+            <div class="notif-panel">
+                <div class="notif-panel-header">
+                    <span class="t-label">Recent Activity</span>
+                    <a href="/transactions" class="t-meta" style="font-size:0.75rem;" @onclick="CloseNotif">All →</a>
+                </div>
+                @if (!recentTxns.Any())
+                {
+                    <div class="notif-empty">No recent activity for your team.</div>
+                }
+                else
+                {
+                    @foreach (var txn in recentTxns)
+                    {
+                        <a href="/transactions/@txn.Id" class="notif-item" @onclick="CloseNotif">
+                            <span class="notif-dot @TxnClass(txn.Type)"></span>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:0.82rem;color:var(--dm-text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                    @TxnLabel(txn.Type)
+                                    @if (txn.Player != null)
+                                    {
+                                        <span style="color:var(--dm-text-bright);font-weight:600;" class="ms-1">@txn.Player.LastName</span>
+                                    }
+                                </div>
+                                <div class="t-meta" style="font-size:0.72rem;">@RelativeTime(txn.OccurredAt)</div>
+                            </div>
+                        </a>
+                    }
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int    TeamId      { get; set; }
+    [Parameter] public string TeamAbbr    { get; set; } = "";
+    [Parameter] public bool   IsCommissioner { get; set; }
+
+    private int  pendingCount;
+    private int  recentCount;
+    private List<Transaction> recentTxns = new();
+    private bool notifOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        await LoadAsync();
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        notifOpen = false;
+        await LoadAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        if (IsCommissioner)
+        {
+            pendingCount = await db.PendingTrades
+                .CountAsync(t => t.Status == TradeStatus.Proposed || t.Status == TradeStatus.Pending);
+            pendingCount += await db.ExtensionOffers
+                .CountAsync(e => e.Status == ExtensionOfferStatus.Pending || e.Status == ExtensionOfferStatus.Countered);
+            pendingCount += await db.FaOffers
+                .CountAsync(o => o.Status == FaOfferStatus.Active);
+        }
+        else if (TeamId > 0)
+        {
+            pendingCount = await db.PendingTrades
+                .CountAsync(t => (t.TeamAId == TeamId || t.TeamBId == TeamId)
+                              && (t.Status == TradeStatus.Proposed || t.Status == TradeStatus.Pending));
+            pendingCount += await db.ExtensionOffers
+                .CountAsync(e => e.TeamId == TeamId
+                              && (e.Status == ExtensionOfferStatus.Pending || e.Status == ExtensionOfferStatus.Countered));
+        }
+
+        if (TeamId > 0)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-7);
+            recentTxns = await db.Transactions
+                .Include(t => t.Player)
+                .Where(t => t.TeamId == TeamId && t.OccurredAt >= cutoff)
+                .OrderByDescending(t => t.OccurredAt)
+                .Take(8)
+                .AsNoTracking()
+                .ToListAsync();
+
+            recentCount = await db.Transactions
+                .CountAsync(t => t.TeamId == TeamId && t.OccurredAt >= DateTime.UtcNow.AddDays(-1));
+        }
+    }
+
+    private void ToggleNotif() => notifOpen = !notifOpen;
+    private void CloseNotif()  => notifOpen = false;
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+
+    private static string TxnLabel(TransactionType t) => t switch
+    {
+        TransactionType.Cut                => "Cut",
+        TransactionType.Signed             => "Signed",
+        TransactionType.Extended           => "Extended",
+        TransactionType.Traded             => "Traded",
+        TransactionType.ExtensionAgreed    => "Extension Agreed",
+        TransactionType.ExtensionCountered => "Counter Offer",
+        TransactionType.ExtensionDeclined  => "Extension Declined",
+        TransactionType.FaOfferRejected    => "Offer Rejected",
+        TransactionType.ContractModified   => "Contract Modified",
+        TransactionType.CapAdjusted        => "Cap Adjusted",
+        _                                  => t.ToString()
+    };
+}

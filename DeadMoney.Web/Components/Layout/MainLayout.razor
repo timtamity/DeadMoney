@@ -1,6 +1,8 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 
 <div class="page">
     <div class="sidebar @(menuOpen ? "open" : "")">
@@ -13,7 +15,7 @@
     }
 
     <main>
-        <header class="top-bar px-3 px-md-4">
+        <header class="top-bar px-3 px-md-4" style="@headerStyle">
             <div class="d-flex align-items-center gap-2">
                 <button class="hamburger-btn" @onclick="ToggleMenu" aria-label="Toggle menu">
                     <i class="bi @(menuOpen ? "bi-x-lg" : "bi-list")"></i>
@@ -38,7 +40,13 @@
                                 </span>
                             </Authorized>
                         </AuthorizeView>
-                        <span class="welcome-text d-none d-sm-inline me-1">
+
+                        @if (showTeamBar)
+                        {
+                            <TeamBar TeamId="myTeamId" TeamAbbr="@teamAbbr" IsCommissioner="@isCommissioner" />
+                        }
+
+                        <span class="welcome-text d-none d-md-inline me-1">
                             @(context.User.FindFirst("DisplayName")?.Value ?? context.User.Identity?.Name)
                         </span>
                         <form action="logout" method="post" class="d-inline">
@@ -66,11 +74,44 @@
 </div>
 
 @code {
-    private bool menuOpen = false;
+    private bool   menuOpen;
+    private bool   showTeamBar;
+    private bool   isCommissioner;
+    private int    myTeamId;
+    private string teamAbbr  = "";
+    private string headerStyle = "";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         Navigation.LocationChanged += OnLocationChanged;
+
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+        if (!user.Identity?.IsAuthenticated ?? true) return;
+
+        isCommissioner = user.IsInRole("Admin") || user.IsInRole("Commissioner");
+        var isGmRole   = user.IsInRole("GM") || user.IsInRole("Assistant GM");
+
+        int.TryParse(user.FindFirst("TeamId")?.Value, out myTeamId);
+
+        showTeamBar = isCommissioner || isGmRole;
+
+        if (myTeamId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            var team = await db.Teams
+                .Where(t => t.Id == myTeamId)
+                .Select(t => new { t.Abbreviation, t.PrimaryColor })
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
+
+            if (team != null)
+            {
+                teamAbbr = team.Abbreviation;
+                if (!string.IsNullOrEmpty(team.PrimaryColor))
+                    headerStyle = $"--team-color: {team.PrimaryColor};";
+            }
+        }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -79,11 +120,8 @@
         InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose()
-    {
-        Navigation.LocationChanged -= OnLocationChanged;
-    }
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
 
     private void ToggleMenu() => menuOpen = !menuOpen;
-    private void CloseMenu() => menuOpen = false;
+    private void CloseMenu()  => menuOpen = false;
 }
