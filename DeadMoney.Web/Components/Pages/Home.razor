@@ -1,62 +1,204 @@
 @page "/"
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+@inject LeagueSettingsService LeagueSettingsSvc
 
 <PageTitle>Home — Dead Money</PageTitle>
 
-<AuthorizeView>
-    <NotAuthorized>
-        <div class="bento-card text-center py-5 mt-2">
-            <i class="bi bi-shield-lock-fill" style="font-size: 3rem; color: var(--dm-gold);"></i>
-            <h3 class="mt-3">Welcome to Dead Money</h3>
-            <p style="color: var(--dm-text-muted); max-width: 380px; margin: 0 auto 1.5rem;">
-                Sign in with your Discord account to access the league portal.
-            </p>
-            <a href="login" class="dm-btn-primary">
-                <i class="bi bi-discord"></i> Login with Discord
-            </a>
-        </div>
-    </NotAuthorized>
-    <Authorized>
-        <div class="page-header">
-            <div>
-                <h1>Dashboard</h1>
-                <div class="subtitle">Welcome back, @(context.User.FindFirst("DisplayName")?.Value ?? context.User.Identity?.Name)</div>
-            </div>
-        </div>
-
-        <p style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--dm-text-muted); margin-bottom: 0.6rem;">
-            Quick Access
+@if (!isAuthenticated)
+{
+    <div class="bento-card text-center py-5 mt-2">
+        <i class="bi bi-shield-lock-fill" style="font-size: 3rem; color: var(--dm-gold);"></i>
+        <h3 class="mt-3">Welcome to Dead Money</h3>
+        <p style="color: var(--dm-text-muted); max-width: 380px; margin: 0 auto 1.5rem;">
+            Sign in with your Discord account to access the league portal.
         </p>
-        <div class="quick-nav-grid">
-            <a href="/teams" class="quick-nav-card">
-                <i class="bi bi-flag-fill"></i>
-                <span>Teams</span>
-            </a>
-            <a href="/players" class="quick-nav-card">
-                <i class="bi bi-people-fill"></i>
-                <span>Players</span>
-            </a>
-            <a href="/contracts" class="quick-nav-card">
-                <i class="bi bi-file-earmark-text-fill"></i>
-                <span>Contracts</span>
-            </a>
-            <a href="/free-agents" class="quick-nav-card">
-                <i class="bi bi-person-plus-fill"></i>
-                <span>Free Agents</span>
-            </a>
-            <a href="/salary-cap" class="quick-nav-card">
-                <i class="bi bi-bank2"></i>
-                <span>Salary Cap</span>
-            </a>
-            <AuthorizeView Roles="Admin, GM, Assistant GM, Commissioner" Context="innerCtx">
-                <Authorized>
-                    <a href="/roster" class="quick-nav-card">
-                        <i class="bi bi-clipboard2-check-fill"></i>
-                        <span>My Roster</span>
-                    </a>
-                </Authorized>
-            </AuthorizeView>
+        <a href="login" class="dm-btn-primary">
+            <i class="bi bi-discord"></i> Login with Discord
+        </a>
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>Dashboard</h1>
+            <div class="subtitle">Welcome back, @myDisplayName</div>
         </div>
+    </div>
 
-        <TransactionFeed />
-    </Authorized>
-</AuthorizeView>
+    @if (loaded)
+    {
+        @if (isGm && myTeamId > 0)
+        {
+            <div class="stats-row mb-4">
+                <a href="/roster" class="stat-card" style="text-decoration:none;">
+                    <div class="stat-label">Cap Hit</div>
+                    <div class="stat-value gold">@FormatMoney(capHit)</div>
+                    <div class="stat-sub">@selectedYear</div>
+                </a>
+                <a href="/roster" class="stat-card" style="text-decoration:none;">
+                    <div class="stat-label">Cap Space</div>
+                    <div class="stat-value @(capSpace < 0 ? "red" : "green")">@FormatMoney(capSpace)</div>
+                    <div class="stat-sub">incl. carryover</div>
+                </a>
+                <a href="/proposals" class="stat-card" style="text-decoration:none;">
+                    <div class="stat-label">Pending Proposals</div>
+                    <div class="stat-value @(pendingCount > 0 ? "t-gold" : "")">@pendingCount</div>
+                    <div class="stat-sub">trades &amp; extensions</div>
+                </a>
+                <a href="/roster" class="stat-card" style="text-decoration:none;">
+                    <div class="stat-label">Expiring</div>
+                    <div class="stat-value @(expiringCount > 0 ? "t-gold" : "")">@expiringCount</div>
+                    <div class="stat-sub">contracts after @selectedYear</div>
+                </a>
+            </div>
+        }
+
+        @if (isCommissioner)
+        {
+            <div class="stats-row mb-4">
+                <a href="/proposals" class="stat-card" style="text-decoration:none;">
+                    <div class="stat-label">Pending Trades</div>
+                    <div class="stat-value @(commishTrades > 0 ? "t-gold" : "")">@commishTrades</div>
+                    <div class="stat-sub">awaiting action</div>
+                </a>
+                <a href="/proposals" class="stat-card" style="text-decoration:none;">
+                    <div class="stat-label">Pending Extensions</div>
+                    <div class="stat-value @(commishExtensions > 0 ? "t-gold" : "")">@commishExtensions</div>
+                    <div class="stat-sub">awaiting action</div>
+                </a>
+                <a href="/proposals" class="stat-card" style="text-decoration:none;">
+                    <div class="stat-label">FA Offers</div>
+                    <div class="stat-value @(commishFaOffers > 0 ? "t-gold" : "")">@commishFaOffers</div>
+                    <div class="stat-sub">active</div>
+                </a>
+                <a href="/commissioner/cap" class="stat-card" style="text-decoration:none;">
+                    <div class="stat-label">League Cap</div>
+                    <div class="stat-value stat-sm">@FormatMoney(leagueCap)</div>
+                    <div class="stat-sub">@selectedYear</div>
+                </a>
+            </div>
+        }
+    }
+
+    <p class="t-label mb-2">Quick Access</p>
+    <div class="quick-nav-grid">
+        <a href="/teams" class="quick-nav-card">
+            <i class="bi bi-flag-fill"></i>
+            <span>Teams</span>
+        </a>
+        <a href="/players" class="quick-nav-card">
+            <i class="bi bi-people-fill"></i>
+            <span>Players</span>
+        </a>
+        <a href="/contracts" class="quick-nav-card">
+            <i class="bi bi-file-earmark-text-fill"></i>
+            <span>Contracts</span>
+        </a>
+        <a href="/free-agents" class="quick-nav-card">
+            <i class="bi bi-person-plus-fill"></i>
+            <span>Free Agents</span>
+        </a>
+        <a href="/salary-cap" class="quick-nav-card">
+            <i class="bi bi-bank2"></i>
+            <span>Salary Cap</span>
+        </a>
+        @if (isGm || isCommissioner)
+        {
+            <a href="/roster" class="quick-nav-card">
+                <i class="bi bi-clipboard2-check-fill"></i>
+                <span>My Roster</span>
+            </a>
+        }
+    </div>
+
+    <TransactionFeed />
+}
+
+@code {
+    private bool loaded;
+    private bool isAuthenticated;
+    private bool isGm;
+    private bool isCommissioner;
+    private int  myTeamId;
+    private int  selectedYear;
+    private decimal leagueCap;
+    private string myDisplayName = "";
+
+    // GM stats
+    private decimal capHit;
+    private decimal capSpace;
+    private int     pendingCount;
+    private int     expiringCount;
+
+    // Commissioner stats
+    private int commishTrades;
+    private int commishExtensions;
+    private int commishFaOffers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+        if (!isAuthenticated) return;
+
+        isCommissioner = user.IsInRole("Admin") || user.IsInRole("Commissioner");
+        isGm           = user.IsInRole("GM") || user.IsInRole("Assistant GM");
+        myDisplayName  = user.FindFirst("DisplayName")?.Value ?? user.Identity?.Name ?? "";
+        if (int.TryParse(user.FindFirst("TeamId")?.Value, out var tid)) myTeamId = tid;
+
+        var setting  = await LeagueSettingsSvc.GetCurrentAsync();
+        selectedYear = setting?.Year      ?? DateTime.UtcNow.Year;
+        leagueCap    = setting?.SalaryCap ?? 279_200_000m;
+
+        if (isGm && myTeamId > 0) await LoadGmStatsAsync();
+        if (isCommissioner)       await LoadCommishStatsAsync();
+
+        loaded = true;
+    }
+
+    private async Task LoadGmStatsAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        capHit = await db.ContractYears
+            .Where(cy => cy.TeamId == myTeamId && cy.Year == selectedYear)
+            .SumAsync(cy => (decimal?)cy.CapNumber) ?? 0m;
+
+        var carryover = await db.Teams
+            .Where(t => t.Id == myTeamId)
+            .Select(t => t.CarryoverCap)
+            .FirstOrDefaultAsync();
+
+        capSpace = leagueCap + carryover - capHit;
+
+        pendingCount = await db.PendingTrades
+            .CountAsync(t => (t.TeamAId == myTeamId || t.TeamBId == myTeamId)
+                          && (t.Status == TradeStatus.Proposed || t.Status == TradeStatus.Pending));
+        pendingCount += await db.ExtensionOffers
+            .CountAsync(e => e.TeamId == myTeamId
+                          && (e.Status == ExtensionOfferStatus.Pending || e.Status == ExtensionOfferStatus.Countered));
+
+        expiringCount = await db.Players
+            .Where(p => p.TeamId == myTeamId)
+            .CountAsync(p => p.Contracts.Any(c => c.IsActive &&
+                c.ContractYears.Where(y => !y.IsVoidYear).Max(y => (int?)y.Year) == selectedYear));
+    }
+
+    private async Task LoadCommishStatsAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        commishTrades = await db.PendingTrades
+            .CountAsync(t => t.Status == TradeStatus.Proposed || t.Status == TradeStatus.Pending);
+
+        commishExtensions = await db.ExtensionOffers
+            .CountAsync(e => e.Status == ExtensionOfferStatus.Pending || e.Status == ExtensionOfferStatus.Countered);
+
+        commishFaOffers = await db.FaOffers
+            .CountAsync(o => o.Status == FaOfferStatus.Active);
+    }
+}

@@ -3,90 +3,114 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 
-<PageTitle>My Profile - Dead Money</PageTitle>
+<PageTitle>My Profile — Dead Money</PageTitle>
 
-<div class="container mt-4">
-    <div class="d-flex align-items-center mb-4">
-        @if (!string.IsNullOrEmpty(_user?.AvatarUrl))
-        {
-            <img src="@_user.AvatarUrl" alt="Avatar" class="rounded-circle me-3" style="width: 80px; height: 80px; border: 2px solid #444;" />
-        }
-        <div>
-            <h1 class="mb-0">@(_user?.DisplayName ?? "User Profile")</h1>
-            <p class="text-muted">@_user?.Username</p>
+@if (_user == null)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading profile...
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            @if (!string.IsNullOrEmpty(_user.AvatarUrl))
+            {
+                <img src="@_user.AvatarUrl" alt="Avatar"
+                     style="width:56px;height:56px;border-radius:50%;border:2px solid var(--dm-border);" />
+            }
+            <div>
+                <h1 class="mb-0">@_user.DisplayName</h1>
+                <div class="t-meta">@_user.Username</div>
+            </div>
         </div>
     </div>
 
-    <hr />
-
-    @if (_user == null)
-    {
-        <div class="text-center">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2">Fetching your stats from the grid...</p>
-        </div>
-    }
-    else
-    {
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-dark text-white">
-                        Account Details
-                    </div>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">
-                            <strong>Discord ID:</strong> <span class="text-muted small">@_user.DiscordId</span>
-                        </li>
-                        <li class="list-group-item">
-                            <strong>Preferred Timezone:</strong> @_user.TimeZoneId
-                        </li>
-                        <li class="list-group-item">
-                            <strong>Theme:</strong> @_user.ThemePreference
-                        </li>
-                        <li class="list-group-item">
-                            <strong>Member Since:</strong> @_user.CreatedAt.ToShortDateString()
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="card shadow-sm">
-                    <div class="card-header bg-secondary text-white">
-                        Bio
-                    </div>
-                    <div class="card-body">
-                        <p class="card-text">@(string.IsNullOrWhiteSpace(_user.Bio) ? "No bio provided." : _user.Bio)</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-info text-white">
-                        Active Session Claims
-                    </div>
-                    <div class="card-body">
-                        <p class="text-muted small">These values are stored in your encrypted session cookie:</p>
-                        <ul class="list-group list-group-flush">
-                            @foreach (var claim in _claims)
-                            {
-                                <li class="list-group-item" style="font-size: 0.8rem;">
-                                    <strong>@claim.Type:</strong> @claim.Value
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                </div>
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6">
+            <div class="bento-card h-100">
+                <div class="t-label mb-3">Account</div>
+                <table class="dm-table">
+                    <tbody>
+                        <tr>
+                            <td class="t-meta" style="width:40%">Discord ID</td>
+                            <td class="t-sub">@_user.DiscordId</td>
+                        </tr>
+                        <tr>
+                            <td class="t-meta">Timezone</td>
+                            <td class="t-sub">@(string.IsNullOrEmpty(_user.TimeZoneId) ? "—" : _user.TimeZoneId)</td>
+                        </tr>
+                        <tr>
+                            <td class="t-meta">Theme</td>
+                            <td class="t-sub">@(string.IsNullOrEmpty(_user.ThemePreference) ? "—" : _user.ThemePreference)</td>
+                        </tr>
+                        <tr>
+                            <td class="t-meta">Member Since</td>
+                            <td class="t-sub">@_user.CreatedAt.ToString("MMM d, yyyy")</td>
+                        </tr>
+                        @if (_user.UserRoles.Any())
+                        {
+                            <tr>
+                                <td class="t-meta">Roles</td>
+                                <td>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        @foreach (var ur in _user.UserRoles)
+                                        {
+                                            <span class="badge bg-secondary">@ur.Role?.Name</span>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
-    }
-</div>
+
+        <div class="col-12 col-md-6">
+            <div class="bento-card h-100">
+                <div class="t-label mb-3">Bio</div>
+                @if (string.IsNullOrWhiteSpace(_user.Bio))
+                {
+                    <p class="t-meta m-0">No bio provided.</p>
+                }
+                else
+                {
+                    <p class="t-sub m-0">@_user.Bio</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="bento-card">
+        <div class="t-label mb-3">Session Claims</div>
+        <div class="table-responsive">
+            <table class="dm-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var claim in _claims)
+                    {
+                        <tr>
+                            <td class="t-meta" style="font-family:monospace;font-size:0.8rem;">@claim.Type</td>
+                            <td class="t-sub">@claim.Value</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
 
 @code {
     private User? _user;
-    private IEnumerable<Claim> _claims = Enumerable.Empty<Claim>();
+    private IEnumerable<System.Security.Claims.Claim> _claims = Enumerable.Empty<System.Security.Claims.Claim>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -94,16 +118,12 @@
         var principal = authState.User;
         _claims = principal.Claims;
 
-        // Get the internal UserId we stashed in the claims during login
-        var userIdClaim = principal.FindFirst("UserId")?.Value;
-
-        if (int.TryParse(userIdClaim, out var userId))
+        if (int.TryParse(principal.FindFirst("UserId")?.Value, out var userId))
         {
             using var db = await DbFactory.CreateDbContextAsync();
             _user = await db.Users
                 .AsNoTracking()
-                .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Id == userId);
         }
     }
