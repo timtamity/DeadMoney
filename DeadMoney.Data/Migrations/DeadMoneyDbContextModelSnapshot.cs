@@ -1328,6 +1328,9 @@ namespace DeadMoney.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("ConvertedPlayerId")
+                        .HasColumnType("int");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1355,6 +1358,8 @@ namespace DeadMoney.Data.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ConvertedPlayerId");
 
                     b.HasIndex("PositionId");
 
@@ -1658,11 +1663,18 @@ namespace DeadMoney.Data.Migrations
 
             modelBuilder.Entity("DeadMoney.Core.Entities.DraftProspect", b =>
                 {
+                    b.HasOne("DeadMoney.Core.Entities.Player", "ConvertedPlayer")
+                        .WithMany()
+                        .HasForeignKey("ConvertedPlayerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("DeadMoney.Core.Entities.Position", "Position")
                         .WithMany()
                         .HasForeignKey("PositionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("ConvertedPlayer");
 
                     b.Navigation("Position");
                 });

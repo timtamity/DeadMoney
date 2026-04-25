@@ -34,6 +34,7 @@ public static class UiHelpers
         TransactionType.ExtensionCountered => "txn-traded",
         TransactionType.ExtensionDeclined  => "txn-cut",
         TransactionType.FaOfferRejected    => "txn-cut",
+        TransactionType.DraftPickMade      => "txn-signed",
         _                                  => ""
     };
 

@@ -108,6 +108,7 @@ else
         TransactionType.Traded        => "TRADED",
         TransactionType.PickGranted   => "PICK",
         TransactionType.PickForfeited => "FORFEITED",
+        TransactionType.DraftPickMade => "DRAFTED",
         _                             => t.ToString().ToUpper()
     };
 
@@ -119,6 +120,7 @@ else
         TransactionType.Traded        => "⇄",
         TransactionType.PickGranted   => "⊕",
         TransactionType.PickForfeited => "✕",
+        TransactionType.DraftPickMade => "⬆",
         _                             => "·"
     };
 

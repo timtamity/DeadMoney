@@ -233,6 +233,11 @@ public class DeadMoneyDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(dp => dp.PositionId)
                   .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(dp => dp.ConvertedPlayer)
+                  .WithMany()
+                  .HasForeignKey(dp => dp.ConvertedPlayerId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         builder.Entity<DraftSession>(entity =>

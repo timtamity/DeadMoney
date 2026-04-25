@@ -31,5 +31,8 @@ public class DraftProspect
 
     public bool IsDrafted { get; set; }
 
+    public int? ConvertedPlayerId { get; set; }
+    public virtual Player? ConvertedPlayer { get; set; }
+
     public string FullName => $"{FirstName} {LastName}";
 }

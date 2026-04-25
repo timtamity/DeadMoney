@@ -3,6 +3,7 @@
 @inject DraftStateService DraftState
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
+@inject TransactionFeedService FeedSvc
 
 <PageTitle>Draft Setup — Dead Money</PageTitle>
 
@@ -247,6 +248,46 @@ else
                 </div>
             }
         </div>
+
+        <!-- ── Convert to Roster ─────────────────────────────────── -->
+        @if (UnconvertedProspects.Any())
+        {
+            <h2 class="section-title">Convert to Roster</h2>
+            <div class="bento-card mb-4">
+                <p style="color:var(--dm-text-muted);font-size:0.88rem;" class="mb-3">
+                    @UnconvertedProspects.Count drafted prospect@(UnconvertedProspects.Count == 1 ? "" : "s") not yet added to any roster.
+                    Converting creates a player record and a 4-year rookie contract (editable).
+                </p>
+                <div class="table-responsive mb-3">
+                    <table class="dm-table">
+                        <thead>
+                            <tr><th>Name</th><th>Pos</th><th>College</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in UnconvertedProspects)
+                            {
+                                <tr>
+                                    <td class="t-name">@p.LastName, @p.FirstName</td>
+                                    <td><span class="@PosBadgeClass(p.Position?.Code)">@(p.Position?.Code ?? "?")</span></td>
+                                    <td class="t-meta">@(p.College ?? "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <button class="dm-btn-primary" @onclick="ConvertAllAsync" disabled="@converting">
+                    @if (converting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    <i class="bi bi-person-check-fill"></i> Convert All to Roster
+                </button>
+                @if (!string.IsNullOrEmpty(convertMsg))
+                {
+                    <span class="t-meta ms-3" style="color:var(--dm-success);">@convertMsg</span>
+                }
+            </div>
+        }
     }
 }
 
@@ -267,6 +308,13 @@ else
     private List<Position>      positions   = new();
     private ProspectForm        newP        = new();
     private string              prospectMsg = "";
+
+    // Conversion
+    private bool   converting  = false;
+    private string convertMsg  = "";
+
+    private List<DraftProspect> UnconvertedProspects =>
+        prospects.Where(p => p.IsDrafted && p.ConvertedPlayerId == null).ToList();
 
     private class ProspectForm
     {
@@ -416,6 +464,118 @@ else
         var p = await db.DraftProspects.FindAsync(id);
         if (p != null) { db.DraftProspects.Remove(p); await db.SaveChangesAsync(); }
         await LoadProspectsAndClocks(db);
+    }
+
+    private async Task ConvertAllAsync()
+    {
+        if (DraftState.SessionId == null || DraftState.Year == 0) return;
+        converting = true;
+        convertMsg = "";
+        StateHasChanged();
+
+        try
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+
+            var unconverted = await db.DraftProspects
+                .Where(p => p.Year == DraftState.Year && p.IsDrafted && p.ConvertedPlayerId == null)
+                .Include(p => p.Position)
+                .ToListAsync();
+
+            if (!unconverted.Any()) { convertMsg = "Nothing to convert."; return; }
+
+            // Load picks indexed by prospect id for quick lookup
+            var prospectIds = unconverted.Select(p => p.Id).ToHashSet();
+            var picks = await db.DraftPicks
+                .Include(dp => dp.CurrentTeam)
+                .Where(dp => dp.DraftProspectId.HasValue && prospectIds.Contains(dp.DraftProspectId!.Value))
+                .AsNoTracking()
+                .ToListAsync();
+            var pickByProspect = picks.ToDictionary(dp => dp.DraftProspectId!.Value);
+
+            const decimal salary = 800_000m;
+            int converted = 0;
+
+            foreach (var prospect in unconverted)
+            {
+                pickByProspect.TryGetValue(prospect.Id, out var pick);
+                int? teamId = pick?.CurrentTeamId;
+
+                var player = new Player
+                {
+                    FirstName  = prospect.FirstName,
+                    LastName   = prospect.LastName,
+                    PositionId = prospect.PositionId,
+                    TeamId     = teamId,
+                    College    = prospect.College,
+                    Height     = prospect.Height,
+                    Weight     = prospect.Weight,
+                    Age        = prospect.Age,
+                    DraftYear  = DraftState.Year,
+                    DraftRound = pick?.Round,
+                    DraftPick  = pick?.PickNumber
+                };
+                db.Players.Add(player);
+                await db.SaveChangesAsync();
+
+                var contract = new Contract
+                {
+                    PlayerId        = player.Id,
+                    TotalValue      = salary * 4,
+                    TotalGuaranteed = salary,
+                    SigningBonus    = 0,
+                    IsActive        = true
+                };
+                db.Contracts.Add(contract);
+                await db.SaveChangesAsync();
+
+                for (int yr = 0; yr < 4; yr++)
+                {
+                    db.ContractYears.Add(new ContractYear
+                    {
+                        ContractId  = contract.Id,
+                        Year        = DraftState.Year + yr,
+                        TeamId      = teamId,
+                        BaseSalary  = salary,
+                        CapNumber   = salary
+                    });
+                }
+
+                var txn = new Transaction
+                {
+                    Type        = TransactionType.Signed,
+                    PlayerId    = player.Id,
+                    TeamId      = teamId,
+                    Details     = $"Rookie contract · {DraftState.Year} draft pick",
+                    OccurredAt  = DateTime.UtcNow
+                };
+                db.Transactions.Add(txn);
+
+                prospect.ConvertedPlayerId = player.Id;
+                await db.SaveChangesAsync();
+
+                FeedSvc.Notify(new TransactionDto(
+                    txn.Id,
+                    TransactionType.Signed,
+                    player.FullName,
+                    player.Id,
+                    null,
+                    pick?.CurrentTeam?.Abbreviation,
+                    teamId,
+                    null,
+                    txn.Details,
+                    txn.OccurredAt));
+
+                converted++;
+            }
+
+            await LoadProspectsAndClocks(db);
+            convertMsg = $"{converted} player{(converted == 1 ? "" : "s")} added to roster.";
+        }
+        finally
+        {
+            converting = false;
+        }
     }
 
     private static string FormatSeconds(int s) => $"{s / 60}:{s % 60:D2}";
