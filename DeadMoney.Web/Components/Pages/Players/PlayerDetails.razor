@@ -1,5 +1,4 @@
 @page "/players/{playerId:int}"
-@attribute [Authorize]
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
