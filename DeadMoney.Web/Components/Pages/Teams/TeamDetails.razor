@@ -30,6 +30,10 @@ else
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
+            <a href="/teams/@teamId/depth-chart" class="dm-btn-ghost dm-btn-sm">
+                <i class="bi bi-diagram-3"></i>
+                <span class="d-none d-sm-inline">Depth Chart</span>
+            </a>
             <label class="t-label m-0">Year:</label>
             <select class="form-select w-auto" @onchange="OnYearChanged">
                 @foreach (var y in availableYears)
@@ -62,6 +66,55 @@ else
             <div class="stat-value">@roster.Count</div>
         </div>
     </div>
+
+    <h2 class="section-title">Draft Capital</h2>
+
+    @if (!draftPicks.Any())
+    {
+        <div class="empty-state mb-4">
+            <i class="bi bi-ticket-perforated"></i>
+            <p>No draft picks on record.</p>
+        </div>
+    }
+    else
+    {
+        <div class="bento-card mb-4 p-0">
+            <table class="dm-table">
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th>Round</th>
+                        <th>Via</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var pick in draftPicks)
+                    {
+                        <tr>
+                            <td class="t-bright">@pick.Year</td>
+                            <td>
+                                <span class="t-bright">@RoundLabel(pick.Round)</span>
+                                @if (pick.PickNumber.HasValue)
+                                {
+                                    <span class="t-meta ms-1">(#@pick.PickNumber)</span>
+                                }
+                            </td>
+                            <td>
+                                @if (pick.OriginalTeamId != teamId)
+                                {
+                                    <span class="t-gold">@(pick.OriginalTeam?.Abbreviation ?? "—")</span>
+                                }
+                                else
+                                {
+                                    <span class="t-meta">Own</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 
     <h2 class="section-title">Roster</h2>
 
@@ -125,6 +178,7 @@ else
     private int selectedYear;
     private decimal capHit = 0m;
     private List<Player> roster = new();
+    private List<DraftPick> draftPicks = new();
 
     [Parameter]
     public int teamId { get; set; }
@@ -160,6 +214,13 @@ else
             .AsNoTracking()
             .ToListAsync();
 
+        draftPicks = await db.DraftPicks
+            .Where(dp => dp.CurrentTeamId == teamId && !dp.IsUsed && !dp.IsVoided)
+            .Include(dp => dp.OriginalTeam)
+            .OrderBy(dp => dp.Year).ThenBy(dp => dp.Round).ThenBy(dp => dp.PickNumber)
+            .AsNoTracking()
+            .ToListAsync();
+
         await RefreshCapHitAsync();
     }
 
@@ -181,4 +242,12 @@ else
     }
 
     private void GoToPlayer(int playerId) => Navigation.NavigateTo($"/players/{playerId}");
+
+    private static string RoundLabel(int r) => r switch
+    {
+        1 => "1st",
+        2 => "2nd",
+        3 => "3rd",
+        _ => $"{r}th"
+    };
 }

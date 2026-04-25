@@ -1305,6 +1305,38 @@ namespace DeadMoney.Data.Migrations
                     b.ToTable("UserRoles", "Auth");
                 });
 
+            modelBuilder.Entity("DeadMoney.Core.Entities.DepthChartEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DepthOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlayerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PositionCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("TeamId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId");
+
+                    b.HasIndex("TeamId", "PositionCode")
+                        .HasDatabaseName("IX_DepthChartEntries_TeamId_PositionCode");
+
+                    b.ToTable("DepthChartEntries", "League");
+                });
+
             modelBuilder.Entity("DeadMoney.Core.Entities.Contract", b =>
                 {
                     b.HasOne("DeadMoney.Core.Entities.Player", "Player")
@@ -1514,6 +1546,25 @@ namespace DeadMoney.Data.Migrations
                     b.Navigation("Team");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DeadMoney.Core.Entities.DepthChartEntry", b =>
+                {
+                    b.HasOne("DeadMoney.Core.Entities.Player", "Player")
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DeadMoney.Core.Entities.Team", "Team")
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Player");
+
+                    b.Navigation("Team");
                 });
 
             modelBuilder.Entity("DeadMoney.Core.Entities.Contract", b =>

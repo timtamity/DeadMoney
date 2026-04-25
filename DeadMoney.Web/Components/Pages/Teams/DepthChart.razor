@@ -1,0 +1,271 @@
+@page "/teams/{teamId:int}/depth-chart"
+@inject IDbContextFactory<DeadMoneyDbContext> DbFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>@(teamAbbr != "" ? $"{teamAbbr} Depth Chart" : "Depth Chart") — Dead Money</PageTitle>
+
+<div class="mb-3">
+    <button class="dm-btn-ghost" @onclick="@(() => Navigation.NavigateTo($"/teams/{teamId}"))">
+        <i class="bi bi-arrow-left"></i> @(teamAbbr != "" ? teamAbbr : "Team")
+    </button>
+</div>
+
+@if (!loaded)
+{
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading depth chart...
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>@teamAbbr <span style="font-weight:400;font-size:1.1rem;">Depth Chart</span></h1>
+        </div>
+    </div>
+
+    <div class="depth-tabs mb-3">
+        @foreach (var tab in Tabs)
+        {
+            <button class="depth-tab-btn @(activeTab == tab ? "active" : "")" @onclick="@(() => activeTab = tab)">
+                @tab
+            </button>
+        }
+    </div>
+
+    <div class="depth-grid">
+        @foreach (var pos in TabPositions[activeTab])
+        {
+            var group = entries.GetValueOrDefault(pos) ?? new();
+            <div class="depth-pos-card">
+                <div class="depth-pos-header">
+                    <span class="@PosBadgeClass(pos)">@pos</span>
+                    @if (canEdit)
+                    {
+                        <button class="dm-btn-ghost dm-btn-sm" style="padding:2px 6px;font-size:0.75rem;" @onclick="@(() => ToggleAdd(pos))">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    }
+                </div>
+
+                @if (canEdit && addingPos == pos)
+                {
+                    <div class="depth-add">
+                        <select class="form-select form-select-sm" @onchange="@(e => AddEntry(pos, e))">
+                            <option value="">— add player —</option>
+                            @foreach (var p in GetAddableRoster(pos))
+                            {
+                                <option value="@p.Id">@p.LastName, @p.FirstName (@(p.Position?.Code ?? "?"))</option>
+                            }
+                        </select>
+                    </div>
+                }
+
+                @if (!group.Any())
+                {
+                    <div class="depth-empty">No players set</div>
+                }
+                else
+                {
+                    @foreach (var entry in group)
+                    {
+                        <div class="depth-entry @(_dragOver == entry.Id ? "drag-over" : "")"
+                             draggable="@(canEdit ? "true" : "false")"
+                             @ondragstart="@(() => { _dragging = entry; })"
+                             @ondragenter="@(() => _dragOver = entry.Id)"
+                             @ondragenter:preventDefault="true"
+                             @ondragover:preventDefault="true"
+                             @ondrop="@(() => HandleDrop(entry))"
+                             @ondragend="@(() => { _dragging = null; _dragOver = 0; })">
+                            <span class="depth-num">@entry.DepthOrder</span>
+                            @if (canEdit)
+                            {
+                                <i class="bi bi-grip-vertical" style="color:var(--dm-text-muted);font-size:0.75rem;flex-shrink:0;"></i>
+                            }
+                            <span class="t-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                @(entry.Player?.FirstName?[0]). @entry.Player?.LastName
+                            </span>
+                            @if (canEdit)
+                            {
+                                <button class="dm-btn-ghost dm-btn-sm"
+                                        style="padding:1px 5px;font-size:0.7rem;color:var(--dm-danger);"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="@(() => RemoveEntry(entry))">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int teamId { get; set; }
+
+    private static readonly string[] Tabs = ["Offense", "Defense", "Special Teams"];
+
+    private static readonly Dictionary<string, string[]> TabPositions = new()
+    {
+        ["Offense"]       = ["QB", "RB", "FB", "WR", "TE", "OT", "G", "C"],
+        ["Defense"]       = ["EDGE", "DT", "LB", "CB", "S"],
+        ["Special Teams"] = ["K", "P", "LS"]
+    };
+
+    private string activeTab = "Offense";
+    private string teamAbbr  = "";
+    private bool   loaded;
+    private bool   canEdit;
+    private string addingPos = "";
+
+    private Dictionary<string, List<DepthChartEntry>> entries = new();
+    private List<Player> roster = new();
+
+    private DepthChartEntry? _dragging;
+    private int              _dragOver;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var isCommissioner = user.IsInRole("Admin") || user.IsInRole("Commissioner");
+            var isGmRole       = user.IsInRole("GM") || user.IsInRole("Assistant GM");
+            int.TryParse(user.FindFirst("TeamId")?.Value, out var myTeamId);
+            canEdit = isCommissioner || (isGmRole && myTeamId == teamId);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        var team = await db.Teams
+            .Where(t => t.Id == teamId)
+            .Select(t => new { t.Abbreviation })
+            .AsNoTracking()
+            .FirstOrDefaultAsync();
+        teamAbbr = team?.Abbreviation ?? "";
+
+        var rawEntries = await db.DepthChartEntries
+            .Where(e => e.TeamId == teamId)
+            .Include(e => e.Player).ThenInclude(p => p!.Position)
+            .OrderBy(e => e.PositionCode).ThenBy(e => e.DepthOrder)
+            .ToListAsync();
+
+        entries = rawEntries
+            .GroupBy(e => e.PositionCode)
+            .ToDictionary(g => g.Key, g => g.OrderBy(e => e.DepthOrder).ToList());
+
+        roster = await db.Players
+            .Where(p => p.TeamId == teamId)
+            .Include(p => p.Position)
+            .OrderBy(p => p.Position != null ? p.Position.DisplayOrder : 99).ThenBy(p => p.LastName)
+            .AsNoTracking()
+            .ToListAsync();
+
+        loaded = true;
+    }
+
+    private IEnumerable<Player> GetAddableRoster(string pos)
+    {
+        var alreadyIn = entries.GetValueOrDefault(pos)?.Select(e => e.PlayerId).ToHashSet() ?? new();
+        return roster.Where(p => !alreadyIn.Contains(p.Id));
+    }
+
+    private void ToggleAdd(string pos) => addingPos = addingPos == pos ? "" : pos;
+
+    private async Task AddEntry(string pos, ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var playerId) || playerId == 0) return;
+
+        var group = entries.GetValueOrDefault(pos) ?? new();
+        var nextOrder = group.Count + 1;
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        var entry = new DepthChartEntry
+        {
+            TeamId       = teamId,
+            PlayerId     = playerId,
+            PositionCode = pos,
+            DepthOrder   = nextOrder
+        };
+        db.DepthChartEntries.Add(entry);
+        await db.SaveChangesAsync();
+
+        addingPos = "";
+        await LoadAsync();
+    }
+
+    private async Task RemoveEntry(DepthChartEntry entry)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var existing = await db.DepthChartEntries.FindAsync(entry.Id);
+        if (existing != null)
+        {
+            db.DepthChartEntries.Remove(existing);
+            await db.SaveChangesAsync();
+            await ReorderPositionAsync(entry.PositionCode);
+        }
+        await LoadAsync();
+    }
+
+    private async Task HandleDrop(DepthChartEntry target)
+    {
+        if (_dragging == null || _dragging.Id == target.Id || _dragging.PositionCode != target.PositionCode)
+        {
+            _dragging = null;
+            _dragOver = 0;
+            return;
+        }
+
+        var pos   = target.PositionCode;
+        var group = entries.GetValueOrDefault(pos);
+        if (group == null) return;
+
+        var dragIdx = group.FindIndex(x => x.Id == _dragging.Id);
+        var dropIdx = group.FindIndex(x => x.Id == target.Id);
+        if (dragIdx < 0 || dropIdx < 0) return;
+
+        var dragged = group[dragIdx];
+        group.RemoveAt(dragIdx);
+        group.Insert(dropIdx, dragged);
+
+        for (int i = 0; i < group.Count; i++) group[i].DepthOrder = i + 1;
+
+        await SavePositionAsync(pos, group);
+
+        _dragging = null;
+        _dragOver = 0;
+    }
+
+    private async Task SavePositionAsync(string pos, List<DepthChartEntry> group)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        foreach (var e in group)
+        {
+            var row = await db.DepthChartEntries.FindAsync(e.Id);
+            if (row != null) row.DepthOrder = e.DepthOrder;
+        }
+        await db.SaveChangesAsync();
+    }
+
+    private async Task ReorderPositionAsync(string pos)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var rows = await db.DepthChartEntries
+            .Where(e => e.TeamId == teamId && e.PositionCode == pos)
+            .OrderBy(e => e.DepthOrder)
+            .ToListAsync();
+        for (int i = 0; i < rows.Count; i++) rows[i].DepthOrder = i + 1;
+        await db.SaveChangesAsync();
+    }
+}

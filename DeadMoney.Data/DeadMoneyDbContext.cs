@@ -22,6 +22,7 @@ public class DeadMoneyDbContext : DbContext
     public DbSet<ExtensionOffer> ExtensionOffers => Set<ExtensionOffer>();
     public DbSet<PendingTrade> PendingTrades => Set<PendingTrade>();
     public DbSet<PendingTradeAsset> PendingTradeAssets => Set<PendingTradeAsset>();
+    public DbSet<DepthChartEntry> DepthChartEntries => Set<DepthChartEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -220,6 +221,20 @@ public class DeadMoneyDbContext : DbContext
                   .HasForeignKey(a => a.DraftPickId)
                   .IsRequired(false)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<DepthChartEntry>(entity =>
+        {
+            entity.ToTable("DepthChartEntries", "League");
+            entity.HasOne(e => e.Team)
+                  .WithMany()
+                  .HasForeignKey(e => e.TeamId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Player)
+                  .WithMany()
+                  .HasForeignKey(e => e.PlayerId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.TeamId, e.PositionCode });
         });
 
         // 4. Static Seeding

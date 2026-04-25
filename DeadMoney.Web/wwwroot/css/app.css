@@ -211,6 +211,86 @@ main {
     -webkit-backdrop-filter: blur(3px);
 }
 
+/* --- Depth Chart --- */
+.depth-tabs {
+    display: flex;
+    gap: 6px;
+}
+
+.depth-tab-btn {
+    background: none;
+    border: 1px solid var(--dm-border);
+    color: var(--dm-text-muted);
+    padding: 5px 16px;
+    border-radius: var(--dm-radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.depth-tab-btn:hover  { color: var(--dm-text-bright); border-color: var(--dm-text-muted); }
+.depth-tab-btn.active { color: var(--dm-accent); border-color: var(--dm-accent); background: rgba(88,166,255,0.08); }
+
+.depth-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+.depth-pos-card {
+    background: var(--dm-bg-card);
+    border: 1px solid var(--dm-border);
+    border-radius: var(--dm-radius);
+    overflow: hidden;
+}
+
+.depth-pos-header {
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--dm-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.depth-entry {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.1s;
+    user-select: none;
+    min-height: 34px;
+}
+.depth-entry:last-child { border-bottom: none; }
+.depth-entry:hover { background: var(--dm-bg-row-hover); }
+.depth-entry.drag-over { background: rgba(88,166,255,0.1); border-top: 2px solid var(--dm-accent); }
+.depth-entry[draggable="true"] { cursor: grab; }
+.depth-entry[draggable="true"]:active { cursor: grabbing; }
+
+.depth-num {
+    font-size: 0.68rem;
+    color: var(--dm-text-muted);
+    width: 14px;
+    flex-shrink: 0;
+    text-align: right;
+    font-weight: 700;
+}
+
+.depth-empty {
+    padding: 10px 12px;
+    color: var(--dm-text-muted);
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+.depth-add {
+    padding: 6px 10px 8px;
+    border-top: 1px solid var(--dm-border);
+}
+
 /* ============================================
    MOBILE  (<768px)
    ============================================ */
