@@ -241,6 +241,35 @@ else
         </div>
     }
 
+    <!-- Transactions -->
+    @if (transactions.Any())
+    {
+        <h2 class="section-title">Transaction History</h2>
+        <div class="bento-card mb-4">
+            <div class="txn-feed-list">
+                @foreach (var txn in transactions)
+                {
+                    <div class="txn-row">
+                        <span class="txn-badge @TxnClass(txn.Type)">@TxnLabel(txn.Type)</span>
+                        <div class="txn-row-body">
+                            @if (txn.Team != null)
+                            {
+                                <span class="txn-team">
+                                    @(txn.ToTeam != null ? $"{txn.Team.Abbreviation} → {txn.ToTeam.Abbreviation}" : txn.Team.Abbreviation)
+                                </span>
+                            }
+                            @if (!string.IsNullOrEmpty(txn.Details))
+                            {
+                                <span class="txn-details">@txn.Details</span>
+                            }
+                        </div>
+                        <div class="txn-time">@RelativeTime(txn.OccurredAt)</div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
     <!-- Contracts -->
     <h2 class="section-title">
         Contracts
@@ -340,6 +369,9 @@ else
     private bool isAdminOrCommish;
     private int  myTeamId;
 
+    // Transactions
+    private List<Transaction> transactions = new();
+
     // Offer state
     private FaHeatDto?  heat;
     private FaOffer?    myOffer;
@@ -367,6 +399,17 @@ else
                 .ThenInclude(c => c.ContractYears)
                     .ThenInclude(cy => cy.Team)
             .FirstOrDefaultAsync(p => p.Id == playerId);
+
+        if (player != null)
+        {
+            transactions = await db.Transactions
+                .Where(t => t.PlayerId == playerId)
+                .Include(t => t.Team)
+                .Include(t => t.ToTeam)
+                .OrderByDescending(t => t.OccurredAt)
+                .AsNoTracking()
+                .ToListAsync();
+        }
 
         if (player?.TeamId == null && player?.IsRetired == false)
             await LoadOfferDataAsync();
@@ -413,4 +456,15 @@ else
 
     private void GoToContract(int contractId) => Navigation.NavigateTo($"/contracts/{contractId}");
 
+    private static string TxnLabel(TransactionType t) => t switch
+    {
+        TransactionType.Cut                => "CUT",
+        TransactionType.Signed             => "SIGNED",
+        TransactionType.Extended           => "EXTENDED",
+        TransactionType.Traded             => "TRADED",
+        TransactionType.DraftPickMade      => "DRAFTED",
+        TransactionType.ExtensionAgreed    => "EXTENDED",
+        TransactionType.ContractModified   => "MODIFIED",
+        _                                  => t.ToString().ToUpper()
+    };
 }
