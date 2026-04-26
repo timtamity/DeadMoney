@@ -8,445 +8,146 @@
 <div class="page-header">
     <div>
         <h1>Teams</h1>
-        @if (activeTab == "grid" && teams != null)
-        {
-            <div class="subtitle">@totalTeams teams</div>
-        }
-        else if (activeTab == "cap" && capLoaded)
+        @if (loaded)
         {
             <div class="subtitle">@currentYear &middot; Cap: $@(salaryCap / 1_000_000m).0M</div>
         }
     </div>
-    @if (activeTab == "cap" && capLoaded)
+    @if (loaded)
     {
-        <div class="d-flex align-items-center gap-2">
-            <label class="t-label m-0">Sort:</label>
-            <select class="form-select w-auto" @bind="capSort" @bind:after="ApplyCapSort">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <input class="form-control" style="max-width:200px;" placeholder="Search…"
+                   @bind-value="search" @bind-value:event="oninput" />
+            <select class="form-select w-auto" @bind="confFilter">
+                <option value="">All</option>
+                <option value="AFC">AFC</option>
+                <option value="NFC">NFC</option>
+            </select>
+            <select class="form-select w-auto" @bind="sortMode">
+                <option value="div">Division</option>
                 <option value="space">Cap Space</option>
                 <option value="hit">Cap Hit</option>
-                <option value="alpha">Team</option>
+                <option value="roster">Roster Size</option>
+                <option value="picks">Draft Capital</option>
             </select>
         </div>
     }
 </div>
 
-<!-- Tab bar -->
-<div class="depth-tabs mb-4">
-    <button class="depth-tab-btn @(activeTab == "grid"    ? "active" : "")" @onclick='@(() => SetTab("grid"))'>Teams</button>
-    <button class="depth-tab-btn @(activeTab == "cap"     ? "active" : "")" @onclick='@(() => SetTab("cap"))'>Cap</button>
-    <button class="depth-tab-btn @(activeTab == "rosters" ? "active" : "")" @onclick='@(() => SetTab("rosters"))'>Rosters</button>
-    <button class="depth-tab-btn @(activeTab == "picks"   ? "active" : "")" @onclick='@(() => SetTab("picks"))'>Draft Capital</button>
-</div>
-
-<!-- ── Teams Grid ───────────────────────────────────────────── -->
-@if (activeTab == "grid")
+@if (!loaded)
 {
-    <div class="filter-bar bento-card mb-4">
-        <div class="row g-3">
-            <div class="col-12 col-sm-6">
-                <label>Search</label>
-                <input type="text" class="form-control" placeholder="Name, city, or abbreviation..."
-                       value="@searchName" @oninput="@(e => OnSearchInput(e.Value?.ToString() ?? ""))" />
-            </div>
-            <div class="col-12 col-sm-6">
-                <label>Conference</label>
-                <select class="form-select" @bind="filterConference" @bind:after="OnFilterChanged">
-                    <option value="">All Conferences</option>
-                    <option value="AFC">AFC</option>
-                    <option value="NFC">NFC</option>
-                </select>
-            </div>
-        </div>
+    <div class="loading-state">
+        <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
+        Loading teams...
     </div>
-
-    @if (teams == null)
-    {
-        <div class="loading-state">
-            <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
-            Loading teams...
-        </div>
-    }
-    else if (!teams.Any())
-    {
-        <div class="empty-state"><i class="bi bi-flag"></i><p>No teams found.</p></div>
-    }
-    else
-    {
-        <div class="teams-grid">
-            @foreach (var team in teams)
-            {
-                <div class="team-card" style="--team-color: @(team.PrimaryColor ?? "var(--dm-gold)");"
-                     @onclick="@(() => NavigateToTeam(team.Id))">
-                    <div class="team-abbrev">@team.Abbreviation</div>
-                    <div class="team-name">@team.City @team.Name</div>
-                    <div class="team-conf mt-1">
-                        <span class="conf-badge @(team.Conference == "AFC" ? "afc" : "nfc")">
-                            @team.Conference — @team.Division
-                        </span>
-                    </div>
-                </div>
-            }
-        </div>
-
-        @if (totalPages > 1)
-        {
-            <div class="dm-pagination">
-                <button @onclick="@(async () => await SetPage(1))"                    disabled="@(currentPage == 1)">«</button>
-                <button @onclick="@(async () => await SetPage(currentPage - 1))"      disabled="@(currentPage == 1)">‹</button>
-                @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+}
+else
+{
+    <div class="table-responsive bento-card">
+        <table class="dm-table">
+            <thead>
+                <tr>
+                    <th>Team</th>
+                    <th class="d-none d-sm-table-cell">Conf / Div</th>
+                    <th class="text-end">Cap Space</th>
+                    <th class="text-end d-none d-md-table-cell">Cap Hit</th>
+                    <th class="text-center d-none d-md-table-cell">Roster</th>
+                    <th class="text-center d-none d-lg-table-cell">Picks</th>
+                    <th class="d-none d-lg-table-cell">Cap Usage</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in FilteredRows)
                 {
-                    int pageNum = i;
-                    <button class="@(currentPage == pageNum ? "active" : "")"
-                            @onclick="@(async () => await SetPage(pageNum))">@pageNum</button>
+                    var pct = (salaryCap + row.CarryoverCap) > 0
+                        ? Math.Min((double)row.CapHit / (double)(salaryCap + row.CarryoverCap) * 100.0, 100.0)
+                        : 0.0;
+                    var barClass = pct >= 100 ? "red" : pct >= 85 ? "yellow" : "green";
+
+                    <tr class="row-link" @onclick="@(() => Navigation.NavigateTo($"/teams/{row.TeamId}"))">
+                        <td>
+                            <span class="t-name" style="color:@(row.PrimaryColor ?? "var(--dm-text-bright)")">@row.Abbreviation</span>
+                            <span class="t-meta d-block">@row.City @row.Nickname</span>
+                        </td>
+                        <td class="t-meta d-none d-sm-table-cell">@row.Conference — @row.Division</td>
+                        <td class="text-end @(row.CapSpace < 0 ? "t-danger" : "t-success") fw-bold">
+                            @FormatMoney(row.CapSpace)
+                        </td>
+                        <td class="text-end t-meta d-none d-md-table-cell">@FormatMoney(row.CapHit)</td>
+                        <td class="text-center d-none d-md-table-cell">
+                            <span class="@(row.RosterCount >= 85 ? "t-success" : row.RosterCount == 0 ? "t-meta" : "")">
+                                @row.RosterCount
+                            </span>
+                            <span class="t-meta">/90</span>
+                        </td>
+                        <td class="text-center t-meta d-none d-lg-table-cell">@row.PickCount</td>
+                        <td class="d-none d-lg-table-cell" style="min-width:100px;">
+                            <div class="cap-bar-wrap">
+                                <div class="cap-bar-fill @barClass" style="width:@(pct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <i class="bi bi-chevron-right t-meta"></i>
+                        </td>
+                    </tr>
                 }
-                <button @onclick="@(async () => await SetPage(currentPage + 1))"      disabled="@(currentPage == totalPages)">›</button>
-                <button @onclick="@(async () => await SetPage(totalPages))"           disabled="@(currentPage == totalPages)">»</button>
-            </div>
-        }
-    }
-}
-
-<!-- ── Cap ─────────────────────────────────────────────────── -->
-@if (activeTab == "cap")
-{
-    @if (!capLoaded)
-    {
-        <div class="loading-state">
-            <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
-            Loading cap data...
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive bento-card">
-            <table class="dm-table">
-                <thead>
-                    <tr>
-                        <th>Team</th>
-                        <th class="d-none d-sm-table-cell">Div</th>
-                        <th class="text-end">Cap Hit</th>
-                        <th class="d-none d-md-table-cell text-end">Dead Money</th>
-                        <th class="d-none d-md-table-cell text-end">Carryover</th>
-                        <th class="text-end">Cap Space</th>
-                        <th class="d-none d-lg-table-cell">Usage</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var row in capRows)
-                    {
-                        var pct = (salaryCap + row.CarryoverCap) > 0
-                            ? Math.Min((double)row.CapHit / (double)(salaryCap + row.CarryoverCap) * 100.0, 100.0)
-                            : 0.0;
-                        var barClass = pct >= 100 ? "red" : pct >= 85 ? "yellow" : "green";
-                        <tr class="row-link" @onclick="@(() => NavigateToTeam(row.TeamId))">
-                            <td>
-                                <span class="t-name">@row.Abbreviation</span>
-                                <span class="t-meta d-block">@row.City @row.Nickname</span>
-                            </td>
-                            <td class="d-none d-sm-table-cell t-meta">@row.Conference — @row.Division</td>
-                            <td class="text-end t-money">@FormatMoney(row.CapHit)</td>
-                            <td class="d-none d-md-table-cell text-end t-meta">@FormatMoney(row.DeadMoney)</td>
-                            <td class="d-none d-md-table-cell text-end @(row.CarryoverCap > 0 ? "t-success" : "t-meta")">
-                                @(row.CarryoverCap > 0 ? FormatMoney(row.CarryoverCap) : "—")
-                            </td>
-                            <td class="text-end @(row.CapSpace < 0 ? "t-danger" : "t-success")">@FormatMoney(row.CapSpace)</td>
-                            <td class="d-none d-lg-table-cell" style="min-width:120px;">
-                                <div class="cap-bar-wrap">
-                                    <div class="cap-bar-fill @barClass" style="width:@(pct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
-                                </div>
-                                <div class="t-meta mt-1">@pct.ToString("F0")%</div>
-                            </td>
-                            <td class="text-end">
-                                <button class="dm-btn-ghost dm-btn-sm" @onclick:stopPropagation="true"
-                                        @onclick="@(() => NavigateToTeam(row.TeamId))">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <div class="stats-row mt-4">
-            <div class="stat-card">
-                <div class="stat-label">Avg Cap Hit</div>
-                <div class="stat-value gold">@FormatMoney(capRows.Count > 0 ? capRows.Average(r => r.CapHit) : 0)</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Most Space</div>
-                <div class="stat-value green">
-                    @if (capRows.Count > 0)
-                    {
-                        var top = capRows.OrderByDescending(r => r.CapSpace).First();
-                        <span>@top.Abbreviation (@FormatMoney(top.CapSpace))</span>
-                    }
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Over Cap</div>
-                <div class="stat-value @(capRows.Count(r => r.CapSpace < 0) > 0 ? "red" : "green")">
-                    @capRows.Count(r => r.CapSpace < 0) teams
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Total Dead Money</div>
-                <div class="stat-value">@FormatMoney(capRows.Sum(r => r.DeadMoney))</div>
-            </div>
-        </div>
-    }
-}
-
-<!-- ── Rosters ─────────────────────────────────────────────── -->
-@if (activeTab == "rosters")
-{
-    @if (!rosterLoaded)
-    {
-        <div class="loading-state">
-            <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
-            Loading rosters...
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive bento-card">
-            <table class="dm-table">
-                <thead>
-                    <tr>
-                        <th>Team</th>
-                        <th class="text-center">Total</th>
-                        <th class="text-center d-none d-sm-table-cell">QB</th>
-                        <th class="text-center d-none d-sm-table-cell">RB</th>
-                        <th class="text-center d-none d-sm-table-cell">WR</th>
-                        <th class="text-center d-none d-sm-table-cell">TE</th>
-                        <th class="text-center d-none d-md-table-cell">OL</th>
-                        <th class="text-center d-none d-md-table-cell">DL</th>
-                        <th class="text-center d-none d-md-table-cell">LB</th>
-                        <th class="text-center d-none d-md-table-cell">DB</th>
-                        <th class="text-center d-none d-lg-table-cell">ST</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var row in rosterRows.OrderBy(r => r.Conference).ThenBy(r => r.Division).ThenBy(r => r.Abbreviation))
-                    {
-                        <tr class="row-link" @onclick="@(() => NavigateToTeam(row.TeamId))">
-                            <td>
-                                <span class="t-name">@row.Abbreviation</span>
-                                <span class="t-meta d-block">@row.City @row.Nickname</span>
-                            </td>
-                            <td class="text-center @(row.Total >= 85 ? "t-success" : row.Total == 0 ? "t-meta" : "")">
-                                <strong>@row.Total</strong>
-                                <span class="t-meta d-block" style="font-size:0.68rem;">/ 90</span>
-                            </td>
-                            <td class="text-center t-meta d-none d-sm-table-cell">@(row.QB  > 0 ? row.QB.ToString()  : "—")</td>
-                            <td class="text-center t-meta d-none d-sm-table-cell">@(row.RB  > 0 ? row.RB.ToString()  : "—")</td>
-                            <td class="text-center t-meta d-none d-sm-table-cell">@(row.WR  > 0 ? row.WR.ToString()  : "—")</td>
-                            <td class="text-center t-meta d-none d-sm-table-cell">@(row.TE  > 0 ? row.TE.ToString()  : "—")</td>
-                            <td class="text-center t-meta d-none d-md-table-cell">@(row.OL  > 0 ? row.OL.ToString()  : "—")</td>
-                            <td class="text-center t-meta d-none d-md-table-cell">@(row.DL  > 0 ? row.DL.ToString()  : "—")</td>
-                            <td class="text-center t-meta d-none d-md-table-cell">@(row.LB  > 0 ? row.LB.ToString()  : "—")</td>
-                            <td class="text-center t-meta d-none d-md-table-cell">@(row.DB  > 0 ? row.DB.ToString()  : "—")</td>
-                            <td class="text-center t-meta d-none d-lg-table-cell">@(row.ST  > 0 ? row.ST.ToString()  : "—")</td>
-                            <td class="text-end">
-                                <button class="dm-btn-ghost dm-btn-sm" @onclick:stopPropagation="true"
-                                        @onclick="@(() => NavigateToTeam(row.TeamId))">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-}
-
-<!-- ── Draft Capital ───────────────────────────────────────── -->
-@if (activeTab == "picks")
-{
-    @if (!picksLoaded)
-    {
-        <div class="loading-state">
-            <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
-            Loading picks...
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive bento-card">
-            <table class="dm-table">
-                <thead>
-                    <tr>
-                        <th>Team</th>
-                        <th class="text-center">Total</th>
-                        @foreach (var r in new[] { 1,2,3,4,5,6,7 })
-                        {
-                            <th class="text-center d-none d-sm-table-cell">Rd @r</th>
-                        }
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var row in picksRows.OrderBy(r => r.Conference).ThenBy(r => r.Division).ThenBy(r => r.Abbreviation))
-                    {
-                        <tr class="row-link" @onclick="@(() => NavigateToTeam(row.TeamId))">
-                            <td>
-                                <span class="t-name">@row.Abbreviation</span>
-                                <span class="t-meta d-block">@row.City @row.Nickname</span>
-                            </td>
-                            <td class="text-center"><strong>@row.TotalPicks</strong></td>
-                            @foreach (var rd in new[] { 1,2,3,4,5,6,7 })
-                            {
-                                var roundPicks = row.Picks.Where(p => p.Round == rd).ToList();
-                                <td class="text-center d-none d-sm-table-cell">
-                                    @if (!roundPicks.Any())
-                                    {
-                                        <span class="t-meta">—</span>
-                                    }
-                                    else
-                                    {
-                                        @foreach (var pk in roundPicks)
-                                        {
-                                            <span class="@(pk.IsTrade ? "t-gold" : "t-meta")"
-                                                  title="@(pk.IsTrade ? $"via {pk.OriginalTeamAbbr}" : "own pick")">
-                                                @(pk.PickNumber.HasValue ? $"#{pk.PickNumber}" : "✓")
-                                            </span>
-                                            <br />
-                                        }
-                                    }
-                                </td>
-                            }
-                            <td class="text-end">
-                                <button class="dm-btn-ghost dm-btn-sm" @onclick:stopPropagation="true"
-                                        @onclick="@(() => NavigateToTeam(row.TeamId))">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <div class="t-meta mt-2" style="font-size:0.78rem;">
-            <span class="t-gold">Gold</span> = acquired via trade
-        </div>
-    }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
-    private string activeTab = "grid";
+    private record TeamRow(int TeamId, string Abbreviation, string City, string Nickname,
+        string Conference, string Division, string? PrimaryColor,
+        decimal CapHit, decimal CarryoverCap, decimal CapSpace,
+        int RosterCount, int PickCount);
 
-    // ── Grid ──────────────────────────────────────────────────
-    private List<Team>? teams;
-    private string searchName       = "";
-    private string filterConference = "";
-    private int    currentPage      = 1;
-    private const int PageSize      = 32;
-    private int    totalTeams       = 0;
-    private int    totalPages       = 0;
+    private bool         loaded      = false;
+    private int          currentYear;
+    private decimal      salaryCap;
+    private string       search      = "";
+    private string       confFilter  = "";
+    private string       sortMode    = "div";
+    private List<TeamRow> allRows    = new();
 
-    // ── Cap ───────────────────────────────────────────────────
-    private record CapRow(int TeamId, string Abbreviation, string City, string Nickname,
-        string Conference, string Division, decimal CapHit, decimal DeadMoney,
-        decimal CarryoverCap, decimal CapSpace);
-
-    private bool        capLoaded  = false;
-    private int         currentYear;
-    private decimal     salaryCap;
-    private string      capSort    = "space";
-    private List<CapRow> capRows   = new();
-
-    // ── Rosters ───────────────────────────────────────────────
-    private record RosterRow(int TeamId, string Abbreviation, string City, string Nickname,
-        string Conference, string Division,
-        int Total, int QB, int RB, int WR, int TE, int OL, int DL, int LB, int DB, int ST);
-
-    private bool             rosterLoaded = false;
-    private List<RosterRow>  rosterRows   = new();
-
-    // ── Picks ─────────────────────────────────────────────────
-    private record PickInfo(int Round, int? PickNumber, bool IsTrade, string? OriginalTeamAbbr);
-    private record PicksRow(int TeamId, string Abbreviation, string City, string Nickname,
-        string Conference, string Division, List<PickInfo> Picks, int TotalPicks);
-
-    private bool            picksLoaded = false;
-    private List<PicksRow>  picksRows   = new();
+    private IEnumerable<TeamRow> FilteredRows
+    {
+        get
+        {
+            var q = allRows.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(search))
+                q = q.Where(r =>
+                    r.Abbreviation.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    r.City.Contains(search,         StringComparison.OrdinalIgnoreCase) ||
+                    r.Nickname.Contains(search,     StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(confFilter))
+                q = q.Where(r => r.Conference == confFilter);
+            return sortMode switch
+            {
+                "space"  => q.OrderByDescending(r => r.CapSpace),
+                "hit"    => q.OrderByDescending(r => r.CapHit),
+                "roster" => q.OrderByDescending(r => r.RosterCount),
+                "picks"  => q.OrderByDescending(r => r.PickCount),
+                _        => q.OrderBy(r => r.Conference).ThenBy(r => r.Division).ThenBy(r => r.Abbreviation)
+            };
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         var setting = await LeagueSettingsSvc.GetCurrentAsync();
         currentYear = setting?.Year ?? DateTime.UtcNow.Year;
         salaryCap   = setting?.SalaryCap ?? 279_200_000m;
-        await LoadGridAsync();
+        await LoadAsync();
+        loaded = true;
     }
 
-    private async Task SetTab(string tab)
-    {
-        activeTab = tab;
-        switch (tab)
-        {
-            case "cap"     when !capLoaded:     await LoadCapAsync();     break;
-            case "rosters" when !rosterLoaded:  await LoadRostersAsync(); break;
-            case "picks"   when !picksLoaded:   await LoadPicksAsync();   break;
-        }
-    }
-
-    // ── Grid ──────────────────────────────────────────────────
-    private async Task OnSearchInput(string value)
-    {
-        searchName  = value;
-        currentPage = 1;
-        await LoadGridAsync();
-    }
-
-    private async Task OnFilterChanged()
-    {
-        currentPage = 1;
-        await LoadGridAsync();
-    }
-
-    private async Task LoadGridAsync()
-    {
-        using var db = await DbFactory.CreateDbContextAsync();
-        var query = db.Teams.AsQueryable();
-
-        if (!string.IsNullOrEmpty(searchName))
-            query = query.Where(t =>
-                EF.Functions.Like(t.City,         $"%{searchName}%") ||
-                EF.Functions.Like(t.Name,         $"%{searchName}%") ||
-                EF.Functions.Like(t.Abbreviation, $"%{searchName}%"));
-
-        if (!string.IsNullOrEmpty(filterConference))
-            query = query.Where(t => t.Conference == filterConference);
-
-        totalTeams = await query.CountAsync();
-        totalPages = Math.Max(1, (totalTeams + PageSize - 1) / PageSize);
-        if (currentPage > totalPages) currentPage = totalPages;
-
-        teams = await query
-            .OrderBy(t => t.Conference).ThenBy(t => t.Division).ThenBy(t => t.Abbreviation)
-            .Skip((currentPage - 1) * PageSize).Take(PageSize)
-            .AsNoTracking()
-            .ToListAsync();
-    }
-
-    private async Task SetPage(int page)
-    {
-        if (page >= 1 && page <= totalPages)
-        {
-            currentPage = page;
-            await LoadGridAsync();
-        }
-    }
-
-    // ── Cap ───────────────────────────────────────────────────
-    private async Task LoadCapAsync()
+    private async Task LoadAsync()
     {
         using var db = await DbFactory.CreateDbContextAsync();
 
-        var allTeams = await db.Teams.AsNoTracking().ToListAsync();
+        var teams = await db.Teams.AsNoTracking().ToListAsync();
 
         var capHits = await db.ContractYears
             .Where(cy => cy.Year == currentYear && cy.TeamId != null)
@@ -454,110 +155,31 @@
             .Select(g => new { TeamId = g.Key!.Value, Total = g.Sum(cy => cy.CapNumber) })
             .ToListAsync();
 
-        var deadData = await db.ContractYears
-            .Where(cy => cy.Year == currentYear && cy.TeamId != null && cy.IsVoidYear)
-            .GroupBy(cy => cy.TeamId)
-            .Select(g => new { TeamId = g.Key!.Value, Total = g.Sum(cy => cy.CapNumber) })
+        var rosterCounts = await db.Players
+            .Where(p => p.TeamId != null && !p.IsRetired)
+            .GroupBy(p => p.TeamId)
+            .Select(g => new { TeamId = g.Key!.Value, Count = g.Count() })
             .ToListAsync();
 
-        var hitMap  = capHits.ToDictionary(x => x.TeamId, x => x.Total);
-        var deadMap = deadData.ToDictionary(x => x.TeamId, x => x.Total);
+        var pickCounts = await db.DraftPicks
+            .Where(dp => !dp.IsVoided && !dp.IsUsed)
+            .GroupBy(dp => dp.CurrentTeamId)
+            .Select(g => new { TeamId = g.Key, Count = g.Count() })
+            .ToListAsync();
 
-        capRows = allTeams.Select(t =>
+        var hitMap    = capHits.ToDictionary(x => x.TeamId, x => x.Total);
+        var rosterMap = rosterCounts.ToDictionary(x => x.TeamId, x => x.Count);
+        var pickMap   = pickCounts.ToDictionary(x => x.TeamId, x => x.Count);
+
+        allRows = teams.Select(t =>
         {
             var hit   = hitMap.TryGetValue(t.Id, out var h) ? h : 0m;
-            var dead  = deadMap.TryGetValue(t.Id, out var d) ? d : 0m;
             var space = salaryCap + t.CarryoverCap - hit;
-            return new CapRow(t.Id, t.Abbreviation, t.City, t.Nickname,
-                t.Conference, t.Division, hit, dead, t.CarryoverCap, space);
+            var roster = rosterMap.TryGetValue(t.Id, out var rc) ? rc : 0;
+            var picks  = pickMap.TryGetValue(t.Id, out var pc) ? pc : 0;
+            return new TeamRow(t.Id, t.Abbreviation, t.City, t.Nickname,
+                t.Conference, t.Division, t.PrimaryColor,
+                hit, t.CarryoverCap, space, roster, picks);
         }).ToList();
-
-        ApplyCapSort();
-        capLoaded = true;
     }
-
-    private void ApplyCapSort()
-    {
-        capRows = capSort switch
-        {
-            "hit"   => capRows.OrderByDescending(r => r.CapHit).ToList(),
-            "alpha" => capRows.OrderBy(r => r.Abbreviation).ToList(),
-            _       => capRows.OrderByDescending(r => r.CapSpace).ToList()
-        };
-    }
-
-    // ── Rosters ───────────────────────────────────────────────
-    private async Task LoadRostersAsync()
-    {
-        using var db = await DbFactory.CreateDbContextAsync();
-
-        var allTeams = await db.Teams.AsNoTracking().ToListAsync();
-
-        var playersByTeam = await db.Players
-            .Where(p => p.TeamId != null && !p.IsRetired)
-            .Include(p => p.Position)
-            .Select(p => new { p.TeamId, Code = p.Position!.Code })
-            .AsNoTracking()
-            .ToListAsync();
-
-        var grouped = playersByTeam.GroupBy(p => p.TeamId!.Value)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        rosterRows = allTeams.Select(t =>
-        {
-            var players = grouped.TryGetValue(t.Id, out var ps) ? ps : new();
-            int Count(Func<string, bool> pred) => players.Count(p => pred(p.Code?.ToUpper() ?? ""));
-
-            return new RosterRow(
-                t.Id, t.Abbreviation, t.City, t.Nickname, t.Conference, t.Division,
-                Total: players.Count,
-                QB:    Count(c => c == "QB"),
-                RB:    Count(c => c is "RB" or "FB" or "HB"),
-                WR:    Count(c => c == "WR"),
-                TE:    Count(c => c == "TE"),
-                OL:    Count(c => c is "C" or "G" or "OT" or "OG" or "LG" or "RG" or "LT" or "RT"),
-                DL:    Count(c => c is "DT" or "NT" or "DE"),
-                LB:    Count(c => c is "LB" or "ILB" or "OLB" or "MLB" or "EDGE"),
-                DB:    Count(c => c is "CB" or "S" or "DB" or "FS" or "SS" or "SAF"),
-                ST:    Count(c => c is "K" or "P" or "LS")
-            );
-        }).ToList();
-
-        rosterLoaded = true;
-    }
-
-    // ── Picks ─────────────────────────────────────────────────
-    private async Task LoadPicksAsync()
-    {
-        using var db = await DbFactory.CreateDbContextAsync();
-
-        var allTeams = await db.Teams.AsNoTracking().ToListAsync();
-        var teamAbbrMap = allTeams.ToDictionary(t => t.Id, t => t.Abbreviation);
-
-        var picks = await db.DraftPicks
-            .Where(dp => !dp.IsVoided && !dp.IsUsed)
-            .OrderBy(dp => dp.Year).ThenBy(dp => dp.Round).ThenBy(dp => dp.PickNumber)
-            .AsNoTracking()
-            .ToListAsync();
-
-        var byTeam = picks.GroupBy(dp => dp.CurrentTeamId)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        picksRows = allTeams.Select(t =>
-        {
-            var teamPicks = byTeam.TryGetValue(t.Id, out var ps) ? ps : new();
-            var infos = teamPicks.Select(p => new PickInfo(
-                p.Round,
-                p.PickNumber,
-                p.OriginalTeamId != p.CurrentTeamId,
-                p.OriginalTeamId != p.CurrentTeamId && teamAbbrMap.TryGetValue(p.OriginalTeamId, out var a) ? a : null
-            )).ToList();
-            return new PicksRow(t.Id, t.Abbreviation, t.City, t.Nickname,
-                t.Conference, t.Division, infos, infos.Count);
-        }).ToList();
-
-        picksLoaded = true;
-    }
-
-    private void NavigateToTeam(int id) => Navigation.NavigateTo($"/teams/{id}");
 }
