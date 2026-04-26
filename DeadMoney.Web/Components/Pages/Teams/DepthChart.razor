@@ -1,4 +1,4 @@
-@page "/teams/{teamId:int}/depth-chart"
+@page "/teams/{TeamId:int}/depth-chart"
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
@@ -6,7 +6,7 @@
 <PageTitle>@(teamAbbr != "" ? $"{teamAbbr} Depth Chart" : "Depth Chart") — Dead Money</PageTitle>
 
 <div class="mb-3">
-    <button class="dm-btn-ghost" @onclick="@(() => Navigation.NavigateTo($"/teams/{teamId}"))">
+    <button class="dm-btn-ghost" @onclick="@(() => Navigation.NavigateTo($"/teams/{TeamId}"))">
         <i class="bi bi-arrow-left"></i> @(teamAbbr != "" ? teamAbbr : "Team")
     </button>
 </div>
@@ -105,7 +105,7 @@ else
 }
 
 @code {
-    [Parameter] public int teamId { get; set; }
+    [Parameter] public int TeamId { get; set; }
 
     private static readonly string[] Tabs = ["Offense", "Defense", "Special Teams"];
 
@@ -138,7 +138,7 @@ else
             var isCommissioner = user.IsInRole("Admin") || user.IsInRole("Commissioner");
             var isGmRole       = user.IsInRole("GM") || user.IsInRole("Assistant GM");
             int.TryParse(user.FindFirst("TeamId")?.Value, out var myTeamId);
-            canEdit = isCommissioner || (isGmRole && myTeamId == teamId);
+            canEdit = isCommissioner || (isGmRole && myTeamId == TeamId);
         }
 
         await LoadAsync();
@@ -149,14 +149,14 @@ else
         using var db = await DbFactory.CreateDbContextAsync();
 
         var team = await db.Teams
-            .Where(t => t.Id == teamId)
+            .Where(t => t.Id == TeamId)
             .Select(t => new { t.Abbreviation })
             .AsNoTracking()
             .FirstOrDefaultAsync();
         teamAbbr = team?.Abbreviation ?? "";
 
         var rawEntries = await db.DepthChartEntries
-            .Where(e => e.TeamId == teamId)
+            .Where(e => e.TeamId == TeamId)
             .Include(e => e.Player).ThenInclude(p => p!.Position)
             .OrderBy(e => e.PositionCode).ThenBy(e => e.DepthOrder)
             .ToListAsync();
@@ -166,7 +166,7 @@ else
             .ToDictionary(g => g.Key, g => g.OrderBy(e => e.DepthOrder).ToList());
 
         roster = await db.Players
-            .Where(p => p.TeamId == teamId)
+            .Where(p => p.TeamId == TeamId)
             .Include(p => p.Position)
             .OrderBy(p => p.Position != null ? p.Position.DisplayOrder : 99).ThenBy(p => p.LastName)
             .AsNoTracking()
@@ -193,7 +193,7 @@ else
         using var db = await DbFactory.CreateDbContextAsync();
         var entry = new DepthChartEntry
         {
-            TeamId       = teamId,
+            TeamId       = TeamId,
             PlayerId     = playerId,
             PositionCode = pos,
             DepthOrder   = nextOrder
@@ -262,7 +262,7 @@ else
     {
         using var db = await DbFactory.CreateDbContextAsync();
         var rows = await db.DepthChartEntries
-            .Where(e => e.TeamId == teamId && e.PositionCode == pos)
+            .Where(e => e.TeamId == TeamId && e.PositionCode == pos)
             .OrderBy(e => e.DepthOrder)
             .ToListAsync();
         for (int i = 0; i < rows.Count; i++) rows[i].DepthOrder = i + 1;

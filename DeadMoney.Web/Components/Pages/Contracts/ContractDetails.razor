@@ -1,4 +1,4 @@
-@page "/contracts/{contractId:int}"
+@page "/contracts/{ContractId:int}"
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
@@ -217,7 +217,7 @@ else
 }
 
 @code {
-    [Parameter] public int contractId { get; set; }
+    [Parameter] public int ContractId { get; set; }
 
     private Contract? contract;
     private bool isCommissioner;
@@ -263,7 +263,7 @@ else
             .Include(c => c.Player).ThenInclude(p => p.Team)
             .Include(c => c.ContractYears).ThenInclude(cy => cy.Team)
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == contractId);
+            .FirstOrDefaultAsync(c => c.Id == ContractId);
     }
 
     private void StartEdit()
@@ -302,7 +302,7 @@ else
 
             var dbContract = await db.Contracts
                 .Include(c => c.ContractYears)
-                .FirstOrDefaultAsync(c => c.Id == contractId);
+                .FirstOrDefaultAsync(c => c.Id == ContractId);
 
             if (dbContract == null) { statusMessage = "Contract not found."; statusIsError = true; return; }
 

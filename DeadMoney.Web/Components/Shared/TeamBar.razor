@@ -130,19 +130,4 @@
 
     public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
 
-    private static string TxnLabel(TransactionType t) => t switch
-    {
-        TransactionType.Cut                => "Cut",
-        TransactionType.Signed             => "Signed",
-        TransactionType.Extended           => "Extended",
-        TransactionType.Traded             => "Traded",
-        TransactionType.ExtensionAgreed    => "Extension Agreed",
-        TransactionType.ExtensionCountered => "Counter Offer",
-        TransactionType.ExtensionDeclined  => "Extension Declined",
-        TransactionType.FaOfferRejected    => "Offer Rejected",
-        TransactionType.ContractModified   => "Contract Modified",
-        TransactionType.CapAdjusted        => "Cap Adjusted",
-        TransactionType.DraftPickMade      => "Drafted",
-        _                                  => t.ToString()
-    };
 }

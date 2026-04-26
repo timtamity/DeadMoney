@@ -1,4 +1,4 @@
-@page "/transactions/{transactionId:int}"
+@page "/transactions/{TransactionId:int}"
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 
@@ -162,7 +162,7 @@ else
 }
 
 @code {
-    [Parameter] public int transactionId { get; set; }
+    [Parameter] public int TransactionId { get; set; }
 
     private Transaction? transaction;
 
@@ -175,7 +175,7 @@ else
             .Include(t => t.ToTeam)
             .Include(t => t.DraftPick).ThenInclude(dp => dp!.OriginalTeam)
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == transactionId);
+            .FirstOrDefaultAsync(t => t.Id == TransactionId);
     }
 
 }

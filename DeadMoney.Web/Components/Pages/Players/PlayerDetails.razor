@@ -1,4 +1,4 @@
-@page "/players/{playerId:int}"
+@page "/players/{PlayerId:int}"
 @inject IDbContextFactory<DeadMoneyDbContext> DbFactory
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
@@ -360,7 +360,7 @@ else
 }
 
 @code {
-    [Parameter] public int playerId { get; set; }
+    [Parameter] public int PlayerId { get; set; }
 
     private Player? player;
 
@@ -398,12 +398,12 @@ else
             .Include(p => p.Contracts)
                 .ThenInclude(c => c.ContractYears)
                     .ThenInclude(cy => cy.Team)
-            .FirstOrDefaultAsync(p => p.Id == playerId);
+            .FirstOrDefaultAsync(p => p.Id == PlayerId);
 
         if (player != null)
         {
             transactions = await db.Transactions
-                .Where(t => t.PlayerId == playerId)
+                .Where(t => t.PlayerId == PlayerId)
                 .Include(t => t.Team)
                 .Include(t => t.ToTeam)
                 .OrderByDescending(t => t.OccurredAt)
@@ -417,11 +417,11 @@ else
 
     private async Task LoadOfferDataAsync()
     {
-        heat = await FaOfferSvc.GetHeatAsync(playerId);
+        heat = await FaOfferSvc.GetHeatAsync(PlayerId);
 
         if (isGmOrAbove && !isAdminOrCommish && myTeamId > 0)
         {
-            myOffer = await FaOfferSvc.GetMyOfferAsync(myTeamId, playerId);
+            myOffer = await FaOfferSvc.GetMyOfferAsync(myTeamId, PlayerId);
             if (myOffer != null)
             {
                 offerYears       = myOffer.Years;
@@ -431,15 +431,15 @@ else
         }
 
         if (isAdminOrCommish)
-            allOffers = await FaOfferSvc.GetOffersForPlayerAsync(playerId);
+            allOffers = await FaOfferSvc.GetOffersForPlayerAsync(PlayerId);
     }
 
     private async Task SubmitOfferAsync()
     {
         if (offerTotalM <= 0 || offerYears <= 0 || myTeamId == 0) return;
         isBusy = true; offerMsg = "";
-        myOffer = await FaOfferSvc.SubmitOrUpdateAsync(myTeamId, playerId, offerYears, offerTotalM, offerGuaranteedM);
-        heat = await FaOfferSvc.GetHeatAsync(playerId);
+        myOffer = await FaOfferSvc.SubmitOrUpdateAsync(myTeamId, PlayerId, offerYears, offerTotalM, offerGuaranteedM);
+        heat = await FaOfferSvc.GetHeatAsync(PlayerId);
         offerMsg = "Offer submitted.";
         isBusy = false;
     }
@@ -450,21 +450,10 @@ else
         isBusy = true;
         await FaOfferSvc.WithdrawAsync(myOffer.Id, myTeamId);
         myOffer = null;
-        heat = await FaOfferSvc.GetHeatAsync(playerId);
+        heat = await FaOfferSvc.GetHeatAsync(PlayerId);
         isBusy = false;
     }
 
     private void GoToContract(int contractId) => Navigation.NavigateTo($"/contracts/{contractId}");
 
-    private static string TxnLabel(TransactionType t) => t switch
-    {
-        TransactionType.Cut                => "CUT",
-        TransactionType.Signed             => "SIGNED",
-        TransactionType.Extended           => "EXTENDED",
-        TransactionType.Traded             => "TRADED",
-        TransactionType.DraftPickMade      => "DRAFTED",
-        TransactionType.ExtensionAgreed    => "EXTENDED",
-        TransactionType.ContractModified   => "MODIFIED",
-        _                                  => t.ToString().ToUpper()
-    };
 }

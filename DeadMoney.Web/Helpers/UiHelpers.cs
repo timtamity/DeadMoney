@@ -19,6 +19,37 @@ public static class UiHelpers
         _                                       => "pos-badge"
     };
 
+    public static string TxnLabel(TransactionType t) => t switch
+    {
+        TransactionType.Cut                => "Cut",
+        TransactionType.Signed             => "Signed",
+        TransactionType.Extended           => "Extended",
+        TransactionType.Traded             => "Traded",
+        TransactionType.PickGranted        => "Pick Granted",
+        TransactionType.PickForfeited      => "Pick Forfeited",
+        TransactionType.ContractModified   => "Contract Modified",
+        TransactionType.CapAdjusted        => "Cap Adjusted",
+        TransactionType.ExtensionOffered   => "Extension Offered",
+        TransactionType.ExtensionAgreed    => "Extension Agreed",
+        TransactionType.ExtensionCountered => "Counter Offer",
+        TransactionType.ExtensionDeclined  => "Extension Declined",
+        TransactionType.FaOfferRejected    => "Offer Rejected",
+        TransactionType.DraftPickMade      => "Drafted",
+        _                                  => t.ToString()
+    };
+
+    public static string TxnIcon(TransactionType t) => t switch
+    {
+        TransactionType.Cut                => "✂",
+        TransactionType.Signed             => "+",
+        TransactionType.Extended           => "↑",
+        TransactionType.Traded             => "⇄",
+        TransactionType.PickGranted        => "⊕",
+        TransactionType.PickForfeited      => "✕",
+        TransactionType.DraftPickMade      => "⬆",
+        _                                  => "·"
+    };
+
     public static string TxnClass(TransactionType t) => t switch
     {
         TransactionType.Cut                => "txn-cut",

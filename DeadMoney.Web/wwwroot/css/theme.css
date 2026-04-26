@@ -468,6 +468,7 @@ h1 a, .t-name a, .stat-value.gold a { color: inherit; }
     flex-shrink: 0;
     min-width: 64px;
     text-align: center;
+    text-transform: uppercase;
 }
 .txn-row-body { flex: 1; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
 .txn-player   { font-weight: 600; color: var(--dm-text-bright); font-size: 0.875rem; }

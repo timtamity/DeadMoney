@@ -100,28 +100,4 @@ else
 
     public void Dispose() => FeedSvc.OnChange -= OnFeedChanged;
 
-    private static string TxnLabel(TransactionType t) => t switch
-    {
-        TransactionType.Cut           => "CUT",
-        TransactionType.Signed        => "SIGNED",
-        TransactionType.Extended      => "EXTENDED",
-        TransactionType.Traded        => "TRADED",
-        TransactionType.PickGranted   => "PICK",
-        TransactionType.PickForfeited => "FORFEITED",
-        TransactionType.DraftPickMade => "DRAFTED",
-        _                             => t.ToString().ToUpper()
-    };
-
-    private static string TxnIcon(TransactionType t) => t switch
-    {
-        TransactionType.Cut           => "✂",
-        TransactionType.Signed        => "+",
-        TransactionType.Extended      => "↑",
-        TransactionType.Traded        => "⇄",
-        TransactionType.PickGranted   => "⊕",
-        TransactionType.PickForfeited => "✕",
-        TransactionType.DraftPickMade => "⬆",
-        _                             => "·"
-    };
-
 }
